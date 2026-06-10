@@ -1,18 +1,9 @@
-from core.sync_service import SyncService
+from ui.main_window import MainWindow
 
 
 def main():
-    service = SyncService()
-
-    results = service.compare(
-        r"C:\LOCAL",
-        r"C:\SERVER",
-    )
-
-    for result in results:
-        print(
-            f"{result.status:<15} | {result.relative_path}"
-        )
+    app = MainWindow()
+    app.mainloop()
 
 
 if __name__ == "__main__":
