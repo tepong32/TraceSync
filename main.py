@@ -1,15 +1,12 @@
-from core.scanner import scan_folder
-from core.comparer import compare_folders
+from core.sync_service import SyncService
 
 
 def main():
-    local_files = scan_folder(r"C:\Users\TEMP.MARIZ\Desktop\GSO inv")
+    service = SyncService()
 
-    server_files = scan_folder(r"C:\Users\TEMP.MARIZ\Desktop\SCAN")
-
-    results = compare_folders(
-        local_files,
-        server_files,
+    results = service.compare(
+        r"C:\LOCAL",
+        r"C:\SERVER",
     )
 
     for result in results:
