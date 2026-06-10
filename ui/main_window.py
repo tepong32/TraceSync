@@ -1,3 +1,5 @@
+from collections import Counter
+from models.compare_status import CompareStatus
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
@@ -172,6 +174,24 @@ class MainWindow(tk.Tk):
             fill="y",
         )
 
+        # ------------------------------
+        # Summary Bar
+        # ------------------------------
+        self.summary_var = tk.StringVar(
+            value="No comparison results."
+        )
+
+        summary_label = ttk.Label(
+            self,
+            textvariable=self.summary_var,
+            anchor="w",
+            padding=(10, 5),
+        )
+
+        summary_label.pack(
+            fill="x",
+        )
+
     def browse_local(self):
         folder = filedialog.askdirectory()
 
@@ -207,6 +227,20 @@ class MainWindow(tk.Tk):
                 local_folder,
                 server_folder,
             )
+            counts = Counter(
+                result.status
+                for result in results
+            )
+
+            summary_text = (
+                f"Local Newer: {counts.get(CompareStatus.LOCAL_NEWER, 0)} | "
+                f"Server Newer: {counts.get(CompareStatus.SERVER_NEWER, 0)} | "
+                f"Same: {counts.get(CompareStatus.SAME, 0)} | "
+                f"Local Only: {counts.get(CompareStatus.LOCAL_ONLY, 0)} | "
+                f"Server Only: {counts.get(CompareStatus.SERVER_ONLY, 0)}"
+            )
+
+            self.summary_var.set(summary_text)
 
             self.tree.delete(
                 *self.tree.get_children()
@@ -217,7 +251,7 @@ class MainWindow(tk.Tk):
                     "",
                     "end",
                     values=(
-                        result.status,
+                        result.status.value,
                         result.relative_path,
                     ),
                 )
@@ -227,3 +261,4 @@ class MainWindow(tk.Tk):
                 "Comparison Error",
                 str(exc),
             )
+    

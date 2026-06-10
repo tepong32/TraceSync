@@ -1,11 +1,5 @@
+from models.compare_status import CompareStatus
 from models.comparison_result import ComparisonResult
-
-
-LOCAL_NEWER = "Local Newer"
-SERVER_NEWER = "Server Newer"
-SAME = "Same"
-LOCAL_ONLY = "Local Only"
-SERVER_ONLY = "Server Only"
 
 
 def compare_folders(
@@ -29,7 +23,7 @@ def compare_folders(
             results.append(
                 ComparisonResult(
                     relative_path=relative_path,
-                    status=LOCAL_ONLY,
+                    status=CompareStatus.LOCAL_ONLY,
                 )
             )
             continue
@@ -38,19 +32,19 @@ def compare_folders(
             results.append(
                 ComparisonResult(
                     relative_path=relative_path,
-                    status=SERVER_ONLY,
+                    status=CompareStatus.SERVER_ONLY,
                 )
             )
             continue
 
         if local_record.modified_time > server_record.modified_time:
-            status = LOCAL_NEWER
+            status = CompareStatus.LOCAL_NEWER
 
         elif server_record.modified_time > local_record.modified_time:
-            status = SERVER_NEWER
+            status = CompareStatus.SERVER_NEWER
 
         else:
-            status = SAME
+            status = CompareStatus.SAME
 
         results.append(
             ComparisonResult(
