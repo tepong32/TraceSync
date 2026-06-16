@@ -6,13 +6,14 @@ from tkinter import messagebox
 from tkinter import ttk
 
 from core.sync_service import SyncService
+from utils.settings import SettingsService
 
 
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("TraceSync v0.1.0")
+        self.title("TraceSync v0.1.4")
         self.geometry("1000x600")
         self.minsize(800, 500)
 
@@ -20,12 +21,14 @@ class MainWindow(tk.Tk):
         self.current_filter = None
 
         self.sync_service = SyncService()
+        self.settings = SettingsService.load()
         self.status_var = tk.StringVar(
             value="Ready"
         )
 
 
         self._build_ui()
+        self._load_saved_folders()
 
     def _build_ui(self):
         top_frame = ttk.Frame(self, padding=10)
@@ -265,17 +268,38 @@ class MainWindow(tk.Tk):
             fill="x",
         )
 
+    def _load_saved_folders(self):
+        self.local_var.set(
+            self.settings.get(
+                "local_folder",
+                "",
+            )
+        )
+
+        self.server_var.set(
+            self.settings.get(
+                "server_folder",
+                "",
+            )
+        )
+
     def browse_local(self):
         folder = filedialog.askdirectory()
 
         if folder:
             self.local_var.set(folder)
 
+            self.settings["local_folder"] = folder
+            SettingsService.save(self.settings)
+
     def browse_server(self):
         folder = filedialog.askdirectory()
 
         if folder:
             self.server_var.set(folder)
+
+            self.settings["server_folder"] = folder
+            SettingsService.save(self.settings)
 
     def populate_tree(self, results):
         self.tree.delete(
