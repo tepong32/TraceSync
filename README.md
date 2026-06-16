@@ -14,7 +14,7 @@ Instead of immediately syncing files, TraceSync helps users answer three questio
 
 ## Current Status
 
-Current Version: v0.1.0 (Development)
+Current Version: v0.1.3 (Development)
 
 Implemented:
 
@@ -22,8 +22,13 @@ Implemented:
 - Relative-path-based file matching
 - File comparison engine
 - Difference classification
+- CompareStatus enum
 - Basic desktop GUI
 - Comparison results Treeview
+- Summary statistics bar
+- Row color coding
+- Quick filter buttons
+- Status bar
 
 ---
 
@@ -71,11 +76,11 @@ Relative path serves as the source of truth.
 
 | Status | Meaning |
 |----------|----------|
-| Left Newer | Left file has a newer modification date |
-| Right Newer | Right file has a newer modification date |
+| Local Newer | Local file has a newer modification date |
+| Server Newer | Server file has a newer modification date |
 | Same | Both files have matching modification dates |
-| Left Only | File exists only in Left Folder |
-| Right Only | File exists only in Right Folder |
+| Local Only | File exists only in Local Folder |
+| Server Only | File exists only in Server Folder |
 
 ---
 
@@ -96,6 +101,7 @@ tracesync/
 │   └── sync_service.py
 │
 ├── models/
+│   ├── compare_status.py
 │   ├── file_record.py
 │   └── comparison_result.py
 │
@@ -109,6 +115,32 @@ tracesync/
 
 ---
 
+## Release History
+
+### v0.1.3
+
+- Added row color highlighting for comparison results
+- Added filter buttons for all comparison statuses
+- Added status bar with active view information
+- Preserved selected filter across comparisons
+- Improved comparison result navigation
+
+### v0.1.2
+
+- Added CompareStatus enum
+- Migrated comparison engine to enum-based statuses
+- Added summary statistics bar
+- Established foundation for filtering and row styling
+
+### v0.1.1
+
+- Initial comparison workflow
+- Folder scanning
+- File matching
+- Difference classification
+- Desktop GUI
+
+
 ## Roadmap
 
 ### v0.1.x — Comparison Experience
@@ -121,18 +153,18 @@ tracesync/
 - [x] SyncService orchestration
 - [x] Desktop GUI
 - [x] Results Treeview
+- [x] CompareStatus Enum
+- [x] Summary statistics bar
+- [x] Row color coding
+- [x] Quick filter buttons
+- [x] Status bar
 
 #### Planned
 
 - [ ] Left / Right folder layout
 - [ ] Side-by-side folder selectors
-- [ ] CompareStatus Enum
-- [ ] Summary statistics bar
-- [ ] Row color coding
-- [ ] Quick filter buttons
 - [ ] Remember last folders
 - [ ] File details dialog
-- [ ] Status bar
 - [ ] Column sorting
 
 ---
