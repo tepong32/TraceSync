@@ -16,7 +16,14 @@ class MainWindow(tk.Tk):
         self.geometry("1000x600")
         self.minsize(800, 500)
 
+        self.results = []
+        self.current_filter = None
+
         self.sync_service = SyncService()
+        self.status_var = tk.StringVar(
+            value="Ready"
+        )
+
 
         self._build_ui()
 
@@ -107,6 +114,35 @@ class MainWindow(tk.Tk):
         )
 
         top_frame.columnconfigure(0, weight=1)
+
+        # ------------------------------
+        # Filter Buttons
+        # ------------------------------
+        filter_frame = ttk.Frame(self)
+        filter_frame.pack(
+            fill="x",
+            padx=10,
+            pady=(0, 5),
+        )
+
+        ttk.Button(
+            filter_frame,
+            text="All",
+            command=lambda: self.apply_filter(None),
+        ).pack(
+            side="left",
+            padx=(0, 5),
+        )
+
+        for status in CompareStatus:
+            ttk.Button(
+                filter_frame,
+                text=status.value,
+                command=lambda s=status: self.apply_filter(s),
+            ).pack(
+                side="left",
+                padx=(0, 5),
+            )
 
         # ------------------------------
         # Results Treeview
@@ -200,6 +236,17 @@ class MainWindow(tk.Tk):
             fill="y",
         )
 
+        status_label = ttk.Label(
+            self,
+            textvariable=self.status_var,
+            anchor="w",
+            padding=(10, 5),
+        )
+
+        status_label.pack(
+            fill="x",
+        )
+
         # ------------------------------
         # Summary Bar
         # ------------------------------
@@ -230,6 +277,45 @@ class MainWindow(tk.Tk):
         if folder:
             self.server_var.set(folder)
 
+    def populate_tree(self, results):
+        self.tree.delete(
+            *self.tree.get_children()
+        )
+
+        for result in results:
+            self.tree.insert(
+                "",
+                "end",
+                values=(
+                    result.status.value,
+                    result.relative_path,
+                ),
+                tags=(result.status.name,),
+            )
+
+    def apply_filter(self, status):
+        self.current_filter = status
+
+        if status is None:
+            filtered_results = self.results
+
+            self.status_var.set(
+                f"Showing all {len(filtered_results)} files"
+            )
+
+        else:
+            filtered_results = [
+                result
+                for result in self.results
+                if result.status == status
+            ]
+
+            self.status_var.set(
+                f"Showing {len(filtered_results)} {status.value} files"
+            )
+
+        self.populate_tree(filtered_results)
+
     def compare_folders(self):
         local_folder = self.local_var.get().strip()
         server_folder = self.server_var.get().strip()
@@ -253,6 +339,7 @@ class MainWindow(tk.Tk):
                 local_folder,
                 server_folder,
             )
+            self.results = results
             counts = Counter(
                 result.status
                 for result in results
@@ -267,25 +354,17 @@ class MainWindow(tk.Tk):
             )
 
             self.summary_var.set(summary_text)
-
-            self.tree.delete(
-                *self.tree.get_children()
+            self.apply_filter(
+                self.current_filter
             )
-
-            for result in results:
-                self.tree.insert(
-                    "",
-                    "end",
-                    values=(
-                        result.status.value,
-                        result.relative_path,
-                    ),
-                    tags=(result.status.name,),
-                )
 
         except Exception as exc:
             messagebox.showerror(
                 "Comparison Error",
                 str(exc),
             )
-    
+
+        
+
+
+            
