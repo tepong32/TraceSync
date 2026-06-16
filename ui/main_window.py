@@ -130,6 +130,32 @@ class MainWindow(tk.Tk):
             show="headings",
         )
 
+        # defining row colors
+        self.tree.tag_configure(
+            CompareStatus.LOCAL_NEWER.name,
+            background="#d4edda",
+        )
+
+        self.tree.tag_configure(
+            CompareStatus.SERVER_NEWER.name,
+            background="#d1ecf1",
+        )
+
+        self.tree.tag_configure(
+            CompareStatus.LOCAL_ONLY.name,
+            background="#fff3cd",
+        )
+
+        self.tree.tag_configure(
+            CompareStatus.SERVER_ONLY.name,
+            background="#ffe5b4",
+        )
+
+        self.tree.tag_configure(
+            CompareStatus.SAME.name,
+            background="#ffffff",
+        )
+
         self.tree.heading(
             "status",
             text="Status",
@@ -254,6 +280,7 @@ class MainWindow(tk.Tk):
                         result.status.value,
                         result.relative_path,
                     ),
+                    tags=(result.status.name,),
                 )
 
         except Exception as exc:
