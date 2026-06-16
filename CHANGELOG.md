@@ -1,4 +1,17 @@
 # Changelog
+## [0.1.4] - 2026-06-16
+### ✨ Added
+## [0.1.4] - 2026-06-16
+
+### ✨ Added
+feat: remember last selected folders
+
+- Added SettingsService
+- Added settings.json persistence
+- Local folder selection now persists between sessions
+- Server folder selection now persists between sessions
+- Folder paths automatically restore on startup
+
 ## [0.1.3] - 2026-06-16
 ### ✨ Added
 feat: improve comparison results UX
