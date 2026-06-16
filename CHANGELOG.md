@@ -1,4 +1,15 @@
 # Changelog
+## [0.1.3] - 2026-06-16
+### ✨ Added
+feat: improve comparison results UX
+
+- Added color-coded Treeview rows based on CompareStatus
+- Added filter buttons for comparison statuses
+- Added persistent filter state across comparisons
+- Added status bar showing current filtered view
+- Refactored Treeview population into reusable helper
+- Improved navigation of large comparison result sets
+
 ## [0.1.2] - 2026-06-10
 ### ✨ Added
 TraceSync v0.1.2 progress
