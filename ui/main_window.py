@@ -9,16 +9,19 @@ from core.sync_service import SyncService
 from utils.settings import SettingsService
 
 
+
+
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("TraceSync v0.1.4")
+        self.title(f"TraceSync v0.1.5")
         self.geometry("1000x600")
         self.minsize(800, 500)
 
         self.results = []
         self.current_filter = None
+        self.filter_buttons = {}
 
         self.sync_service = SyncService()
         self.settings = SettingsService.load()
@@ -31,125 +34,216 @@ class MainWindow(tk.Tk):
         self._load_saved_folders()
 
     def _build_ui(self):
-        top_frame = ttk.Frame(self, padding=10)
-        top_frame.pack(fill="x")
+        # ------------------------------
+        # Widget Styles
+        # ------------------------------
+        style = ttk.Style()
 
+        style.configure(
+            "Primary.TButton",
+            font=("Segoe UI", 10, "bold"),
+        )
+
+        style.configure(
+            "Filter.TButton",
+        )
+
+        style.configure(
+            "ActiveFilter.TButton",
+            font=("Segoe UI", 9, "bold"),
+        )
         # ------------------------------
-        # Local Folder
+        # Folder Selection Area
         # ------------------------------
-        ttk.Label(
-            top_frame,
-            text="Local Folder"
-        ).grid(
+        folder_frame = ttk.Frame(
+            self,
+            padding=10,
+        )
+        folder_frame.pack(
+            fill="x",
+        )
+
+        folder_frame.columnconfigure(
+            0,
+            weight=1,
+        )
+
+        folder_frame.columnconfigure(
+            1,
+            weight=1,
+        )
+
+        # LEFT PANEL
+        left_frame = ttk.LabelFrame(
+            folder_frame,
+            text="Local Folder",
+            padding=10,
+        )
+
+        left_frame.grid(
             row=0,
             column=0,
-            sticky="w",
-            pady=(0, 5),
+            sticky="nsew",
+            padx=(0, 5),
+        )
+
+        left_frame.columnconfigure(
+            0,
+            weight=1,
         )
 
         self.local_var = tk.StringVar()
 
         ttk.Entry(
-            top_frame,
+            left_frame,
             textvariable=self.local_var,
         ).grid(
-            row=1,
+            row=0,
             column=0,
             sticky="ew",
             padx=(0, 5),
         )
 
         ttk.Button(
-            top_frame,
+            left_frame,
             text="Browse",
             command=self.browse_local,
         ).grid(
-            row=1,
+            row=0,
             column=1,
         )
 
-        # ------------------------------
-        # Server Folder
-        # ------------------------------
-        ttk.Label(
-            top_frame,
-            text="Server Folder"
-        ).grid(
-            row=2,
-            column=0,
-            sticky="w",
-            pady=(10, 5),
+        # RIGHT PANEL
+        right_frame = ttk.LabelFrame(
+            folder_frame,
+            text="Server Folder",
+            padding=10,
+        )
+
+        right_frame.grid(
+            row=0,
+            column=1,
+            sticky="nsew",
+        )
+
+        right_frame.columnconfigure(
+            0,
+            weight=1,
         )
 
         self.server_var = tk.StringVar()
 
         ttk.Entry(
-            top_frame,
+            right_frame,
             textvariable=self.server_var,
         ).grid(
-            row=3,
+            row=0,
             column=0,
             sticky="ew",
             padx=(0, 5),
         )
 
         ttk.Button(
-            top_frame,
+            right_frame,
             text="Browse",
             command=self.browse_server,
         ).grid(
-            row=3,
+            row=0,
             column=1,
         )
 
         # ------------------------------
         # Compare Button
         # ------------------------------
-        ttk.Button(
-            top_frame,
-            text="Compare",
-            command=self.compare_folders,
-        ).grid(
-            row=4,
-            column=0,
-            sticky="w",
-            pady=15,
+        toolbar_frame = ttk.Frame(self)
+        toolbar_frame.pack(
+            fill="x",
+            padx=10,
+            pady=(0, 10),
         )
 
-        top_frame.columnconfigure(0, weight=1)
+        # Primary application action
+        ttk.Button(
+            toolbar_frame,
+            text="🔍 Compare Folders",
+            command=self.compare_folders,
+            style="Primary.TButton",
+            width=25,
+        ).pack()
+
+        # ------------------------------
+        # Summary Bar
+        # ------------------------------
+        self.summary_var = tk.StringVar(
+            value="No comparison results."
+        )
+
+        
+        summary_label = ttk.Label(
+            self,
+            textvariable=self.summary_var,
+            anchor="w",
+            padding=(10, 5),
+        )
+
+        summary_label.pack(
+            fill="x",
+        )
 
         # ------------------------------
         # Filter Buttons
         # ------------------------------
         filter_frame = ttk.Frame(self)
+
         filter_frame.pack(
             fill="x",
             padx=10,
             pady=(0, 5),
         )
 
-        ttk.Button(
+        # All Filter
+        all_button = ttk.Button(
             filter_frame,
             text="All",
+            style="ActiveFilter.TButton",
             command=lambda: self.apply_filter(None),
-        ).pack(
+        )
+
+        all_button.pack(
             side="left",
             padx=(0, 5),
         )
 
+        self.filter_buttons[None] = all_button
+
+        # Status Filters
         for status in CompareStatus:
-            ttk.Button(
+            btn = ttk.Button(
                 filter_frame,
                 text=status.value,
+                style="Filter.TButton",
                 command=lambda s=status: self.apply_filter(s),
-            ).pack(
+            )
+
+            btn.pack(
                 side="left",
                 padx=(0, 5),
             )
 
+            self.filter_buttons[status] = btn
+
         # ------------------------------
         # Results Treeview
         # ------------------------------
+        ttk.Label(
+            self,
+            text="Results",
+        ).pack(
+            anchor="w",
+            padx=10,
+            pady=(5, 5),
+        )
+
         tree_frame = ttk.Frame(self)
         tree_frame.pack(
             fill="both",
@@ -202,7 +296,7 @@ class MainWindow(tk.Tk):
 
         self.tree.heading(
             "relative_path",
-            text="Relative Path",
+            text="File",
         )
 
         self.tree.column(
@@ -251,22 +345,50 @@ class MainWindow(tk.Tk):
         )
 
         # ------------------------------
-        # Summary Bar
+        # Action Bar
         # ------------------------------
-        self.summary_var = tk.StringVar(
-            value="No comparison results."
-        )
-
-        summary_label = ttk.Label(
+        action_frame = ttk.Frame(
             self,
-            textvariable=self.summary_var,
-            anchor="w",
-            padding=(10, 5),
+            padding=10,
         )
 
-        summary_label.pack(
+        action_frame.pack(
             fill="x",
         )
+
+        action_frame.columnconfigure(
+            0,
+            weight=1,
+        )
+
+        action_frame.columnconfigure(
+            1,
+            weight=1,
+        )
+
+        ttk.Button(
+            action_frame,
+            text="Copy from Local → Server",
+            state="disabled",
+        ).grid(
+            row=0,
+            column=0,
+            sticky="ew",
+            padx=(0, 5),
+        )
+
+        ttk.Button(
+            action_frame,
+            text="Copy from Server → Local",
+            state="disabled",
+        ).grid(
+            row=0,
+            column=1,
+            sticky="ew",
+            padx=(5, 0),
+        )
+
+        
 
     def _load_saved_folders(self):
         self.local_var.set(
@@ -317,8 +439,29 @@ class MainWindow(tk.Tk):
                 tags=(result.status.name,),
             )
 
+    def _update_filter_button_styles(
+        self,
+        active_status):
+        """
+        Visually highlight
+        the currently selected filter.
+        """
+
+        for status, button in self.filter_buttons.items():
+
+            if status == active_status:
+                button.configure(
+                    style="ActiveFilter.TButton"
+                )
+            else:
+                button.configure(
+                    style="Filter.TButton"
+                )
+
     def apply_filter(self, status):
         self.current_filter = status
+        self._update_filter_button_styles(
+            status)
 
         if status is None:
             filtered_results = self.results
@@ -359,6 +502,11 @@ class MainWindow(tk.Tk):
             return
 
         try:
+            self.status_var.set(
+                "Comparing folders..."
+            )
+
+            self.update_idletasks()
             results = self.sync_service.compare(
                 local_folder,
                 server_folder,

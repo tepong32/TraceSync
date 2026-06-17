@@ -1,4 +1,18 @@
 # Changelog
+## [0.2.0] - 2026-06-17
+### ✨ Added
+feat(ui): complete v0.1.5 layout refresh and UX improvements
+
+- add side-by-side folder selector panels
+- add settings persistence and folder restoration
+- add active filter highlighting
+- improve compare button visibility
+- add comparison progress feedback
+- reorganize workflow layout
+- add results section header
+- add synchronization action bar foundation
+- improve usability for non-technical users
+
 ## [0.1.4] - 2026-06-16
 ### ✨ Added
 ## [0.1.4] - 2026-06-16

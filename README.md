@@ -14,7 +14,7 @@ Instead of immediately syncing files, TraceSync helps users answer three questio
 
 ## Current Status
 
-Current Version: v0.1.3 (Development)
+Current Version: v0.1.5 (Development)
 
 Implemented:
 
@@ -116,6 +116,26 @@ tracesync/
 ---
 
 ## Release History
+### v0.1.5
+
+- Refreshed application layout
+- Introduced side-by-side Local and Server folder panels
+- Added settings persistence for selected folders
+- Automatically restores last used folders on startup
+- Added dedicated Results section header
+- Added copy action bar foundation
+- Improved Compare button visibility and workflow
+- Added active filter highlighting
+- Added comparison progress status feedback
+- Improved spacing, grouping, and overall usability
+
+### v0.1.4
+
+- Added SettingsService
+- Added settings.json persistence
+- Remember last selected folders
+- Defensive handling of missing settings file
+- Defensive handling of invalid settings data
 
 ### v0.1.3
 
@@ -158,12 +178,15 @@ tracesync/
 - [x] Row color coding
 - [x] Quick filter buttons
 - [x] Status bar
+- [x] Settings persistence
+- [x] Automatic folder restoration (Remember last folders)
+- [x] Side-by-side folder selectors
+- [x] Layout refresh (Left | Right folder layout)
+- [x] Active filter highlighting
+- [x] Improved comparison workflow
 
 #### Planned
 
-- [ ] Left / Right folder layout
-- [ ] Side-by-side folder selectors
-- [ ] Remember last folders
 - [ ] File details dialog
 - [ ] Column sorting
 
