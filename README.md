@@ -14,7 +14,7 @@ Instead of immediately syncing files, TraceSync helps users answer three questio
 
 ## Current Status
 
-Current Version: v0.1.5 (Development)
+Current Version: v0.2.0 (Development)
 
 Implemented:
 
@@ -116,7 +116,7 @@ tracesync/
 ---
 
 ## Release History
-### v0.1.5
+### v0.2.0
 
 - Refreshed application layout
 - Introduced side-by-side Local and Server folder panels
