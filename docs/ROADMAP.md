@@ -151,7 +151,8 @@ Allow users to inspect comparison results before any synchronization actions.
 
 ### Remaining
 
-* [ ] File Details dialog
+* [x] File Details dialog (layout)
+* [ ] File Details dialog (complete feat)
 * [ ] Double-click row action
 * [ ] Results context menu
 * [ ] Open Local File
