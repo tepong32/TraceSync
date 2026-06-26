@@ -10,12 +10,18 @@ from utils.settings import SettingsService
 
 
 
+### for testing file dialogs
+from ui.dialogs.file_details_dialog import FileDetailsDialog
+from models.comparison_result import ComparisonResult
+from models.compare_status import CompareStatus
+from models.file_record import FileRecord
+
 
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title(f"TraceSync v0.1.5")
+        self.title(f"TraceSync v0.2.1")
         self.geometry("1000x600")
         self.minsize(800, 500)
 
@@ -169,7 +175,20 @@ class MainWindow(tk.Tk):
             command=self.compare_folders,
             style="Primary.TButton",
             width=25,
-        ).pack()
+        ).pack(
+            side="left",
+            padx=(0, 10),
+        )
+
+        ### DEVELOPMENT ONLY
+        # Remove before merging v0.2.1 into master.
+        ttk.Button(
+            toolbar_frame,
+            text="Test Dialog",
+            command=self._test_file_details_dialog,
+        ).pack(
+            side="left",
+        )
 
         # ------------------------------
         # Summary Bar
@@ -388,8 +407,6 @@ class MainWindow(tk.Tk):
             padx=(5, 0),
         )
 
-        
-
     def _load_saved_folders(self):
         self.local_var.set(
             self.settings.get(
@@ -538,5 +555,30 @@ class MainWindow(tk.Tk):
 
         
 
+    ### test dialog button
+    def _test_file_details_dialog(self):
+        local_record = FileRecord(
+            absolute_path=r"C:\Reports\2026\Budget.xlsx",
+            relative_path=r"Reports\2026\Budget.xlsx",
+            modified_time=1750846200.0,
+            size=421376,
+        )
 
-            
+        server_record = FileRecord(
+            absolute_path=r"\\SERVER\Accounting\Reports\2026\Budget.xlsx",
+            relative_path=r"Reports\2026\Budget.xlsx",
+            modified_time=1750587000.0,
+            size=418912,
+        )
+
+        result = ComparisonResult(
+            relative_path=r"Reports\2026\Budget.xlsx",
+            status=CompareStatus.LOCAL_NEWER,
+            local_record=local_record,
+            server_record=server_record,
+        )
+
+        FileDetailsDialog(
+            parent=self,
+            result=result,
+        )

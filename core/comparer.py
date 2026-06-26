@@ -24,6 +24,8 @@ def compare_folders(
                 ComparisonResult(
                     relative_path=relative_path,
                     status=CompareStatus.LOCAL_ONLY,
+                    local_record=local_record,
+                    server_record=None,
                 )
             )
             continue
@@ -33,6 +35,8 @@ def compare_folders(
                 ComparisonResult(
                     relative_path=relative_path,
                     status=CompareStatus.SERVER_ONLY,
+                    local_record=None,
+                    server_record=server_record,
                 )
             )
             continue
@@ -50,6 +54,8 @@ def compare_folders(
             ComparisonResult(
                 relative_path=relative_path,
                 status=status,
+                local_record=local_record,
+                server_record=server_record,
             )
         )
 

@@ -1,90 +1,161 @@
 # TraceSync
 
-TraceSync is a Windows desktop utility designed to help users safely compare and synchronize folders without the risks commonly associated with automatic sync tools.
+## Overview
 
-The project focuses on visibility, transparency, and safety before any file copy operations occur.
+TraceSync is a Windows desktop utility designed to help users safely compare, review, and synchronize files between Local and Server folders.
 
-Instead of immediately syncing files, TraceSync helps users answer three questions:
+Unlike traditional synchronization tools that immediately copy or overwrite files, TraceSync prioritizes visibility, review, and user control before any changes occur.
 
-1. What is different?
-2. Why is it different?
+The application was created to address a common problem in government offices and shared-file environments:
+
+> Users often know that files are different, but they do not know which version is newer, what changed, or whether copying a file will overwrite important work.
+
+TraceSync provides a safer workflow that allows users to compare folders, review differences, and make informed synchronization decisions.
+
+---
+
+## Key Features
+
+### Folder Comparison
+
+* Recursive folder scanning
+* Relative-path-based file matching
+* Local vs Server comparison workflow
+* Difference classification using modification timestamps
+
+### Difference Detection
+
+TraceSync identifies:
+
+* Local Newer
+* Server Newer
+* Same
+* Local Only
+* Server Only
+
+### Results Review
+
+* Color-coded comparison results
+* Summary statistics
+* Quick filtering by status
+* Active filter highlighting
+* File-by-file review workflow
+
+### User Experience
+
+* Side-by-side Local and Server folder selectors
+* Automatic restoration of previously selected folders
+* Settings persistence
+* Comparison progress feedback
+* LGU-friendly workflow and terminology
+
+### Safety-First Design
+
+TraceSync intentionally follows:
+
+Compare → Review → Confirm → Copy
+
+before any synchronization actions occur.
+
+---
+
+## Why TraceSync Exists
+
+Many synchronization tools focus on automation.
+
+TraceSync focuses on confidence.
+
+The goal is not to synchronize files as quickly as possible.
+
+The goal is to help users understand:
+
+1. What changed?
+2. Which copy is newer?
 3. What will happen if I copy?
+4. Is it safe to proceed?
+
+This approach helps reduce accidental overwrites and makes file synchronization easier for non-technical users.
 
 ---
 
 ## Current Status
 
-Current Version: v0.1.5 (Development)
+Current Version: v0.2.0 (Development)
 
-Implemented:
+### Implemented
 
-- Folder scanning
-- Relative-path-based file matching
-- File comparison engine
-- Difference classification
-- CompareStatus enum
-- Basic desktop GUI
-- Comparison results Treeview
-- Summary statistics bar
-- Row color coding
-- Quick filter buttons
-- Status bar
+#### Core Engine
 
----
+* FileRecord model
+* Recursive folder scanner
+* Relative-path comparison engine
+* ComparisonResult model
+* CompareStatus enum
+* SyncService orchestration layer
 
-## Core Philosophy
+#### User Interface
 
-TraceSync is intentionally designed around a:
+* Desktop GUI (Tkinter)
+* Results Treeview
+* Summary statistics bar
+* Status bar
+* Row color highlighting
+* Quick filters
+* Active filter highlighting
+* Results section header
+* Improved comparison workflow
 
-Compare → Review → Confirm → Copy
+#### Configuration
 
-workflow.
+* SettingsService
+* JSON-based settings persistence
+* Automatic folder restoration
+* Defensive settings handling
 
-The goal is to prevent accidental overwrites while remaining simple enough for non-technical users.
+#### Layout Refresh
 
----
-
-## File Identity Rule
-
-Files are matched using their relative path.
-
-Example:
-
-Left Folder:
-
-Finance/
-└── Reports/
-    └── June.xlsx
-
-Right Folder:
-
-Finance/
-└── Reports/
-    └── June.xlsx
-
-These are considered the same file identity regardless of:
-
-- Modified date
-- File size
-- Creator information
-
-Relative path serves as the source of truth.
+* Side-by-side Local and Server folder panels
+* Dedicated comparison action area
+* Synchronization action placeholders
+* Improved spacing and workflow organization
 
 ---
 
 ## Comparison Statuses
 
-| Status | Meaning |
-|----------|----------|
-| Local Newer | Local file has a newer modification date |
+| Status       | Meaning                                   |
+| ------------ | ----------------------------------------- |
+| Local Newer  | Local file has a newer modification date  |
 | Server Newer | Server file has a newer modification date |
-| Same | Both files have matching modification dates |
-| Local Only | File exists only in Local Folder |
-| Server Only | File exists only in Server Folder |
+| Same         | Both copies match                         |
+| Local Only   | Exists only in Local folder               |
+| Server Only  | Exists only in Server folder              |
 
 ---
 
-## Project Structure
+## File Identity Model
+
+Files are matched using their relative path.
+
+Example:
+
+Finance/
+└── Reports/
+└── June.xlsx
+
+and
+
+Finance/
+└── Reports/
+└── June.xlsx
+
+are treated as the same file identity even if timestamps differ.
+
+Relative path serves as the source of truth during comparison.
+
+---
+
+## Architecture
 
 ```text
 tracesync/
@@ -106,120 +177,89 @@ tracesync/
 │   └── comparison_result.py
 │
 ├── utils/
+│   ├── settings.py
 │   └── backup.py
 │
-├── assets/
+├── VERSION
 │
 └── requirements.txt
 ```
 
 ---
 
-## Release History
-### v0.1.5
-
-- Refreshed application layout
-- Introduced side-by-side Local and Server folder panels
-- Added settings persistence for selected folders
-- Automatically restores last used folders on startup
-- Added dedicated Results section header
-- Added copy action bar foundation
-- Improved Compare button visibility and workflow
-- Added active filter highlighting
-- Added comparison progress status feedback
-- Improved spacing, grouping, and overall usability
-
-### v0.1.4
-
-- Added SettingsService
-- Added settings.json persistence
-- Remember last selected folders
-- Defensive handling of missing settings file
-- Defensive handling of invalid settings data
-
-### v0.1.3
-
-- Added row color highlighting for comparison results
-- Added filter buttons for all comparison statuses
-- Added status bar with active view information
-- Preserved selected filter across comparisons
-- Improved comparison result navigation
-
-### v0.1.2
-
-- Added CompareStatus enum
-- Migrated comparison engine to enum-based statuses
-- Added summary statistics bar
-- Established foundation for filtering and row styling
-
-### v0.1.1
-
-- Initial comparison workflow
-- Folder scanning
-- File matching
-- Difference classification
-- Desktop GUI
-
-
 ## Roadmap
 
-### v0.1.x — Comparison Experience
-
-#### Completed
-
-- [x] FileRecord model
-- [x] Recursive folder scanner
-- [x] Comparison engine
-- [x] SyncService orchestration
-- [x] Desktop GUI
-- [x] Results Treeview
-- [x] CompareStatus Enum
-- [x] Summary statistics bar
-- [x] Row color coding
-- [x] Quick filter buttons
-- [x] Status bar
-- [x] Settings persistence
-- [x] Automatic folder restoration (Remember last folders)
-- [x] Side-by-side folder selectors
-- [x] Layout refresh (Left | Right folder layout)
-- [x] Active filter highlighting
-- [x] Improved comparison workflow
+### v0.2.x — Results Exploration
 
 #### Planned
 
-- [ ] File details dialog
-- [ ] Column sorting
+* File details dialog
+* Double-click file inspection
+* Local timestamp display
+* Server timestamp display
+* File size display
+* About dialog
+* Column sorting
 
 ---
 
-### v0.2.x — Safe Copying
+### v0.3.x — Safe Synchronization
 
 #### Planned
 
-- [ ] Copy selected files
-- [ ] Copy all differences
-- [ ] Copy confirmation dialog
-- [ ] Dry-run preview
-- [ ] Copy result summary
+* Copy selected files
+* Copy all differences
+* Synchronization confirmation dialogs
+* Dry-run preview
+* Copy result summaries
 
 #### Safety Features
 
-- [ ] Automatic backup before overwrite
-- [ ] Restore from backup
-- [ ] Error reporting
+* Automatic backup before overwrite
+* Restore from backup
+* Synchronization error reporting
 
 ---
 
-### v0.3.x — Usability Enhancements
+### v0.4.x — Productivity Features
 
 #### Planned
 
-- [ ] Search box
-- [ ] Hide Same Files toggle
-- [ ] Recent folder history
-- [ ] Export comparison report
-- [ ] Open containing folder
-- [ ] Open selected file
+* Search and filtering enhancements
+* Hide Same Files toggle
+* Export comparison reports
+* Recent folder history
+* Open containing folder
+* Open selected file
+
+---
+
+### v0.5.x — Advanced File Inspection
+
+#### Planned
+
+* Excel workbook comparison
+* Changed worksheet detection
+* Changed row detection
+* Changed cell detection
+* Difference review dialog
+
+Example:
+
+Workbook: Budget.xlsx
+
+Changed Sheets:
+
+* Payroll
+* Expenses
+
+Potential Future Enhancements:
+
+* Cell-level value comparison
+* Change summaries
+* Review-focused conflict inspection
+
+This feature is intended to help users identify where changes occurred without manually reviewing entire workbooks.
 
 ---
 
@@ -227,30 +267,32 @@ tracesync/
 
 The following features are intentionally deferred:
 
-- Real-time synchronization
-- Automatic synchronization
-- Background file watchers
-- Hash-based verification
-- Manifest databases
+* Real-time synchronization
+* Automatic synchronization
+* Background file watchers
+* Hash-based verification
+* Manifest databases
 
-These may be introduced in later versions if they can be implemented without compromising safety and transparency.
+TraceSync will continue prioritizing transparency and user confidence over aggressive automation.
 
 ---
 
 ## Design Goals
 
-- Windows-first experience
-- LGU-friendly workflow
-- Minimal learning curve
-- Prevent accidental overwrites
-- Prioritize user confidence over automation
-- Simple architecture and maintainability
+* Windows-first experience
+* LGU-friendly workflow
+* Minimal learning curve
+* Safe synchronization practices
+* Prevent accidental overwrites
+* Clear comparison results
+* Simple and maintainable architecture
 
 ---
 
 ## Long-Term Vision
 
-TraceSync began as a standalone utility for comparing local and server folders.
+TraceSync began as a standalone utility for comparing Local and Server folders.
 
-Future versions may integrate with TracePoint and other document management workflows where file visibility, auditability, and safe synchronization are critical.
+The long-term goal is to evolve it into a review-first synchronization platform that helps organizations understand file changes before synchronization occurs.
 
+Future versions may integrate with TracePoint and other document management workflows where auditability, visibility, and safe synchronization are critical.
