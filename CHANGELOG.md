@@ -1,4 +1,20 @@
 # Changelog
+## [0.3.0] - 2026-06-26
+### ✨ Added
+Finished results exploration enhancements:
+- Added File Details dialog for inspecting comparison results
+- Implemented double-click support to open file details from the Results list
+- Added human-friendly status descriptions for comparison results
+- Displayed detailed Local and Server file information (path, modified date, file size)
+- Added automatic formatting for file sizes (B, KB, MB, GB)
+- Added automatic formatting for file modification timestamps
+- Added graceful handling of missing Local/Server files in the details dialog
+- Added Copy Path functionality for Local and Server file paths
+- Refactored dialog population into reusable helper methods for improved maintainability
+- Improved dialog architecture by using ComparisonResult directly without additional filesystem access
+- Added keyboard shortcut (Esc) to quickly close the File Details dialog
+- Removed development-only Test Dialog after integration
+
 ## [0.2.0] - 2026-06-17
 ### ✨ Added
 feat(ui): complete v0.1.5 layout refresh and UX improvements
