@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-
+from datetime import datetime
 from models.comparison_result import ComparisonResult
 
 
@@ -69,7 +69,98 @@ class FileDetailsDialog(tk.Toplevel):
         self._build_button_frame(main_frame)
 
     def _populate(self):
-        pass
+        self.file_relative_path_var.set(
+            self.result.relative_path
+        )
+
+        self.file_status_var.set(
+            self._friendly_status(self.result.status)
+        )
+
+        self._populate_record(
+            self.result.local_record,
+            self.local_path_var,
+            self.local_modified_var,
+            self.local_size_var,
+        )
+
+        self._populate_record(
+            self.result.server_record,
+            self.server_path_var,
+            self.server_modified_var,
+            self.server_size_var,
+        )
+
+    def _populate_record(
+        self,
+        record,
+        path_var,
+        modified_var,
+        size_var,
+    ):
+        if record is None:
+            path_var.set("—")
+            modified_var.set("Not Available")
+            size_var.set("—")
+            return
+
+        path_var.set(record.absolute_path)
+
+        modified_var.set(
+            self._format_datetime(
+                record.modified_time
+            )
+        )
+
+        size_var.set(
+            self._format_size(
+                record.size
+            )
+        )
+
+    def _format_datetime(self, timestamp):
+        return datetime.fromtimestamp(
+            timestamp
+        ).strftime("%Y-%m-%d %I:%M:%S %p")
+
+    def _format_size(self, size):
+        units = ["B", "KB", "MB", "GB", "TB"]
+
+        value = float(size)
+
+        for unit in units:
+            if value < 1024 or unit == units[-1]:
+                if unit == "B":
+                    return f"{int(value)} {unit}"
+
+                return f"{value:.2f} {unit}"
+
+            value /= 1024
+
+    def _friendly_status(self, status):
+        messages = {
+            CompareStatus.LOCAL_NEWER:
+                "Local file is newer.",
+
+            CompareStatus.SERVER_NEWER:
+                "Server file is newer.",
+
+            CompareStatus.LOCAL_ONLY:
+                "File exists only in the Local folder.",
+
+            CompareStatus.SERVER_ONLY:
+                "File exists only in the Server folder.",
+
+            CompareStatus.SAME:
+                "Files are identical.",
+        }
+
+        return messages.get(
+            status,
+            status.value,
+        )
+
+    
 
     def _build_summary_frame(self, parent):
         summary_frame = ttk.LabelFrame(
@@ -236,4 +327,31 @@ class FileDetailsDialog(tk.Toplevel):
             command=self.destroy,
         ).pack(
             side="right",
+        )
+
+    def _populate_record(
+        self,
+        record,
+        path_var,
+        modified_var,
+        size_var,
+    ):
+        if record is None:
+            path_var.set("—")
+            modified_var.set("Not Available")
+            size_var.set("—")
+            return
+
+        path_var.set(record.absolute_path)
+
+        modified_var.set(
+            self._format_datetime(
+                record.modified_time
+            )
+        )
+
+        size_var.set(
+            self._format_size(
+                record.size
+            )
         )
