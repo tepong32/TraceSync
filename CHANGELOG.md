@@ -31,9 +31,6 @@ feat(ui): complete v0.1.5 layout refresh and UX improvements
 
 ## [0.1.4] - 2026-06-16
 ### ✨ Added
-## [0.1.4] - 2026-06-16
-
-### ✨ Added
 feat: remember last selected folders
 
 - Added SettingsService
