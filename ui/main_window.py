@@ -1,5 +1,4 @@
 from collections import Counter
-from models.compare_status import CompareStatus
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
@@ -21,7 +20,7 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title(f"TraceSync v0.2.1")
+        self.title(f"TraceSync v0.3.0")
         self.geometry("1000x600")
         self.minsize(800, 500)
 
