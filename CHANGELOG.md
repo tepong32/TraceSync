@@ -1,4 +1,14 @@
 # Changelog
+## [0.3.1] - 2026-07-02
+### ✨ Added
+Implemented synchronization candidate selection.
+
+- Added synchronization candidate selection to SyncService.
+- Centralized synchronization business rules.
+- Connected action buttons to candidate availability.
+- Refactored MainWindow to use SyncService for synchronization state.
+- Prepared the application for bulk synchronization.
+
 ## [0.3.0] - 2026-06-26
 ### ✨ Added
 Finished results exploration enhancements:
