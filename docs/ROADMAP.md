@@ -10,12 +10,12 @@ Development follows **milestone-based planning**. Each milestone focuses on deli
 
 # Current Project Status
 
-| Item              | Value                          |
-| ----------------- | ------------------------------ |
-| Current Version   | **v0.2.0**                     |
-| Current Branch    | **v0.2.1-results_exploration** |
-| Current Milestone | **Results Exploration**        |
-| Status            | 🚧 In Progress                 |
+| Item              | Value                              |
+| ----------------- | ---------------------------------- |
+| Current Version   | **v0.3.1**                         |
+| Current Branch    | **v0.3.1-sync-confirmation**       |
+| Current Milestone | **Synchronization**                |
+| Status            | 🚧 In Progress                     |
 
 ---
 
@@ -33,6 +33,62 @@ Before moving to the next milestone:
 * The application should remain stable.
 
 Avoid introducing unrelated features into an active milestone.
+
+---
+
+# Versioning Strategy
+
+TraceSync follows milestone-based semantic versioning.
+
+## Minor Versions
+
+A **minor version** starts a new roadmap milestone.
+
+Examples:
+
+- v0.2.x — Results Exploration
+- v0.3.x — Synchronization
+- v0.4.x — Explorer Polish
+
+## Patch Versions
+
+A **patch version** represents a completed, stable phase within the current milestone.
+
+Each patch should:
+
+- implement one complete capability
+- keep the application stable
+- be safe to merge into master
+
+Example:
+
+v0.3.0
+Synchronization milestone begins
+
+↓
+
+v0.3.1
+Candidate Selection
+
+↓
+
+v0.3.2
+Synchronization Confirmation
+
+↓
+
+v0.3.3
+Synchronization Engine
+
+↓
+
+v0.3.4
+SyncResult Architecture
+
+↓
+
+v0.3.5
+Progress & Auto Refresh
 
 ---
 
@@ -134,58 +190,80 @@ Improve usability and overall application layout.
 
 ---
 
-# 🚧 Current Milestone
-
-# v0.2.1 — Results Exploration
+## v0.2.1 — Results Exploration
 
 **Goal**
 
-Allow users to inspect comparison results before any synchronization actions.
+Allow users to inspect comparison results before synchronization.
 
-### Progress
+### Completed
 
-* [x] Infrastructure folders
-* [x] AGENTS.md
-* [x] Project workflow established
-* [x] ComparisonResult preserves FileRecord references
+- [x] File Details dialog
+- [x] Double-click Treeview support
+- [x] Friendly status descriptions
+- [x] Local/Server file information
+- [x] File size formatting
+- [x] Timestamp formatting
+- [x] Missing file handling
+- [x] Copy Path functionality
+- [x] Dialog population helper refactoring
+- [x] ComparisonResult-based dialog (no filesystem rescans)
+- [x] Esc key closes dialog
+- [x] Removed development-only testing UI
 
-### Remaining
+---
 
-* [x] File Details dialog (layout)
-* [ ] File Details dialog (complete feat)
-* [ ] Double-click row action
-* [ ] Results context menu
-* [ ] Open Local File
-* [ ] Open Server File
-* [ ] Open Local Folder
-* [ ] Open Server Folder
-* [ ] Treeview column sorting
-* [ ] Auto-size Treeview columns
-* [ ] About dialog
-* [ ] VERSION file support
+# 🚧 Current Milestone
+
+## v0.3.x — Synchronization
+
+**Goal**
+
+Safely synchronize files while preserving a clean service-oriented architecture.
+
+### Phase 1 — Candidate Selection ✅
+
+- [x] Added SyncService candidate selection helpers.
+- [x] Centralized synchronization eligibility rules.
+- [x] Added shared candidate collection helper.
+- [x] Connected synchronization button availability to SyncService.
+- [x] Removed synchronization business logic from MainWindow.
+
+### Phase 2 — Confirmation Dialog
+
+- [ ] Display synchronization direction.
+- [ ] Display number of files to synchronize.
+- [ ] Display destination folder.
+- [ ] Display overwrite warning.
+- [ ] Allow user confirmation or cancellation.
+
+### Phase 3 — Synchronization Engine
+
+- [ ] Copy Local → Server
+- [ ] Copy Server → Local
+- [ ] Preserve timestamps (shutil.copy2)
+- [ ] Automatically create destination folders
+- [ ] Safe bulk synchronization
+
+### Phase 4 — SyncResult
+
+- [ ] Introduce SyncResult dataclass.
+- [ ] Return structured synchronization results.
+- [ ] Eliminate primitive synchronization return values.
+
+### Phase 5 — Progress & Refresh
+
+- [ ] Progress indicator.
+- [ ] Status bar updates.
+- [ ] Automatically rerun comparison.
+- [ ] Refresh Treeview.
+- [ ] Refresh summary statistics.
 
 ---
 
 # Planned Milestones
 
-## v0.2.2 — Synchronization
-
-**Goal**
-
-Safely synchronize files between folders.
-
-### Planned
-
-* [ ] Copy Local → Server
-* [ ] Copy Server → Local
-* [ ] Confirmation dialogs
-* [ ] Progress dialog
-* [ ] Backup before overwrite
-* [ ] Synchronization summary
-
----
-
-## v0.2.3 — Explorer Polish
+## v0.4.0 — Explorer Polish
 
 **Goal**
 
@@ -202,7 +280,7 @@ Make TraceSync feel like a polished Windows desktop application.
 
 ---
 
-## v0.3.0 — Intelligent Comparison
+## v0.5.0 — Intelligent Comparison
 
 **Goal**
 
@@ -218,7 +296,7 @@ Provide deeper file analysis beyond timestamps.
 
 ---
 
-## v0.4.0 — Excel Awareness
+## v0.6.0 — Excel Awareness
 
 **Goal**
 
@@ -231,6 +309,12 @@ Improve comparison of Microsoft Excel files.
 * [ ] Sheet count comparison
 * [ ] Workbook summary
 * [ ] Preview changed worksheets
+
+---
+
+## v0.7.x — Backup & Recovery
+
+* [ ] TBD
 
 ---
 
