@@ -36,6 +36,7 @@ class MainWindow(tk.Tk):
 
 
         self._build_ui()
+        self._update_sync_buttons()
         self._load_saved_folders()
 
     def _build_ui(self):
@@ -384,22 +385,26 @@ class MainWindow(tk.Tk):
             weight=1,
         )
 
-        ttk.Button(
+        self.copy_local_button = ttk.Button(
             action_frame,
             text="Copy from Local → Server",
             state="disabled",
-        ).grid(
+        )
+
+        self.copy_local_button.grid(
             row=0,
             column=0,
             sticky="ew",
             padx=(0, 5),
         )
 
-        ttk.Button(
+        self.copy_server_button = ttk.Button(
             action_frame,
             text="Copy from Server → Local",
             state="disabled",
-        ).grid(
+        )
+
+        self.copy_server_button.grid(
             row=0,
             column=1,
             sticky="ew",
@@ -499,6 +504,32 @@ class MainWindow(tk.Tk):
 
         self.populate_tree(filtered_results)
 
+    def _update_sync_buttons(self):
+        """
+        Enable or disable synchronization buttons based on
+        the currently available synchronization candidates.
+        """
+
+        local_candidates = (
+            self.sync_service.get_local_to_server_candidates(
+                self.results
+            )
+        )
+
+        server_candidates = (
+            self.sync_service.get_server_to_local_candidates(
+                self.results
+            )
+        )
+
+        self.copy_local_button.configure(
+            state="normal" if local_candidates else "disabled"
+        )
+
+        self.copy_server_button.configure(
+            state="normal" if server_candidates else "disabled"
+        )
+
     def compare_folders(self):
         local_folder = self.local_var.get().strip()
         server_folder = self.server_var.get().strip()
@@ -542,9 +573,12 @@ class MainWindow(tk.Tk):
             )
 
             self.summary_var.set(summary_text)
+
             self.apply_filter(
                 self.current_filter
             )
+
+            self._update_sync_buttons()
 
         except Exception as exc:
             messagebox.showerror(
