@@ -5,6 +5,10 @@ from pathlib import Path
 from colorama import Fore, Style, init
 import argparse
 
+# Keep release commands usable in Windows terminals that still use a legacy code page.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="backslashreplace")
+
 init(autoreset=True)
 
 VERSION_FILE = Path("VERSION")
