@@ -1,19 +1,24 @@
 import subprocess
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from colorama import Fore, Style, init
 import argparse
 
+# Keep release commands usable in Windows terminals that still use a legacy code page.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(errors="backslashreplace")
+
 init(autoreset=True)
 
 VERSION_FILE = Path("VERSION")
 CHANGELOG_FILE = Path("CHANGELOG.md")
-# 1. Configuration for files that need version replacement
+# Files containing the current release version outside VERSION and CHANGELOG.
 VERSIONED_FILES = [
-    Path("setup.py"),  # Common for Python packages
-    Path("src/__init__.py"), # Example for an internal file
+    Path("README.md"),
+    Path("docs/ROADMAP.md"),
+    Path("ui/main_window.py"),
+    Path("AGENTS.md"),
 ]
 # Define valid changelog categories and their emojis/headers
 CHANGELOG_CATEGORIES = {
@@ -81,17 +86,15 @@ def build_changelog_entry(new_version, message, category="feature"):
 
 
 def update_version_in_files(old_version, new_version, dry_run=False):
-    """Update version string in secondary files (e.g., setup.py)."""
+    """Update the current version in release-facing project files."""
     updated_files = []
-    # Regex to find version strings like version='X.Y.Z' or __version__ = 'X.Y.Z'
-    pattern = re.compile(r"version\s*=\s*['\"]" + re.escape(old_version) + r"['\"]|__version__\s*=\s*['\"]" + re.escape(old_version) + r"['\"]")
-    replacement = r"\g<0>".replace(old_version, new_version) # Preserve quotes/spacing
 
     for file_path in VERSIONED_FILES:
         if file_path.exists():
             try:
                 content = file_path.read_text(encoding="utf-8")
-                new_content, count = re.subn(pattern, replacement, content)
+                new_content = content.replace(old_version, new_version)
+                count = content.count(old_version)
 
                 if count > 0:
                     if not dry_run:
@@ -107,7 +110,7 @@ def update_version_in_files(old_version, new_version, dry_run=False):
     return updated_files
 
 
-def update_files(new_version, message, category, dry_run=False):
+def update_files(old_version, new_version, message, category, dry_run=False):
     """Safely update version and changelog with UTF-8 encoding."""
     changelog_entry = build_changelog_entry(new_version, message, category)
     files_to_add = ["VERSION", "CHANGELOG.md"]
@@ -116,7 +119,7 @@ def update_files(new_version, message, category, dry_run=False):
         print(Style.BRIGHT + Fore.MAGENTA + "\n🚀 Dry Run Preview (no files written):\n")
         print(Fore.CYAN + f"📦 VERSION would become:\n{new_version}\n")
         print(Fore.CYAN + "📝 CHANGELOG entry would be:\n" + Fore.RESET + changelog_entry)
-        update_version_in_files(get_current_version(), new_version, dry_run=True) # Run secondary file update in dry-run
+        update_version_in_files(old_version, new_version, dry_run=True)
         print(Fore.GREEN + "✅ Nothing written. Use without --dry-run to apply changes.\n")
         return
 
@@ -144,7 +147,7 @@ def update_files(new_version, message, category, dry_run=False):
     CHANGELOG_FILE.write_text(new_content.strip() + "\n", encoding="utf-8")
 
     # Update secondary files and track them for git add
-    updated_secondary_files = update_version_in_files(get_current_version(), new_version, dry_run=False)
+    updated_secondary_files = update_version_in_files(old_version, new_version, dry_run=False)
     files_to_add.extend(updated_secondary_files)
     
     print(Fore.GREEN + f"✅ Updated VERSION and CHANGELOG.md → v{new_version}")
@@ -258,7 +261,7 @@ def main():
     new_version = bump_version(current_version, args.bump)
     
     # Update files returns the list of files to be added to git
-    files_to_add = update_files(new_version, message, args.category, dry_run=args.dry_run)
+    files_to_add = update_files(current_version, new_version, message, args.category, dry_run=args.dry_run)
     
     # Perform git operations
     git_commit_and_tag(new_version, message, files_to_add, dry_run=args.dry_run)

@@ -1,4 +1,19 @@
 # Changelog
+## [0.3.3] - 2026-07-31
+### ✨ Added
+- Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.
+
+## [0.3.2] - 2026-07-30
+### Added
+- Completed the reviewed synchronization workflow: preview, confirmation, background job, progress, cancellation, and completion summary.
+- Added provider-based storage abstractions and a local filesystem provider for future storage backends.
+- Added reusable synchronization preview and job models, plus filesystem-level synchronization tests.
+- Added just-in-time source and destination validation so files changed after confirmation are skipped instead of copied over silently.
+
+### Changed
+- SyncService now orchestrates storage providers and generates an immutable copy plan before a job starts.
+- Updated the main window synchronization buttons from placeholders to safe one-way copy actions.
+
 ## [0.3.0] - 2026-06-26
 ### ✨ Added
 Finished results exploration enhancements:
@@ -29,8 +44,6 @@ feat(ui): complete v0.1.5 layout refresh and UX improvements
 - add synchronization action bar foundation
 - improve usability for non-technical users
 
-## [0.1.4] - 2026-06-16
-### ✨ Added
 ## [0.1.4] - 2026-06-16
 
 ### ✨ Added
