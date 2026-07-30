@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.3] - 2026-07-31
+### ✨ Added
+- Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.
+
 ## [0.3.2] - 2026-07-30
 ### Added
 - Completed the reviewed synchronization workflow: preview, confirmation, background job, progress, cancellation, and completion summary.
