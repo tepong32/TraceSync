@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
 from models.comparison_result import ComparisonResult
+from models.compare_status import CompareStatus
 
 
 class FileDetailsDialog(tk.Toplevel):
@@ -91,32 +92,6 @@ class FileDetailsDialog(tk.Toplevel):
             self.server_size_var,
         )
 
-    def _populate_record(
-        self,
-        record,
-        path_var,
-        modified_var,
-        size_var,
-    ):
-        if record is None:
-            path_var.set("—")
-            modified_var.set("Not Available")
-            size_var.set("—")
-            return
-
-        path_var.set(record.absolute_path)
-
-        modified_var.set(
-            self._format_datetime(
-                record.modified_time
-            )
-        )
-
-        size_var.set(
-            self._format_size(
-                record.size
-            )
-        )
 
     def _format_datetime(self, timestamp):
         return datetime.fromtimestamp(
@@ -301,6 +276,7 @@ class FileDetailsDialog(tk.Toplevel):
         ttk.Button(
             file_frame,
             text="Copy Path",
+            command=lambda value=path_var: self._copy_path(value),
         ).grid(
             row=3,
             column=1,
@@ -312,6 +288,13 @@ class FileDetailsDialog(tk.Toplevel):
             lambda event: self.destroy(),
         )
         return file_frame
+
+    def _copy_path(self, path_var):
+        path = path_var.get()
+        if path == "—":
+            return
+        self.clipboard_clear()
+        self.clipboard_append(path)
 
     def _build_button_frame(self, parent):
         button_frame = ttk.Frame(parent)
