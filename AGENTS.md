@@ -159,7 +159,7 @@ Features should be developed in milestone branches.
 
 Example:
 
-v0.2.1-results_exploration
+v0.3.2-synchronization
 
 Commits should remain focused and descriptive.
 
@@ -191,6 +191,10 @@ core/
 scanner.py
 comparer.py
 sync_service.py
+storage_provider.py
+local_storage_provider.py
+storage_scanner.py
+sync_job_runner.py
 
 models/
 
