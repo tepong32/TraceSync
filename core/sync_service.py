@@ -1,4 +1,5 @@
 from core.comparer import compare_folders
+from core.ignore_rule_engine import IgnoreRuleEngine
 from core.local_storage_provider import LocalStorageProvider
 from core.storage_provider import StorageProvider
 from core.storage_scanner import StorageScanner
@@ -6,6 +7,7 @@ from models.compare_status import CompareStatus
 from models.comparison_result import ComparisonResult
 from models.sync_direction import SyncDirection
 from models.sync_preview import SyncOperation, SyncPreview, SyncPreviewItem
+
 
 
 class SyncService:
@@ -27,6 +29,7 @@ class SyncService:
             raise ValueError("Specify either server_provider or destination_provider, not both.")
         self.local_provider = source_provider or local_provider
         self.server_provider = destination_provider or server_provider
+        self._ignore_engine = IgnoreRuleEngine()
 
     def compare(self, local_folder: str | None = None, server_folder: str | None = None) -> list[ComparisonResult]:
         """Scan both providers once and return their comparison results."""
@@ -37,8 +40,15 @@ class SyncService:
             self.server_provider = LocalStorageProvider(server_folder, "Server Folder")
 
         local_provider, server_provider = self._providers()
-        local_files = StorageScanner.scan(local_provider)
-        server_files = StorageScanner.scan(server_provider)
+        local_files = StorageScanner.scan(
+            local_provider,
+            self._ignore_engine,
+        )
+
+        server_files = StorageScanner.scan(
+            server_provider,
+            self._ignore_engine,
+        )
         return compare_folders(local_files, server_files)
 
     def create_preview(
