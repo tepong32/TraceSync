@@ -4,11 +4,11 @@ Ignore Rule Engine
 
 Centralized ignore rule evaluation.
 """
-from collections.abc import Iterable
 from __future__ import annotations
 
 from fnmatch import fnmatch
 from pathlib import PurePosixPath
+from collections.abc import Iterable
 
 from .ignore_rule import IgnoreRule
 from .rule_source import RuleSource

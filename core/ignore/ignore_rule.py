@@ -5,7 +5,7 @@ Ignore Rule Model
 
 from dataclasses import dataclass
 
-from models.rule_source import RuleSource
+from .rule_source import RuleSource
 
 
 @dataclass(frozen=True, slots=True)
