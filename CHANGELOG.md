@@ -1,5 +1,5 @@
 # Changelog
-## [0.3.4] - 2026-08-03
+## [0.4.1] - 2026-08-03
 ### ✨ Added
 Smart Synchronization Phase 1 (Ignore Engine Foundation)
 
