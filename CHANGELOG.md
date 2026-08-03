@@ -1,4 +1,38 @@
 # Changelog
+## [0.4.2] - 2026-08-03
+### ✨ Added
+VM: Implement project-level ignore rule architecture
+
+Architecture
+- Added ProjectIgnoreLoader for .tracesyncignore discovery and parsing.
+- Added IgnoreLoader to aggregate ignore rules from supported sources.
+- Added create_ignore_engine() helper for constructing configured ignore engines.
+- Refactored IgnoreRuleEngine to evaluate injected rules rather than loading rule sources.
+
+Integration
+- Integrated project ignore loading into SyncService.
+- Preserved built-in ignore rules alongside project-defined rules.
+- Maintained centralized ignore evaluation through IgnoreRuleEngine.
+
+User-visible behavior
+- TraceSync now honors project-level .tracesyncignore files.
+- Files matching built-in or project-defined ignore patterns are excluded from comparison, preview, and synchronization automatically.
+
+Foundation
+- Established a modular ignore subsystem ready for future user-defined and workspace-specific ignore rule sources without altering synchronization logic.
+
+## [0.4.1] - 2026-08-03
+### ✨ Added
+Smart Synchronization Phase 1 (Ignore Engine Foundation)
+
+- Introduced the IgnoreRuleEngine as the centralized component for evaluating synchronization ignore rules.
+- Added the IgnoreRule model and RuleSource enumeration to support extensible rule management.
+- Implemented built-in ignore patterns for common system, temporary, and development-generated files.
+- Enhanced the StorageScanner to filter ignored files before entering the comparison pipeline.
+- Integrated the IgnoreRuleEngine into SyncService using dependency injection while preserving separation of concerns.
+- Established the architectural foundation for future .tracesyncignore support, user-defined ignore rules, and include/override capabilities.
+- Adopted the project design principle: TraceSync prioritizes office workflows over technical workflows, keeping synchronization simple for non-technical users.
+
 ## [0.3.3] - 2026-07-31
 ### ✨ Added
 - Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.

@@ -8,7 +8,7 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 | Item | Value |
 | --- | --- |
-| Version | **v0.3.3** |
+| Version | **v0.3.4** |
 | Milestone | **Synchronization** |
 | Status | **Release candidate** |
 
@@ -22,7 +22,7 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 - Folder selection persistence.
 - File details dialog and double-click inspection.
 
-### v0.3.3 - Synchronization
+### v0.3.4 - Synchronization
 
 - One-way Local -> Server and Server -> Local copy workflows.
 - Immutable preview created before any file operation.
