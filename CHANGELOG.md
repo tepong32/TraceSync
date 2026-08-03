@@ -1,4 +1,26 @@
 # Changelog
+## [0.4.2] - 2026-08-03
+### ✨ Added
+VM: Implement project-level ignore rule architecture
+
+Architecture
+- Added ProjectIgnoreLoader for .tracesyncignore discovery and parsing.
+- Added IgnoreLoader to aggregate ignore rules from supported sources.
+- Added create_ignore_engine() helper for constructing configured ignore engines.
+- Refactored IgnoreRuleEngine to evaluate injected rules rather than loading rule sources.
+
+Integration
+- Integrated project ignore loading into SyncService.
+- Preserved built-in ignore rules alongside project-defined rules.
+- Maintained centralized ignore evaluation through IgnoreRuleEngine.
+
+User-visible behavior
+- TraceSync now honors project-level .tracesyncignore files.
+- Files matching built-in or project-defined ignore patterns are excluded from comparison, preview, and synchronization automatically.
+
+Foundation
+- Established a modular ignore subsystem ready for future user-defined and workspace-specific ignore rule sources without altering synchronization logic.
+
 ## [0.4.1] - 2026-08-03
 ### ✨ Added
 Smart Synchronization Phase 1 (Ignore Engine Foundation)
