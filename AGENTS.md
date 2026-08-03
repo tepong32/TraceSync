@@ -159,7 +159,7 @@ Features should be developed in milestone branches.
 
 Example:
 
-v0.3.4-synchronization
+v0.4.1-synchronization
 
 Commits should remain focused and descriptive.
 
