@@ -1,4 +1,16 @@
 # Changelog
+## [0.3.4] - 2026-08-03
+### ✨ Added
+Smart Synchronization Phase 1 (Ignore Engine Foundation)
+
+- Introduced the IgnoreRuleEngine as the centralized component for evaluating synchronization ignore rules.
+- Added the IgnoreRule model and RuleSource enumeration to support extensible rule management.
+- Implemented built-in ignore patterns for common system, temporary, and development-generated files.
+- Enhanced the StorageScanner to filter ignored files before entering the comparison pipeline.
+- Integrated the IgnoreRuleEngine into SyncService using dependency injection while preserving separation of concerns.
+- Established the architectural foundation for future .tracesyncignore support, user-defined ignore rules, and include/override capabilities.
+- Adopted the project design principle: TraceSync prioritizes office workflows over technical workflows, keeping synchronization simple for non-technical users.
+
 ## [0.3.3] - 2026-07-31
 ### ✨ Added
 - Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.
