@@ -4,14 +4,14 @@ Ignore Rule Engine
 
 Centralized ignore rule evaluation.
 """
-
+from collections.abc import Iterable
 from __future__ import annotations
 
 from fnmatch import fnmatch
 from pathlib import PurePosixPath
 
-from models.ignore_rule import IgnoreRule
-from models.rule_source import RuleSource
+from .ignore_rule import IgnoreRule
+from .rule_source import RuleSource
 
 
 class IgnoreRuleEngine:
@@ -41,10 +41,11 @@ class IgnoreRuleEngine:
         "*.temp",
     )
 
-    def __init__(self) -> None:
-        self._rules: list[IgnoreRule] = []
-
-        self.load_builtin_rules()
+    def __init__(
+        self,
+        rules: Iterable[IgnoreRule] | None = None
+    ) -> None:
+        self._rules = list(rules or [])
 
     @property
     def rules(self) -> tuple[IgnoreRule, ...]:
@@ -52,13 +53,15 @@ class IgnoreRuleEngine:
 
         return tuple(self._rules)
 
-    def load_builtin_rules(self) -> None:
-        """Loads TraceSync's built-in ignore rules."""
-
-        self._rules.extend(
-            IgnoreRule(pattern=p, source=RuleSource.BUILTIN)
-            for p in self.BUILTIN_PATTERNS
-        )
+    @classmethod
+    def default_rules(cls) -> list[IgnoreRule]:
+        return [
+            IgnoreRule(
+                pattern=pattern,
+                source=RuleSource.BUILTIN,
+            )
+            for pattern in cls.BUILTIN_PATTERNS
+        ]
 
     def add_rule(self, rule: IgnoreRule) -> None:
         """Adds a rule to the engine."""

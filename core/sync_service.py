@@ -1,5 +1,5 @@
 from core.comparer import compare_folders
-from core.ignore_rule_engine import IgnoreRuleEngine
+from core.ignore.ignore_engine import create_ignore_engine
 from core.local_storage_provider import LocalStorageProvider
 from core.storage_provider import StorageProvider
 from core.storage_scanner import StorageScanner
@@ -29,17 +29,35 @@ class SyncService:
             raise ValueError("Specify either server_provider or destination_provider, not both.")
         self.local_provider = source_provider or local_provider
         self.server_provider = destination_provider or server_provider
-        self._ignore_engine = IgnoreRuleEngine()
+        # Created when compare() knows the project root.
+        self._ignore_engine: IgnoreRuleEngine | None = None
 
-    def compare(self, local_folder: str | None = None, server_folder: str | None = None) -> list[ComparisonResult]:
+    def compare(
+        self,
+        local_folder: str | None = None,
+        server_folder: str | None = None,
+    ) -> list[ComparisonResult]:
         """Scan both providers once and return their comparison results."""
         if local_folder is not None or server_folder is not None:
             if not local_folder or not server_folder:
                 raise ValueError("Both folders are required for comparison.")
-            self.local_provider = LocalStorageProvider(local_folder, "Local Folder")
-            self.server_provider = LocalStorageProvider(server_folder, "Server Folder")
+
+            self.local_provider = LocalStorageProvider(
+                local_folder,
+                "Local Folder",
+            )
+            self.server_provider = LocalStorageProvider(
+                server_folder,
+                "Server Folder",
+            )
 
         local_provider, server_provider = self._providers()
+
+        # Build a configured ignore engine for this project.
+        self._ignore_engine = create_ignore_engine(
+            local_provider.root
+        )
+
         local_files = StorageScanner.scan(
             local_provider,
             self._ignore_engine,
@@ -49,6 +67,7 @@ class SyncService:
             server_provider,
             self._ignore_engine,
         )
+
         return compare_folders(local_files, server_files)
 
     def create_preview(

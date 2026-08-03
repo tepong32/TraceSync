@@ -1,4 +1,4 @@
-from core.ignore_rule_engine import IgnoreRuleEngine
+from core.ignore.ignore_rule_engine import IgnoreRuleEngine
 from core.storage_provider import StorageProvider
 from models.file_record import FileRecord
 
