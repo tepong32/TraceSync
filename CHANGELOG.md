@@ -1,4 +1,8 @@
 # Changelog
+## [0.4.3] - 2026-08-09
+### ✨ Added
+- Add user-configurable ignore rules
+
 ## [0.4.2] - 2026-08-03
 ### ✨ Added
 VM: Implement project-level ignore rule architecture
