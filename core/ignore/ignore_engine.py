@@ -12,7 +12,10 @@ from .ignore_loader import IgnoreLoader
 from .ignore_rule_engine import IgnoreRuleEngine
 
 
-def create_ignore_engine(project_root: str | Path) -> IgnoreRuleEngine:
+def create_ignore_engine(
+    project_root: str | Path,
+    user_ignore_patterns=None,
+) -> IgnoreRuleEngine:
     """
     Build and return a configured IgnoreRuleEngine.
 
@@ -27,5 +30,5 @@ def create_ignore_engine(project_root: str | Path) -> IgnoreRuleEngine:
         Ready-to-use ignore rule engine.
     """
     loader = IgnoreLoader()
-    rules = loader.load(project_root)
+    rules = loader.load(project_root, user_ignore_patterns=user_ignore_patterns)
     return IgnoreRuleEngine(rules)

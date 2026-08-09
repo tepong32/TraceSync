@@ -1,11 +1,13 @@
 from collections import Counter
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from core.sync_service import SyncService
 from models.compare_status import CompareStatus
 from models.sync_direction import SyncDirection
 from ui.dialogs.file_details_dialog import FileDetailsDialog
+from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
@@ -17,7 +19,7 @@ class MainWindow(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("TraceSync v0.4.2")
+        self.title("TraceSync v0.4.3")
         self.geometry("1000x650")
         self.minsize(800, 500)
         self.results = []
@@ -46,7 +48,19 @@ class MainWindow(tk.Tk):
 
         toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Button(toolbar, text="Compare Folders", command=self.compare_folders, style="Primary.TButton", width=25).pack(side="left")
+        ttk.Button(
+            toolbar,
+            text="Ignore Settings",
+            command=self.edit_ignore_settings,
+            width=16,
+        ).pack(side="left")
+        ttk.Button(
+            toolbar,
+            text="Compare Folders",
+            command=self.compare_folders,
+            style="Primary.TButton",
+            width=25,
+        ).pack(side="left", padx=(8, 0))
         ttk.Label(self, textvariable=self.summary_var, anchor="w", padding=(10, 5)).pack(fill="x")
 
         filter_frame = ttk.Frame(self)
@@ -117,7 +131,11 @@ class MainWindow(tk.Tk):
         try:
             self.status_var.set("Comparing folders...")
             self.update_idletasks()
-            self.results = self.sync_service.compare(local_folder, server_folder)
+            self.results = self.sync_service.compare(
+                local_folder,
+                server_folder,
+                user_ignore_patterns=self.settings.get("ignore_patterns", []),
+            )
             self._show_comparison_results()
         except (OSError, ValueError) as exc:
             self._set_sync_buttons(False)
@@ -126,9 +144,23 @@ class MainWindow(tk.Tk):
 
     def _show_comparison_results(self):
         counts = Counter(result.status for result in self.results)
-        self.summary_var.set(" | ".join(f"{status.value}: {counts[status]}" for status in CompareStatus))
+        counts_text = " | ".join(f"{status.value}: {counts[status]}" for status in CompareStatus)
+        status_lines = [counts_text, self._build_ignore_status_line()]
+        self.summary_var.set("\n".join(line for line in status_lines if line))
         self.apply_filter(self.current_filter)
         self._set_sync_buttons(True)
+
+    def _build_ignore_status_line(self) -> str:
+        parts: list[str] = []
+        ignored_count = getattr(self.sync_service, "last_ignored_count", 0)
+        if ignored_count:
+            parts.append(f"{ignored_count} extra office files are being skipped.")
+        local_folder = self.local_var.get().strip()
+        if local_folder and Path(local_folder, ".tracesyncignore").is_file():
+            parts.append(".tracesyncignore is active for this comparison.")
+        if self.settings.get("ignore_patterns"):
+            parts.append("Your custom ignore patterns are in use.")
+        return " ".join(parts)
 
     def apply_filter(self, status):
         self.current_filter = status
@@ -172,12 +204,25 @@ class MainWindow(tk.Tk):
         job_state = job.snapshot()
         summary = job.summary()
         try:
-            self.results = self.sync_service.compare()
+            self.results = self.sync_service.compare(
+                user_ignore_patterns=self.settings.get("ignore_patterns", []),
+            )
             self._show_comparison_results()
         except OSError:
             self._set_sync_buttons(False)
         self.status_var.set(f"Synchronization {job_state.status.value.lower()}: {summary.copied_files} copied, {len(summary.errors)} errors.")
         SyncSummaryDialog(self, job)
+
+    def edit_ignore_settings(self):
+        dialog = IgnoreSettingsDialog(self, self.settings.get("ignore_patterns", []))
+        self.wait_window(dialog)
+        if not dialog.confirmed:
+            return
+        self.settings["ignore_patterns"] = dialog.patterns
+        SettingsService.save(self.settings)
+        self.status_var.set(f"Ignore rules saved ({len(dialog.patterns)} pattern(s)).")
+        if self.results:
+            self.compare_folders()
 
     def _set_sync_buttons(self, enabled: bool):
         state = "normal" if enabled and self.results else "disabled"

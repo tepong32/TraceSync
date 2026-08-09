@@ -31,11 +31,14 @@ class SyncService:
         self.server_provider = destination_provider or server_provider
         # Created when compare() knows the project root.
         self._ignore_engine: IgnoreRuleEngine | None = None
+        self.last_ignored_count = 0
 
     def compare(
         self,
         local_folder: str | None = None,
         server_folder: str | None = None,
+        *,
+        user_ignore_patterns: list[str] | None = None,
     ) -> list[ComparisonResult]:
         """Scan both providers once and return their comparison results."""
         if local_folder is not None or server_folder is not None:
@@ -55,18 +58,20 @@ class SyncService:
 
         # Build a configured ignore engine for this project.
         self._ignore_engine = create_ignore_engine(
-            local_provider.root
+            getattr(local_provider, "root", local_folder or "."),
+            user_ignore_patterns=user_ignore_patterns,
         )
 
-        local_files = StorageScanner.scan(
+        local_files, local_ignored = StorageScanner.scan_with_ignored_count(
             local_provider,
             self._ignore_engine,
         )
 
-        server_files = StorageScanner.scan(
+        server_files, server_ignored = StorageScanner.scan_with_ignored_count(
             server_provider,
             self._ignore_engine,
         )
+        self.last_ignored_count = local_ignored + server_ignored
 
         return compare_folders(local_files, server_files)
 

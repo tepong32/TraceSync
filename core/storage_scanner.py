@@ -21,14 +21,27 @@ class StorageScanner:
         """
         Scan a provider and optionally filter ignored files.
         """
-
-        files = provider.scan()
-
         if ignore_engine is None:
-            return files
+            return provider.scan()
 
-        return {
-            relative_path: record
-            for relative_path, record in files.items()
-            if not ignore_engine.is_ignored(relative_path)
-        }
+        return StorageScanner.scan_with_ignored_count(provider, ignore_engine)[0]
+
+    @staticmethod
+    def scan_with_ignored_count(
+        provider: StorageProvider,
+        ignore_engine: IgnoreRuleEngine,
+    ) -> tuple[dict[str, FileRecord], int]:
+        """
+        Scan a provider and return visible files plus ignored file count.
+        """
+        files = provider.scan()
+        included: dict[str, FileRecord] = {}
+        ignored_count = 0
+
+        for relative_path, record in files.items():
+            if ignore_engine.is_ignored(relative_path):
+                ignored_count += 1
+                continue
+            included[relative_path] = record
+
+        return included, ignored_count
