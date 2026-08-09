@@ -1,10 +1,31 @@
 # Changelog
 ## [0.4.3] - 2026-08-09
-### ✨ Added
-- Add user-configurable ignore rules
+### Added
 
+Architecture
+- Added settings-backed ignore source so users can define skip patterns in preferences.
+- Extended ignore loading to merge built-in, `.tracesyncignore`, and user patterns in a single predictable order.
+- Kept `IgnoreRuleEngine` matching logic unchanged while adding a dedicated user rule source (`RuleSource.USER` integration).
+- Added a simple ignore-pattern count summary for status text (`X extra office files are being skipped`).
+
+Integration
+- Added `ignore_patterns` setting with safe normalization (trim, blank-line/comment filtering, order-preserving display).
+- Wired user ignore patterns into `SyncService.compare(...)` through `SettingsService` and compare-time rule construction.
+- Reused the existing compare -> preview -> confirm -> run flow with no changes to destructive/sync behavior.
+- Updated comparison UI to keep office users informed when ignore filtering is actively skipping additional files.
+
+Visibility
+- Added an "Ignore Settings" dialog for non-technical users with plain-language help and examples.
+- Enabled editing and saving user ignore patterns in a multiline, line-per-pattern workflow.
+- Added user-facing preview text for the number of active custom ignore rules.
+
+Testing
+- Added/updated unit coverage for:
+  - user pattern normalization from settings
+  - ignore rule merge order (built-in + project + user)
+  - user pattern filtering in compare results
 ## [0.4.2] - 2026-08-03
-### ✨ Added
+### Ã¢Å“Â¨ Added
 VM: Implement project-level ignore rule architecture
 
 Architecture
@@ -26,7 +47,7 @@ Foundation
 - Established a modular ignore subsystem ready for future user-defined and workspace-specific ignore rule sources without altering synchronization logic.
 
 ## [0.4.1] - 2026-08-03
-### ✨ Added
+### Ã¢Å“Â¨ Added
 Smart Synchronization Phase 1 (Ignore Engine Foundation)
 
 - Introduced the IgnoreRuleEngine as the centralized component for evaluating synchronization ignore rules.
@@ -38,7 +59,7 @@ Smart Synchronization Phase 1 (Ignore Engine Foundation)
 - Adopted the project design principle: TraceSync prioritizes office workflows over technical workflows, keeping synchronization simple for non-technical users.
 
 ## [0.3.3] - 2026-07-31
-### ✨ Added
+### Ã¢Å“Â¨ Added
 - Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.
 
 ## [0.3.2] - 2026-07-30
@@ -53,7 +74,7 @@ Smart Synchronization Phase 1 (Ignore Engine Foundation)
 - Updated the main window synchronization buttons from placeholders to safe one-way copy actions.
 
 ## [0.3.0] - 2026-06-26
-### ✨ Added
+### Ã¢Å“Â¨ Added
 Finished results exploration enhancements:
 - Added File Details dialog for inspecting comparison results
 - Implemented double-click support to open file details from the Results list
@@ -69,7 +90,7 @@ Finished results exploration enhancements:
 - Removed development-only Test Dialog after integration
 
 ## [0.2.0] - 2026-06-17
-### ✨ Added
+### Ã¢Å“Â¨ Added
 feat(ui): complete v0.1.5 layout refresh and UX improvements
 
 - add side-by-side folder selector panels
@@ -84,7 +105,7 @@ feat(ui): complete v0.1.5 layout refresh and UX improvements
 
 ## [0.1.4] - 2026-06-16
 
-### ✨ Added
+### Ã¢Å“Â¨ Added
 feat: remember last selected folders
 
 - Added SettingsService
@@ -94,7 +115,7 @@ feat: remember last selected folders
 - Folder paths automatically restore on startup
 
 ## [0.1.3] - 2026-06-16
-### ✨ Added
+### Ã¢Å“Â¨ Added
 feat: improve comparison results UX
 
 - Added color-coded Treeview rows based on CompareStatus
@@ -105,7 +126,7 @@ feat: improve comparison results UX
 - Improved navigation of large comparison result sets
 
 ## [0.1.2] - 2026-06-10
-### ✨ Added
+### Ã¢Å“Â¨ Added
 TraceSync v0.1.2 progress
 
 - Added CompareStatus enum as centralized status source
@@ -121,15 +142,16 @@ TraceSync v0.1.2 progress
 - Established foundation for filtering, row colors, and future reporting
 
 ## [0.1.1] - 2026-06-10
-### ✨ Added
+### Ã¢Å“Â¨ Added
 - working comparer + gui window with folder selection option now working
 
 ## [0.1.0] - 2026-06-10
 initial commit
-### ✨ Added
+### Ã¢Å“Â¨ Added
 - FileRecord model
 - Recursive folder scanner
 - Folder comparison engine
 - SyncService
 - Initial Tkinter GUI
 - Results Treeview
+
