@@ -1,4 +1,4 @@
-# TraceSync Roadmap
+﻿# TraceSync Roadmap
 
 > **Simple. Safe. Predictable.**
 
@@ -36,12 +36,12 @@ Completed foundational capabilities:
 
 ---
 
-## v0.3.x — Synchronization
+## v0.3.x â€” Synchronization
 
 Completed synchronization foundation:
 
-* One-way Local → Server synchronization.
-* One-way Server → Local synchronization.
+* One-way Local â†’ Server synchronization.
+* One-way Server â†’ Local synchronization.
 * Synchronization candidate selection.
 * Immutable synchronization previews.
 * Explicit synchronization confirmation.
@@ -57,11 +57,11 @@ Completed synchronization foundation:
 
 ---
 
-# v0.4.x — Smart Synchronization
+# v0.4.x â€” Smart Synchronization
 
 The v0.4 milestone focused on making TraceSync smarter about which files should participate in comparison and synchronization while keeping the normal office workflow simple.
 
-## v0.4.1 — Ignore Engine Foundation
+## v0.4.1 â€” Ignore Engine Foundation
 
 Completed.
 
@@ -80,7 +80,7 @@ The ignore evaluator remains centralized so individual storage and synchronizati
 
 ---
 
-## v0.4.2 — Project Ignore Support
+## v0.4.2 â€” Project Ignore Support
 
 Completed.
 
@@ -101,7 +101,7 @@ Project ignore patterns automatically affect:
 
 ---
 
-## v0.4.3 — User-Configurable Ignore Rules
+## v0.4.3 â€” User-Configurable Ignore Rules
 
 Completed.
 
@@ -147,13 +147,13 @@ Project Rules
       +
 User Rules
 (Settings)
-      ↓
+      â†“
 IgnoreLoader
-      ↓
+      â†“
 IgnoreRuleEngine
-      ↓
+      â†“
 StorageScanner
-      ↓
+      â†“
 Comparison / Preview / Synchronization
 ```
 
@@ -165,11 +165,36 @@ The current ignore system should remain simple unless a real office workflow dem
 
 # Next Milestone
 
-## v0.5 — To Be Defined
+## v0.5 - Synchronization Confidence (In Progress)
 
-The next milestone should be established from the current repository backlog and product priorities before implementation begins.
+V0.5 focuses on helping office users decide what is safe to copy before approval.
 
-No v0.5 feature should be treated as committed solely because it appears in an older roadmap, README, backlog, or previous discussion.
+### Completed in v0.5.1
+
+- Rich File Details refresh:
+  - Better local/server context in the file inspection dialog.
+  - Human-readable size and modification formatting.
+  - File type and extension details.
+  - Clearer missing-file messaging for one-side differences.
+  - Added formatting utilities and tests used by the details dialog.
+
+### Completed in v0.5.2
+
+- Safer difference classification:
+  - Added office-friendly recommendation confidence metadata on each comparison row.
+  - Added low-confidence detection for equal timestamps + unequal size and close timestamp + size-change cases.
+  - Added unit tests for heuristic decision behavior.
+
+### Completed in v0.5.3
+
+- Decision assistance for synchronization previews:
+  - Surface recommendation/confidence in sync confirmation rows.
+  - Count low-confidence files before execution.
+  - Keep explicit uncertainty messaging visible at the approval step.
+
+### Planned in v0.5
+
+- Optional preview reason drill-down before synchronization.
 
 Before beginning v0.5 development:
 
@@ -290,11 +315,11 @@ The goal is:
 
 ```text
 SyncService
-    ↓
+    â†“
 StorageProvider
-    ↓
+    â†“
 Remote Provider
-    ↓
+    â†“
 Authentication / Authorization / Transport
 ```
 
@@ -351,15 +376,15 @@ TraceSync should evolve from:
 
 ```text
 Safe folder comparison
-        ↓
+        â†“
 Safe local/server synchronization
-        ↓
+        â†“
 Smart synchronization rules
-        ↓
+        â†“
 Improved synchronization safety
-        ↓
+        â†“
 Additional storage providers
-        ↓
+        â†“
 Secure remote/cloud synchronization
 ```
 
@@ -368,3 +393,5 @@ The priority remains:
 > **Reliability before breadth.**
 
 TraceSync should become more capable without becoming more complicated for the people who use it.
+
+

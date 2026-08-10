@@ -23,20 +23,29 @@ class SyncConfirmationDialog(tk.Toplevel):
         ttk.Label(frame, text=f"Direction: {preview.direction.display_name}", font=("Segoe UI", 10, "bold")).pack(anchor="w")
         ttk.Label(frame, text=f"Files to copy: {preview.total_files}").pack(anchor="w", pady=(8, 0))
         ttk.Label(frame, text=f"Create: {preview.create_count}    Replace existing: {preview.overwrite_count}").pack(anchor="w")
+        ttk.Label(frame, text=f"Potentially uncertain files: {preview.low_confidence_count}").pack(anchor="w")
         if preview.warnings:
-            warnings = "\n".join(f"• {warning}" for warning in preview.warnings)
+            warnings = "\n".join(f"\u2022 {warning}" for warning in preview.warnings)
             ttk.Label(frame, text=warnings, foreground="#8a4b00", wraplength=500).pack(anchor="w", pady=(10, 0))
 
         preview_frame = ttk.LabelFrame(frame, text="Planned actions", padding=6)
         preview_frame.pack(fill="both", expand=True, pady=12)
-        tree = ttk.Treeview(preview_frame, columns=("file", "action"), show="headings", height=min(10, max(3, preview.total_files)))
+        tree = ttk.Treeview(
+            preview_frame,
+            columns=("file", "action", "confidence"),
+            show="headings",
+            height=min(10, max(3, preview.total_files)),
+        )
         tree.heading("file", text="File")
-        tree.heading("action", text="Action")
-        tree.column("file", width=360)
-        tree.column("action", width=130, anchor="center")
+        tree.heading("action", text="Recommended Action")
+        tree.heading("confidence", text="Confidence")
+        tree.column("file", width=320)
+        tree.column("action", width=200, anchor="center")
+        tree.column("confidence", width=90, anchor="center")
         for item in preview.items:
-            action = "Replace existing" if item.overwrite else "Create new"
-            tree.insert("", "end", values=(item.relative_path, action))
+            action = item.decision_recommendation or ("Replace existing" if item.overwrite else "Create new")
+            confidence = item.decision_confidence or "Unknown"
+            tree.insert("", "end", values=(item.relative_path, action, confidence))
         tree.pack(fill="both", expand=True)
 
         buttons = ttk.Frame(frame)

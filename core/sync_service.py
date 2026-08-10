@@ -112,6 +112,9 @@ class SyncService:
                     reason=self._reason_for(result.status),
                     source_modified_time=source_record.modified_time,
                     source_size=source_record.size,
+                    decision_recommendation=(result.decision.recommendation if result.decision else None),
+                    decision_confidence=(result.decision.confidence.value if result.decision else None),
+                    decision_reason=(result.decision.reason if result.decision else None),
                     destination_modified_time=(destination_record.modified_time if destination_record else None),
                     destination_size=(destination_record.size if destination_record else None),
                 )

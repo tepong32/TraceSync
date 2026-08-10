@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
-from datetime import datetime
+from pathlib import Path
+from ui.utils.formatting import format_bytes, format_file_type, format_timestamp
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
+from models.comparison_decision import ConfidenceLevel
 
 
 class FileDetailsDialog(tk.Toplevel):
@@ -17,14 +19,22 @@ class FileDetailsDialog(tk.Toplevel):
 
         self.file_relative_path_var = tk.StringVar()
         self.file_status_var = tk.StringVar()
+        self.file_type_var = tk.StringVar()
+        self.file_recommendation_var = tk.StringVar()
+        self.file_confidence_var = tk.StringVar()
+        self.file_reason_var = tk.StringVar()
 
         self.local_path_var = tk.StringVar()
         self.local_modified_var = tk.StringVar()
         self.local_size_var = tk.StringVar()
+        self.local_type_var = tk.StringVar()
+        self.local_extension_var = tk.StringVar()
 
         self.server_path_var = tk.StringVar()
         self.server_modified_var = tk.StringVar()
         self.server_size_var = tk.StringVar()
+        self.server_type_var = tk.StringVar()
+        self.server_extension_var = tk.StringVar()
 
         self.title("File Details")
         self.resizable(False, False)
@@ -77,12 +87,24 @@ class FileDetailsDialog(tk.Toplevel):
         self.file_status_var.set(
             self._friendly_status(self.result.status)
         )
+        self.file_type_var.set(self._derive_file_type())
+        decision = self.result.decision
+        if decision is not None:
+            self.file_recommendation_var.set(decision.recommendation)
+            self.file_confidence_var.set(decision.confidence.value)
+            self.file_reason_var.set(decision.reason)
+        else:
+            self.file_recommendation_var.set("Review before synchronizing.")
+            self.file_confidence_var.set(ConfidenceLevel.LOW.value)
+            self.file_reason_var.set("No recommendation metadata is available.")
 
         self._populate_record(
             self.result.local_record,
             self.local_path_var,
             self.local_modified_var,
             self.local_size_var,
+            self.local_type_var,
+            self.local_extension_var,
         )
 
         self._populate_record(
@@ -90,41 +112,22 @@ class FileDetailsDialog(tk.Toplevel):
             self.server_path_var,
             self.server_modified_var,
             self.server_size_var,
+            self.server_type_var,
+            self.server_extension_var,
         )
-
-
-    def _format_datetime(self, timestamp):
-        return datetime.fromtimestamp(
-            timestamp
-        ).strftime("%Y-%m-%d %I:%M:%S %p")
-
-    def _format_size(self, size):
-        units = ["B", "KB", "MB", "GB", "TB"]
-
-        value = float(size)
-
-        for unit in units:
-            if value < 1024 or unit == units[-1]:
-                if unit == "B":
-                    return f"{int(value)} {unit}"
-
-                return f"{value:.2f} {unit}"
-
-            value /= 1024
-
     def _friendly_status(self, status):
         messages = {
             CompareStatus.LOCAL_NEWER:
-                "Local file is newer.",
+                "The Local copy appears more recent.",
 
             CompareStatus.SERVER_NEWER:
-                "Server file is newer.",
+                "The Server copy appears more recent.",
 
             CompareStatus.LOCAL_ONLY:
-                "File exists only in the Local folder.",
+                "The file exists only in the Local folder.",
 
             CompareStatus.SERVER_ONLY:
-                "File exists only in the Server folder.",
+                "The file exists only in the Server folder.",
 
             CompareStatus.SAME:
                 "Files are identical.",
@@ -191,6 +194,93 @@ class FileDetailsDialog(tk.Toplevel):
             pady=2,
         )
 
+        ttk.Label(
+            summary_frame,
+            text="File Type:",
+        ).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_type_var,
+        ).grid(
+            row=2,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Recommendation:",
+        ).grid(
+            row=3,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_recommendation_var,
+            wraplength=460,
+        ).grid(
+            row=3,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Confidence:",
+        ).grid(
+            row=4,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_confidence_var,
+        ).grid(
+            row=4,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Reason:",
+        ).grid(
+            row=5,
+            column=0,
+            sticky="nw",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_reason_var,
+            wraplength=460,
+            justify="left",
+        ).grid(
+            row=5,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
     def _build_file_frame(
         self,
         parent,
@@ -198,6 +288,8 @@ class FileDetailsDialog(tk.Toplevel):
         path_var,
         modified_var,
         size_var,
+        type_var,
+        extension_var,
     ):
         file_frame = ttk.LabelFrame(
             parent,
@@ -273,12 +365,54 @@ class FileDetailsDialog(tk.Toplevel):
             pady=2,
         )
 
+        ttk.Label(
+            file_frame,
+            text="Extension:",
+        ).grid(
+            row=3,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            file_frame,
+            textvariable=extension_var,
+        ).grid(
+            row=3,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            file_frame,
+            text="Type:",
+        ).grid(
+            row=4,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            file_frame,
+            textvariable=type_var,
+        ).grid(
+            row=4,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
         ttk.Button(
             file_frame,
             text="Copy Path",
             command=lambda value=path_var: self._copy_path(value),
         ).grid(
-            row=3,
+            row=5,
             column=1,
             sticky="e",
             pady=(10, 0),
@@ -291,7 +425,7 @@ class FileDetailsDialog(tk.Toplevel):
 
     def _copy_path(self, path_var):
         path = path_var.get()
-        if path == "—":
+        if path in {"—", "Not Available"}:
             return
         self.clipboard_clear()
         self.clipboard_append(path)
@@ -318,23 +452,39 @@ class FileDetailsDialog(tk.Toplevel):
         path_var,
         modified_var,
         size_var,
+        type_var,
+        extension_var,
     ):
         if record is None:
-            path_var.set("—")
+            path_var.set("Not Available")
             modified_var.set("Not Available")
             size_var.set("—")
+            type_var.set("Not Available")
+            extension_var.set("Not Available")
             return
 
         path_var.set(record.absolute_path)
+        extension = Path(record.absolute_path).suffix.lower()
+        extension_var.set(extension or "No extension")
 
         modified_var.set(
-            self._format_datetime(
+            format_timestamp(
                 record.modified_time
             )
         )
 
         size_var.set(
-            self._format_size(
+            format_bytes(
                 record.size
             )
         )
+        type_var.set(format_file_type(record.absolute_path))
+
+    def _derive_file_type(self) -> str:
+        if not self.result or not (self.result.local_record or self.result.server_record):
+            return "Unknown"
+
+        record = self.result.local_record or self.result.server_record
+        if record is None:
+            return "Unknown"
+        return format_file_type(record.absolute_path)

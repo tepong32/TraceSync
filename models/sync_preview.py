@@ -21,6 +21,9 @@ class SyncPreviewItem:
     operation: SyncOperation
     overwrite: bool
     reason: str
+    decision_recommendation: str | None = None
+    decision_confidence: str | None = None
+    decision_reason: str | None = None
     source_modified_time: float | None = None
     source_size: int | None = None
     destination_modified_time: float | None = None
@@ -46,3 +49,7 @@ class SyncPreview:
     @property
     def total_files(self) -> int:
         return len(self.items)
+
+    @property
+    def low_confidence_count(self) -> int:
+        return sum(item.decision_confidence == "Low" for item in self.items)
