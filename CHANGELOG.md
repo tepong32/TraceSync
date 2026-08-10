@@ -8,21 +8,7 @@ Release v0.5: Synchronization Confidence milestone.
 - Unit test coverage added for formatting helpers and confidence heuristics.
 
 ## Unreleased
-### Added
-- Added richer file inspection details in File Details (v0.5.1 groundwork):
-  - Human-friendly file sizes and timestamps
-  - File extension and inferred file type labels
-  - Stronger local/server metadata labeling for one-sided differences
-  - Shared formatting helper utilities used by the UI dialog
-- Added unit tests for the new formatting helpers
-- Added comparison confidence assessment for 0.5.2:
-  - Added recommendation/confidence metadata for each comparison result.
-  - Added low-confidence detection for same-timestamp size mismatches and timestamp-close conflicts.
-  - Surface decision guidance in File Details as recommendation, confidence, and reason.
-  - Added unit tests for heuristic confidence behavior.
-- Added v0.5.3 decision-assistance preview updates:
-  - Added confidence and recommendation fields on preview items.
-  - Displayed low-confidence file count and per-item confidence in confirmation dialog.
+No unreleased changes yet.
 
 ## [0.4.3] - 2026-08-09
 ### Added

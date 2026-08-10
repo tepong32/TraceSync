@@ -13,7 +13,7 @@ The repository is the authoritative source of truth for the current implementati
 | Item      | Value                     |
 | --------- | ------------------------- |
 | Version   | **v0.5.0**                |
-| Milestone | **Smart Synchronization** |
+| Milestone | **Synchronization Confidence** |
 | Status    | **Completed**             |
 
 ---
@@ -163,9 +163,9 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ---
 
-# Next Milestone
+# Next Milestones
 
-## v0.5 - Synchronization Confidence (In Progress)
+## v0.5 - Synchronization Confidence (Completed)
 
 V0.5 focuses on helping office users decide what is safe to copy before approval.
 
@@ -192,19 +192,9 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
   - Count low-confidence files before execution.
   - Keep explicit uncertainty messaging visible at the approval step.
 
-### Planned in v0.5
+### Deferred in v0.6 (non-blocking)
 
 - Optional preview reason drill-down before synchronization.
-
-Before beginning v0.5 development:
-
-1. Review the current backlog and deferred features.
-2. Identify the most valuable office workflow problem.
-3. Define the milestone goal.
-4. Select a small number of cohesive features.
-5. Establish the milestone boundary before implementation.
-6. Implement one feature or phase at a time.
-7. Validate the complete user-facing workflow before release.
 
 ---
 
