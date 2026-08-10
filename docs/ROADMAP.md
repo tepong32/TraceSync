@@ -178,13 +178,14 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
   - Clearer missing-file messaging for one-side differences.
   - Added formatting utilities and tests used by the details dialog.
 
-### In Progress in v0.5.2
+### Completed in v0.5.2
 
 - Safer difference classification:
   - Added office-friendly recommendation confidence metadata on each comparison row.
   - Added low-confidence detection for equal timestamps + unequal size and close timestamp + size-change cases.
+  - Added unit tests for heuristic decision behavior.
 
-### In Progress in v0.5.3
+### Completed in v0.5.3
 
 - Decision assistance for synchronization previews:
   - Surface recommendation/confidence in sync confirmation rows.
@@ -193,7 +194,6 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
 
 ### Planned in v0.5
 
-- Office-oriented synchronization phrasing across confirmation and details views.
 - Optional preview reason drill-down before synchronization.
 
 Before beginning v0.5 development:
