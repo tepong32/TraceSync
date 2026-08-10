@@ -1,4 +1,13 @@
 # Changelog
+## Unreleased
+### Added
+- Added richer file inspection details in File Details (v0.5.1 groundwork):
+  - Human-friendly file sizes and timestamps
+  - File extension and inferred file type labels
+  - Stronger local/server metadata labeling for one-sided differences
+  - Shared formatting helper utilities used by the UI dialog
+- Added unit tests for the new formatting helpers
+
 ## [0.4.3] - 2026-08-09
 ### Added
 
