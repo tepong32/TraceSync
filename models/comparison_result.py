@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from models.comparison_decision import ComparisonDecision
 
 from models.compare_status import CompareStatus
 from models.file_record import FileRecord
@@ -11,3 +12,4 @@ class ComparisonResult:
 
     local_record: FileRecord | None = None
     server_record: FileRecord | None = None
+    decision: ComparisonDecision | None = None

@@ -1,5 +1,6 @@
 from models.compare_status import CompareStatus
 from models.comparison_result import ComparisonResult
+from core.comparison_confidence import build_decision
 
 
 def compare_folders(
@@ -20,25 +21,25 @@ def compare_folders(
         server_record = server_files.get(relative_path)
 
         if local_record and not server_record:
-            results.append(
-                ComparisonResult(
-                    relative_path=relative_path,
-                    status=CompareStatus.LOCAL_ONLY,
-                    local_record=local_record,
-                    server_record=None,
-                )
+            result = ComparisonResult(
+                relative_path=relative_path,
+                status=CompareStatus.LOCAL_ONLY,
+                local_record=local_record,
+                server_record=None,
             )
+            result.decision = build_decision(result)
+            results.append(result)
             continue
 
         if server_record and not local_record:
-            results.append(
-                ComparisonResult(
-                    relative_path=relative_path,
-                    status=CompareStatus.SERVER_ONLY,
-                    local_record=None,
-                    server_record=server_record,
-                )
+            result = ComparisonResult(
+                relative_path=relative_path,
+                status=CompareStatus.SERVER_ONLY,
+                local_record=None,
+                server_record=server_record,
             )
+            result.decision = build_decision(result)
+            results.append(result)
             continue
 
         if local_record.modified_time > server_record.modified_time:
@@ -50,13 +51,13 @@ def compare_folders(
         else:
             status = CompareStatus.SAME
 
-        results.append(
-            ComparisonResult(
-                relative_path=relative_path,
-                status=status,
-                local_record=local_record,
-                server_record=server_record,
-            )
+        result = ComparisonResult(
+            relative_path=relative_path,
+            status=status,
+            local_record=local_record,
+            server_record=server_record,
         )
+        result.decision = build_decision(result)
+        results.append(result)
 
     return results
