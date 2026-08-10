@@ -1,7 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-from ui.utils.formatting import format_bytes, format_file_type, format_timestamp
+from ui.utils.formatting import (
+    format_bytes,
+    format_decision_confidence,
+    format_decision_reason,
+    format_decision_recommendation,
+    format_file_type,
+    format_timestamp,
+)
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
 from models.comparison_decision import ConfidenceLevel
@@ -90,13 +97,15 @@ class FileDetailsDialog(tk.Toplevel):
         self.file_type_var.set(self._derive_file_type())
         decision = self.result.decision
         if decision is not None:
-            self.file_recommendation_var.set(decision.recommendation)
-            self.file_confidence_var.set(decision.confidence.value)
-            self.file_reason_var.set(decision.reason)
+            self.file_recommendation_var.set(format_decision_recommendation(decision.recommendation))
+            self.file_confidence_var.set(format_decision_confidence(decision.confidence))
+            self.file_reason_var.set(format_decision_reason(decision.reason))
         else:
             self.file_recommendation_var.set("Review before synchronizing.")
-            self.file_confidence_var.set(ConfidenceLevel.LOW.value)
-            self.file_reason_var.set("No recommendation metadata is available.")
+            self.file_confidence_var.set(format_decision_confidence(ConfidenceLevel.LOW))
+            self.file_reason_var.set(
+                "TraceSync could not determine a clear recommendation yet. Please review this file."
+            )
 
         self._populate_record(
             self.result.local_record,

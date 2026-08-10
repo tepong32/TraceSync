@@ -56,6 +56,12 @@ class MainWindow(tk.Tk):
         ).pack(side="left")
         ttk.Button(
             toolbar,
+            text="View Decision Details",
+            command=self.open_selected_decision_details,
+            width=18,
+        ).pack(side="left", padx=(8, 0))
+        ttk.Button(
+            toolbar,
             text="Compare Folders",
             command=self.compare_folders,
             style="Primary.TButton",
@@ -184,6 +190,13 @@ class MainWindow(tk.Tk):
         result = next((item for item in self.results if item.relative_path == path), None)
         if result:
             FileDetailsDialog(self, result)
+
+    def open_selected_decision_details(self):
+        selection = self.tree.selection()
+        if not selection:
+            messagebox.showinfo("No selection", "Select a row first to view decision details.")
+            return
+        self._open_selected_details()
 
     def prepare_sync(self, direction: SyncDirection):
         preview = self.sync_service.create_preview(self.results, direction)
