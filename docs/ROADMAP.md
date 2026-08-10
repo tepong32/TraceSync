@@ -167,15 +167,17 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ## v0.6 — Synchronization Transparency (In Progress)
 
-### v0.6.1 — Decision Context (Active)
+### Completed in v0.6.1
 
 - Surface the existing recommendation reason in the confirmation workflow.
 - Add optional access to decision context from selected compare rows.
 - Keep the decision engine unchanged; this phase is about clarity and explanation.
 
-- Planned follow-up phases:
-  - v0.6.2 — Confidence-Aware Review
-  - v0.6.3 — Stale-Item UX (conditional)
+### Planned follow-up phases
+
+- v0.6.2 — Confidence-Aware Review
+- v0.6.3 — Stale-Item UX (conditional)
+
 
 ## v0.5 - Synchronization Confidence (Completed)
 
