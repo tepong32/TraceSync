@@ -4,6 +4,7 @@ from pathlib import Path
 from ui.utils.formatting import format_bytes, format_file_type, format_timestamp
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
+from models.comparison_decision import ConfidenceLevel
 
 
 class FileDetailsDialog(tk.Toplevel):
@@ -19,6 +20,9 @@ class FileDetailsDialog(tk.Toplevel):
         self.file_relative_path_var = tk.StringVar()
         self.file_status_var = tk.StringVar()
         self.file_type_var = tk.StringVar()
+        self.file_recommendation_var = tk.StringVar()
+        self.file_confidence_var = tk.StringVar()
+        self.file_reason_var = tk.StringVar()
 
         self.local_path_var = tk.StringVar()
         self.local_modified_var = tk.StringVar()
@@ -84,6 +88,15 @@ class FileDetailsDialog(tk.Toplevel):
             self._friendly_status(self.result.status)
         )
         self.file_type_var.set(self._derive_file_type())
+        decision = self.result.decision
+        if decision is not None:
+            self.file_recommendation_var.set(decision.recommendation)
+            self.file_confidence_var.set(decision.confidence.value)
+            self.file_reason_var.set(decision.reason)
+        else:
+            self.file_recommendation_var.set("Review before synchronizing.")
+            self.file_confidence_var.set(ConfidenceLevel.LOW.value)
+            self.file_reason_var.set("No recommendation metadata is available.")
 
         self._populate_record(
             self.result.local_record,
@@ -197,6 +210,72 @@ class FileDetailsDialog(tk.Toplevel):
             textvariable=self.file_type_var,
         ).grid(
             row=2,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Recommendation:",
+        ).grid(
+            row=3,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_recommendation_var,
+            wraplength=460,
+        ).grid(
+            row=3,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Confidence:",
+        ).grid(
+            row=4,
+            column=0,
+            sticky="w",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_confidence_var,
+        ).grid(
+            row=4,
+            column=1,
+            sticky="w",
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            text="Reason:",
+        ).grid(
+            row=5,
+            column=0,
+            sticky="nw",
+            padx=(0, 10),
+            pady=2,
+        )
+
+        ttk.Label(
+            summary_frame,
+            textvariable=self.file_reason_var,
+            wraplength=460,
+            justify="left",
+        ).grid(
+            row=5,
             column=1,
             sticky="w",
             pady=2,

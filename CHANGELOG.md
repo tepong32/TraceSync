@@ -7,6 +7,11 @@
   - Stronger local/server metadata labeling for one-sided differences
   - Shared formatting helper utilities used by the UI dialog
 - Added unit tests for the new formatting helpers
+- Added comparison confidence assessment for 0.5.2:
+  - Added recommendation/confidence metadata for each comparison result.
+  - Added low-confidence detection for same-timestamp size mismatches and timestamp-close conflicts.
+  - Surface decision guidance in File Details as recommendation, confidence, and reason.
+  - Added unit tests for heuristic confidence behavior.
 
 ## [0.4.3] - 2026-08-09
 ### Added
