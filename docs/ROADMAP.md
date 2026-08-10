@@ -339,6 +339,8 @@ The following capabilities remain candidates for future milestones and should no
 * Real-time folder monitoring.
 * Advanced conflict resolution.
 * Backup and rollback workflows.
+* Human-Friendly File Identification.
+* Selective Synchronization.
 * File version history.
 * Hash-based verification.
 * Rename detection.
