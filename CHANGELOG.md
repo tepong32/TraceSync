@@ -12,6 +12,9 @@
   - Added low-confidence detection for same-timestamp size mismatches and timestamp-close conflicts.
   - Surface decision guidance in File Details as recommendation, confidence, and reason.
   - Added unit tests for heuristic confidence behavior.
+- Added v0.5.3 decision-assistance preview updates:
+  - Added confidence and recommendation fields on preview items.
+  - Displayed low-confidence file count and per-item confidence in confirmation dialog.
 
 ## [0.4.3] - 2026-08-09
 ### Added

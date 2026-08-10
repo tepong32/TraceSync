@@ -184,10 +184,17 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
   - Added office-friendly recommendation confidence metadata on each comparison row.
   - Added low-confidence detection for equal timestamps + unequal size and close timestamp + size-change cases.
 
+### In Progress in v0.5.3
+
+- Decision assistance for synchronization previews:
+  - Surface recommendation/confidence in sync confirmation rows.
+  - Count low-confidence files before execution.
+  - Keep explicit uncertainty messaging visible at the approval step.
+
 ### Planned in v0.5
 
-- v0.5.3 decision assistance wording and workflow guidance.
 - Office-oriented synchronization phrasing across confirmation and details views.
+- Optional preview reason drill-down before synchronization.
 
 Before beginning v0.5 development:
 
