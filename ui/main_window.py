@@ -35,8 +35,77 @@ class MainWindow(tk.Tk):
 
     def _build_ui(self):
         style = ttk.Style()
-        style.configure("Primary.TButton", font=("Segoe UI", 10, "bold"))
-        style.configure("ActiveFilter.TButton", font=("Segoe UI", 9, "bold"))
+        style.configure("PrimaryNeutral.TButton", font=("Segoe UI", 10, "bold"), padding=(12, 8), background="#d9dde5", foreground="#111827")
+        style.map(
+            "PrimaryNeutral.TButton",
+            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
+            background=[
+                ("disabled", "#eef1f6"),
+                ("pressed", "#c9d0dd"),
+                ("active", "#d4dae4"),
+                ("!disabled", "#d9dde5"),
+            ],
+        )
+        style.configure(
+            "MediumNeutral.TButton",
+            font=("Segoe UI", 10),
+            padding=(10, 7),
+            background="#eceff4",
+            foreground="#111827",
+        )
+        style.map(
+            "MediumNeutral.TButton",
+            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
+            background=[
+                ("disabled", "#f5f6f8"),
+                ("pressed", "#e0e4ec"),
+                ("active", "#e6eaf0"),
+                ("!disabled", "#eceff4"),
+            ],
+        )
+        style.configure(
+            "UtilityNeutral.TButton",
+            font=("Segoe UI", 9),
+            padding=(8, 6),
+            background="#f6f7f9",
+            foreground="#1f2937",
+        )
+        style.map(
+            "UtilityNeutral.TButton",
+            foreground=[("disabled", "#9aa3ad"), ("pressed", "#111827"), ("active", "#111827")],
+            background=[
+                ("disabled", "#f9fafb"),
+                ("pressed", "#e7eaf0"),
+                ("active", "#eef1f5"),
+                ("!disabled", "#f6f7f9"),
+            ],
+        )
+        style.configure("FilterNeutral.TButton", font=("Segoe UI", 9), padding=(8, 6), background="#eceff4", foreground="#1f2937")
+        style.configure(
+            "ActiveFilter.TButton",
+            font=("Segoe UI", 9, "bold"),
+            padding=(8, 6),
+            background="#d9dde5",
+            foreground="#111827",
+        )
+        style.map(
+            "FilterNeutral.TButton",
+            foreground=[("disabled", "#9aa3ad"), ("pressed", "#111827"), ("active", "#111827")],
+            background=[
+                ("pressed", "#e0e4ec"),
+                ("active", "#e6eaf0"),
+                ("!disabled", "#eceff4"),
+            ],
+        )
+        style.map(
+            "ActiveFilter.TButton",
+            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
+            background=[
+                ("pressed", "#c9d0dd"),
+                ("active", "#d4dae4"),
+                ("!disabled", "#d9dde5"),
+            ],
+        )
 
         folder_frame = ttk.Frame(self, padding=10)
         folder_frame.pack(fill="x")
@@ -52,19 +121,21 @@ class MainWindow(tk.Tk):
             toolbar,
             text="Ignore Settings",
             command=self.edit_ignore_settings,
+            style="MediumNeutral.TButton",
             width=16,
         ).pack(side="left")
         ttk.Button(
             toolbar,
             text="View Decision Details",
             command=self.open_selected_decision_details,
-            width=18,
+            style="MediumNeutral.TButton",
+            width=24,
         ).pack(side="left", padx=(8, 0))
         ttk.Button(
             toolbar,
             text="Compare Folders",
             command=self.compare_folders,
-            style="Primary.TButton",
+            style="MediumNeutral.TButton",
             width=25,
         ).pack(side="left", padx=(8, 0))
         ttk.Label(self, textvariable=self.summary_var, anchor="w", padding=(10, 5)).pack(fill="x")
@@ -72,7 +143,12 @@ class MainWindow(tk.Tk):
         filter_frame = ttk.Frame(self)
         filter_frame.pack(fill="x", padx=10, pady=(0, 5))
         for status, label in [(None, "All")] + [(status, status.value) for status in CompareStatus]:
-            button = ttk.Button(filter_frame, text=label, command=lambda value=status: self.apply_filter(value))
+            button = ttk.Button(
+                filter_frame,
+                text=label,
+                style="FilterNeutral.TButton",
+                command=lambda value=status: self.apply_filter(value),
+            )
             button.pack(side="left", padx=(0, 5))
             self.filter_buttons[status] = button
 
@@ -99,8 +175,20 @@ class MainWindow(tk.Tk):
         action_frame = ttk.Frame(self, padding=10)
         action_frame.pack(fill="x")
         action_frame.columnconfigure((0, 1), weight=1)
-        self.local_to_server_button = ttk.Button(action_frame, text="Copy from Local → Server", command=lambda: self.prepare_sync(SyncDirection.LOCAL_TO_SERVER), state="disabled")
-        self.server_to_local_button = ttk.Button(action_frame, text="Copy from Server → Local", command=lambda: self.prepare_sync(SyncDirection.SERVER_TO_LOCAL), state="disabled")
+        self.local_to_server_button = ttk.Button(
+            action_frame,
+            text="Copy from Local → Server",
+            command=lambda: self.prepare_sync(SyncDirection.LOCAL_TO_SERVER),
+            state="disabled",
+            style="PrimaryNeutral.TButton",
+        )
+        self.server_to_local_button = ttk.Button(
+            action_frame,
+            text="Copy from Server → Local",
+            command=lambda: self.prepare_sync(SyncDirection.SERVER_TO_LOCAL),
+            state="disabled",
+            style="PrimaryNeutral.TButton",
+        )
         self.local_to_server_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         self.server_to_local_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
@@ -172,7 +260,7 @@ class MainWindow(tk.Tk):
         self.current_filter = status
         self.visible_results = self.results if status is None else [result for result in self.results if result.status is status]
         for button_status, button in self.filter_buttons.items():
-            button.configure(style="ActiveFilter.TButton" if button_status is status else "TButton")
+            button.configure(style="ActiveFilter.TButton" if button_status is status else "FilterNeutral.TButton")
         self.populate_tree(self.visible_results)
         label = "all" if status is None else status.value
         self.status_var.set(f"Showing {len(self.visible_results)} {label} files")

@@ -61,7 +61,12 @@ class IgnoreSettingsDialog(tk.Toplevel):
 
         button_frame = ttk.Frame(frame)
         button_frame.pack(fill="x", pady=(12, 0))
-        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side="right")
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            style="UtilityNeutral.TButton",
+            command=self.destroy,
+        ).pack(side="right")
         ttk.Button(button_frame, text="Save", command=self._save).pack(side="right", padx=(0, 8))
 
     def _update_pattern_count(self, _event=None) -> None:

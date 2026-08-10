@@ -74,6 +74,8 @@ class FileDetailsDialog(tk.Toplevel):
             path_var=self.local_path_var,
             modified_var=self.local_modified_var,
             size_var=self.local_size_var,
+            type_var=self.local_type_var,
+            extension_var=self.local_extension_var,
         )
 
         self.server_frame = self._build_file_frame(
@@ -82,6 +84,8 @@ class FileDetailsDialog(tk.Toplevel):
             path_var=self.server_path_var,
             modified_var=self.server_modified_var,
             size_var=self.server_size_var,
+            type_var=self.server_type_var,
+            extension_var=self.server_extension_var,
         )
 
         self._build_button_frame(main_frame)
@@ -450,6 +454,7 @@ class FileDetailsDialog(tk.Toplevel):
         ttk.Button(
             button_frame,
             text="Close",
+            style="UtilityNeutral.TButton",
             command=self.destroy,
         ).pack(
             side="right",

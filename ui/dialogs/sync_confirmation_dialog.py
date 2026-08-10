@@ -73,8 +73,18 @@ class SyncConfirmationDialog(tk.Toplevel):
 
         buttons = ttk.Frame(frame)
         buttons.pack(fill="x")
-        ttk.Button(buttons, text="Cancel", command=self.destroy).pack(side="right")
-        ttk.Button(buttons, text="Start Synchronization", command=self._confirm).pack(side="right", padx=(0, 8))
+        ttk.Button(
+            buttons,
+            text="Cancel",
+            style="UtilityNeutral.TButton",
+            command=self.destroy,
+        ).pack(side="right")
+        ttk.Button(
+            buttons,
+            text="Start Synchronization",
+            style="PrimaryNeutral.TButton",
+            command=self._confirm,
+        ).pack(side="right", padx=(0, 8))
 
         if preview.items:
             first_item_id = tree.get_children()[0]
