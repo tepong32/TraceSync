@@ -1,7 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-from ui.utils.formatting import format_bytes, format_file_type, format_timestamp
+from ui.utils.formatting import (
+    format_bytes,
+    format_decision_confidence,
+    format_decision_reason,
+    format_decision_recommendation,
+    format_file_type,
+    format_timestamp,
+)
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
 from models.comparison_decision import ConfidenceLevel
@@ -67,6 +74,8 @@ class FileDetailsDialog(tk.Toplevel):
             path_var=self.local_path_var,
             modified_var=self.local_modified_var,
             size_var=self.local_size_var,
+            type_var=self.local_type_var,
+            extension_var=self.local_extension_var,
         )
 
         self.server_frame = self._build_file_frame(
@@ -75,6 +84,8 @@ class FileDetailsDialog(tk.Toplevel):
             path_var=self.server_path_var,
             modified_var=self.server_modified_var,
             size_var=self.server_size_var,
+            type_var=self.server_type_var,
+            extension_var=self.server_extension_var,
         )
 
         self._build_button_frame(main_frame)
@@ -90,13 +101,15 @@ class FileDetailsDialog(tk.Toplevel):
         self.file_type_var.set(self._derive_file_type())
         decision = self.result.decision
         if decision is not None:
-            self.file_recommendation_var.set(decision.recommendation)
-            self.file_confidence_var.set(decision.confidence.value)
-            self.file_reason_var.set(decision.reason)
+            self.file_recommendation_var.set(format_decision_recommendation(decision.recommendation))
+            self.file_confidence_var.set(format_decision_confidence(decision.confidence))
+            self.file_reason_var.set(format_decision_reason(decision.reason))
         else:
             self.file_recommendation_var.set("Review before synchronizing.")
-            self.file_confidence_var.set(ConfidenceLevel.LOW.value)
-            self.file_reason_var.set("No recommendation metadata is available.")
+            self.file_confidence_var.set(format_decision_confidence(ConfidenceLevel.LOW))
+            self.file_reason_var.set(
+                "TraceSync could not determine a clear recommendation yet. Please review this file."
+            )
 
         self._populate_record(
             self.result.local_record,
@@ -441,6 +454,7 @@ class FileDetailsDialog(tk.Toplevel):
         ttk.Button(
             button_frame,
             text="Close",
+            style="UtilityNeutral.TButton",
             command=self.destroy,
         ).pack(
             side="right",

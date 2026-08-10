@@ -3,6 +3,8 @@ from __future__ import annotations
 import mimetypes
 from datetime import datetime
 
+from models.comparison_decision import ConfidenceLevel
+
 
 def format_timestamp(timestamp: float | int | None) -> str:
     """Return a readable local timestamp string."""
@@ -47,3 +49,37 @@ def format_file_type(path: str | None) -> str:
         return major_minor[-1].replace("-", " ").upper()
 
     return "Unknown"
+
+
+def format_decision_recommendation(recommendation: str | None) -> str:
+    if not recommendation:
+        return "Review before synchronizing."
+    return recommendation
+
+
+def format_decision_confidence(confidence: str | ConfidenceLevel | None) -> str:
+    if not confidence:
+        return "Review needed"
+
+    if isinstance(confidence, ConfidenceLevel):
+        confidence = confidence.value
+
+    return {
+        "High": "Likely safe",
+        "Medium": "Needs review",
+        "Low": "Needs attention",
+    }.get(str(confidence), str(confidence))
+
+
+def format_decision_reason(reason: str | None) -> str:
+    if not reason:
+        return "Review before synchronizing because details are not yet available."
+
+    normalized = str(reason).strip()
+    if "available metadata" in normalized:
+        return "TraceSync could not determine the safest direction with the available information. Please review this file."
+
+    if "could not confidently classify" in normalized:
+        return "TraceSync could not determine the safest direction with confidence. Please review this file."
+
+    return normalized

@@ -13,8 +13,8 @@ The repository is the authoritative source of truth for the current implementati
 | Item      | Value                     |
 | --------- | ------------------------- |
 | Version   | **v0.5.0**                |
-| Milestone | **Synchronization Confidence** |
-| Status    | **Completed**             |
+| Milestone | **Synchronization Transparency** |
+| Status    | **In progress**           |
 
 ---
 
@@ -165,6 +165,18 @@ The current ignore system should remain simple unless a real office workflow dem
 
 # Next Milestones
 
+## v0.6 — Synchronization Transparency (In Progress)
+
+### v0.6.1 — Decision Context (Active)
+
+- Surface the existing recommendation reason in the confirmation workflow.
+- Add optional access to decision context from selected compare rows.
+- Keep the decision engine unchanged; this phase is about clarity and explanation.
+
+- Planned follow-up phases:
+  - v0.6.2 — Confidence-Aware Review
+  - v0.6.3 — Stale-Item UX (conditional)
+
 ## v0.5 - Synchronization Confidence (Completed)
 
 V0.5 focuses on helping office users decide what is safe to copy before approval.
@@ -192,9 +204,9 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
   - Count low-confidence files before execution.
   - Keep explicit uncertainty messaging visible at the approval step.
 
-### Deferred in v0.6 (non-blocking)
+### v0.6.x Deferred (non-blocking)
 
-- Optional preview reason drill-down before synchronization.
+- Advanced ignore include/override behavior remains intentionally deferred.
 
 ---
 
@@ -327,6 +339,8 @@ The following capabilities remain candidates for future milestones and should no
 * Real-time folder monitoring.
 * Advanced conflict resolution.
 * Backup and rollback workflows.
+* Human-Friendly File Identification.
+* Selective Synchronization.
 * File version history.
 * Hash-based verification.
 * Rename detection.
