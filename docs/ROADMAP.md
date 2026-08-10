@@ -12,7 +12,7 @@ The repository is the authoritative source of truth for the current implementati
 
 | Item      | Value                     |
 | --------- | ------------------------- |
-| Version   | **v0.4.3**                |
+| Version   | **v0.5.0**                |
 | Milestone | **Smart Synchronization** |
 | Status    | **Completed**             |
 
@@ -244,7 +244,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of the current v0.4.3 release.
+These are future capabilities and are not part of the current v0.5.0 release.
 
 ---
 

@@ -1,4 +1,12 @@
 # Changelog
+## [0.5.0] - 2026-08-10
+### ✨ Added
+Release v0.5: Synchronization Confidence milestone.
+- Rich file understanding for selected rows in File Details (v0.5.1).
+- Confidence metadata in comparison and recommendation surfaces (v0.5.2).
+- Decision-assistance indicators in sync preview (v0.5.3).
+- Unit test coverage added for formatting helpers and confidence heuristics.
+
 ## Unreleased
 ### Added
 - Added richer file inspection details in File Details (v0.5.1 groundwork):
@@ -171,4 +179,3 @@ initial commit
 - SyncService
 - Initial Tkinter GUI
 - Results Treeview
-
