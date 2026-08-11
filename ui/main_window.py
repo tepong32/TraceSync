@@ -20,7 +20,7 @@ class MainWindow(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("TraceSync v0.5.0")
+        self.title("TraceSync v0.6.0")
         self.geometry("1000x650")
         self.minsize(800, 500)
         self.results = []

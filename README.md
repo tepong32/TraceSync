@@ -2,7 +2,7 @@
 
 TraceSync is a Windows desktop utility for safely comparing and synchronizing two folders. It is designed for office and shared-file environments where users must understand a copy operation before it changes a file.
 
-Current release: **v0.5.0**
+Current release: **v0.6.0**
 
 ## Workflow
 
@@ -28,7 +28,7 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 
 TraceSync never starts a synchronization job until the user confirms the complete preview. Existing destination files are identified before confirmation. The job preserves timestamps where the local filesystem supports them and creates missing destination directories.
 
-No rollback, backup, automatic synchronization, cloud provider, or bidirectional conflict-resolution feature is included in v0.5.0.
+No rollback, backup, automatic synchronization, cloud provider, or bidirectional conflict-resolution feature is included in v0.6.0.
 
 ## Architecture
 
