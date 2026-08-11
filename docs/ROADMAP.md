@@ -173,9 +173,13 @@ The current ignore system should remain simple unless a real office workflow dem
 - Add optional access to decision context from selected compare rows.
 - Keep the decision engine unchanged; this phase is about clarity and explanation.
 
-### Planned follow-up phases
+### Completed in v0.6.2
 
-- v0.6.2 — Confidence-Aware Review
+- Add one narrow needs-attention review affordance to surface low-confidence items for user review.
+- Reuse existing decision confidence data for discoverability, without changing comparison or sync logic.
+
+### Planned follow-up phase
+
 - v0.6.3 — Stale-Item UX (conditional)
 
 
