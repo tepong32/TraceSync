@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox, ttk
 from core.sync_service import SyncService
 from models.compare_status import CompareStatus
 from models.sync_direction import SyncDirection
+from models.comparison_decision import ConfidenceLevel
 from ui.dialogs.file_details_dialog import FileDetailsDialog
 from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
@@ -28,6 +29,7 @@ class MainWindow(tk.Tk):
         self.filter_buttons = {}
         self.sync_service = SyncService()
         self.settings = SettingsService.load()
+        self._needs_attention_filter_key = "NEEDS_ATTENTION"
         self.status_var = tk.StringVar(value="Ready")
         self.summary_var = tk.StringVar(value="No comparison results.")
         self._build_ui()
@@ -142,7 +144,11 @@ class MainWindow(tk.Tk):
 
         filter_frame = ttk.Frame(self)
         filter_frame.pack(fill="x", padx=10, pady=(0, 5))
-        for status, label in [(None, "All")] + [(status, status.value) for status in CompareStatus]:
+        for status, label in (
+                [(None, "All")]
+                + [(status, status.value) for status in CompareStatus]
+                + [(self._needs_attention_filter_key, "Needs Attention")]
+        ):
             button = ttk.Button(
                 filter_frame,
                 text=label,
@@ -165,6 +171,7 @@ class MainWindow(tk.Tk):
             CompareStatus.LOCAL_ONLY: "#fff3cd", CompareStatus.SERVER_ONLY: "#ffe5b4", CompareStatus.SAME: "#ffffff",
         }.items():
             self.tree.tag_configure(status.name, background=color)
+        self.tree.tag_configure("NEEDS_ATTENTION", background="#fff3cd")
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
@@ -237,6 +244,7 @@ class MainWindow(tk.Tk):
             self.status_var.set("Comparison failed.")
 
     def _show_comparison_results(self):
+        self._refresh_filter_labels()
         counts = Counter(result.status for result in self.results)
         counts_text = " | ".join(f"{status.value}: {counts[status]}" for status in CompareStatus)
         status_lines = [counts_text, self._build_ignore_status_line()]
@@ -258,17 +266,59 @@ class MainWindow(tk.Tk):
 
     def apply_filter(self, status):
         self.current_filter = status
-        self.visible_results = self.results if status is None else [result for result in self.results if result.status is status]
+        if status == self._needs_attention_filter_key:
+            self.visible_results = [result for result in self.results if self._needs_attention(result)]
+        else:
+            self.visible_results = self.results if status is None else [result for result in self.results if result.status is status]
         for button_status, button in self.filter_buttons.items():
             button.configure(style="ActiveFilter.TButton" if button_status is status else "FilterNeutral.TButton")
         self.populate_tree(self.visible_results)
-        label = "all" if status is None else status.value
-        self.status_var.set(f"Showing {len(self.visible_results)} {label} files")
+        if status is None:
+            label = "all files"
+        elif status == self._needs_attention_filter_key:
+            if len(self.visible_results) == 1:
+                label = "file needing attention"
+            else:
+                label = "files needing attention"
+        else:
+            label = f"{status.value} files"
+        self.status_var.set(f"Showing {len(self.visible_results)} {label}")
+        self._refresh_filter_labels()
+
+    def _needs_attention(self, result):
+        if result.decision is None:
+            return False
+        return result.decision.confidence == ConfidenceLevel.LOW
+
+    def _needs_attention_count(self) -> int:
+        return sum(1 for result in self.results if self._needs_attention(result))
+
+    def _needs_attention_filter_text(self) -> str:
+        return f"Needs Attention ({self._needs_attention_count()})"
+
+    def _status_filter_text(self, status: CompareStatus) -> str:
+        status_count = sum(1 for result in self.results if result.status is status)
+        return f"{status.value} ({status_count})"
+
+    def _all_filter_text(self) -> str:
+        return f"All ({len(self.results)})"
+
+    def _refresh_filter_labels(self):
+        for button_status, button in self.filter_buttons.items():
+            if button_status is None:
+                button.configure(text=self._all_filter_text())
+            elif button_status == self._needs_attention_filter_key:
+                button.configure(text=self._needs_attention_filter_text())
+            else:
+                button.configure(text=self._status_filter_text(button_status))
 
     def populate_tree(self, results):
         self.tree.delete(*self.tree.get_children())
         for result in results:
-            self.tree.insert("", "end", values=(result.status.value, result.relative_path), tags=(result.status.name,))
+            tags = [result.status.name]
+            if self._needs_attention(result):
+                tags.append("NEEDS_ATTENTION")
+            self.tree.insert("", "end", values=(result.status.value, result.relative_path), tags=tuple(tags))
 
     def _open_selected_details(self, _event=None):
         selection = self.tree.selection()
