@@ -12,9 +12,9 @@ The repository is the authoritative source of truth for the current implementati
 
 | Item      | Value                     |
 | --------- | ------------------------- |
-| Version   | **v0.5.0**                |
+| Version   | **v0.6.0**                |
 | Milestone | **Synchronization Transparency** |
-| Status    | **In progress**           |
+| Status    | **Released**              |
 
 ---
 
@@ -165,7 +165,7 @@ The current ignore system should remain simple unless a real office workflow dem
 
 # Next Milestones
 
-## v0.6 — Synchronization Transparency (In Progress)
+## v0.6 — Synchronization Transparency (Released)
 
 ### Completed in v0.6.1
 
@@ -178,9 +178,7 @@ The current ignore system should remain simple unless a real office workflow dem
 - Add one narrow needs-attention review affordance to surface low-confidence items for user review.
 - Reuse existing decision confidence data for discoverability, without changing comparison or sync logic.
 
-### Planned follow-up phase
-
-- v0.6.3 — Stale-Item UX: **OPTIONAL / PARKED**
+### v0.6.3 — Stale-Item UX: **OPTIONAL / PARKED**
   - Not required at this time.
   - Existing stale-file safety and messaging are present.
   - Keep this phase on the shelf as a narrow office-user presentation refinement if future feedback shows confusion around stale-file outcomes.
@@ -255,7 +253,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of the current v0.5.0 release.
+These are future capabilities and are not part of the current v0.6.0 release.
 
 ---
 

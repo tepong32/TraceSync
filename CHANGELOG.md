@@ -1,4 +1,12 @@
 # Changelog
+## [0.6.0] - 2026-08-11
+### âœ¨ Added
+Release v0.6: Synchronization Transparency milestone.
+- Added decision-context visibility in the comparison and confirmation workflows.
+- Made recommendation, confidence, and reason text clearer and easier to read at decision points.
+- Added a focused needs-attention filter to surface low-confidence files before synchronization.
+- Preserved the existing safe synchronization flow and safety behavior, including pre-copy state validation.
+
 ## [0.5.0] - 2026-08-10
 ### ✨ Added
 Release v0.5: Synchronization Confidence milestone.
