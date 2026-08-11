@@ -180,7 +180,10 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ### Planned follow-up phase
 
-- v0.6.3 — Stale-Item UX (conditional)
+- v0.6.3 — Stale-Item UX: **OPTIONAL / PARKED**
+  - Not required at this time.
+  - Existing stale-file safety and messaging are present.
+  - Keep this phase on the shelf as a narrow office-user presentation refinement if future feedback shows confusion around stale-file outcomes.
 
 
 ## v0.5 - Synchronization Confidence (Completed)
