@@ -32,8 +32,19 @@ class MainWindow(tk.Tk):
         self._needs_attention_filter_key = "NEEDS_ATTENTION"
         self.status_var = tk.StringVar(value="Ready")
         self.summary_var = tk.StringVar(value="No comparison results.")
+        self.provider_options = [
+            "Local Folder (active)",
+            "OneDrive (coming soon)",
+            "Google Drive (coming soon)",
+            "Dropbox (coming soon)",
+        ]
+        self.source_provider_var = tk.StringVar(value=self.provider_options[0])
+        self.destination_provider_var = tk.StringVar(value=self.provider_options[0])
+        self.source_provider_status_var = tk.StringVar(value="")
+        self.destination_provider_status_var = tk.StringVar(value="")
         self._build_ui()
         self._load_saved_folders()
+        self._refresh_provider_status()
 
     def _build_ui(self):
         style = ttk.Style()
@@ -116,6 +127,63 @@ class MainWindow(tk.Tk):
         self.server_var = tk.StringVar()
         self._build_folder_panel(folder_frame, 0, "Local Folder", self.local_var, self.browse_local, (0, 5))
         self._build_folder_panel(folder_frame, 1, "Server Folder", self.server_var, self.browse_server, (5, 0))
+
+        provider_panel = ttk.LabelFrame(self, text="Provider Onboarding (Planned)", padding=10)
+        provider_panel.pack(fill="x", padx=10, pady=(0, 10))
+
+        ttk.Label(provider_panel, text="Source provider:").grid(row=0, column=0, sticky="w")
+        source_provider_combo = ttk.Combobox(
+            provider_panel,
+            textvariable=self.source_provider_var,
+            values=self.provider_options,
+            state="readonly",
+            width=36,
+        )
+        source_provider_combo.grid(row=0, column=1, sticky="w", padx=(10, 0))
+        source_provider_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda event: self._refresh_provider_status(),
+        )
+
+        ttk.Label(
+            provider_panel,
+            textvariable=self.source_provider_status_var,
+            foreground="#4b5563",
+        ).grid(row=1, column=1, sticky="w", padx=(10, 0), pady=(4, 10))
+
+        ttk.Button(
+            provider_panel,
+            text="Connect Source Provider",
+            state="disabled",
+            style="UtilityNeutral.TButton",
+        ).grid(row=0, column=2, padx=(10, 0), sticky="w")
+
+        ttk.Label(provider_panel, text="Destination provider:").grid(row=2, column=0, sticky="w")
+        destination_provider_combo = ttk.Combobox(
+            provider_panel,
+            textvariable=self.destination_provider_var,
+            values=self.provider_options,
+            state="readonly",
+            width=36,
+        )
+        destination_provider_combo.grid(row=2, column=1, sticky="w", padx=(10, 0))
+        destination_provider_combo.bind(
+            "<<ComboboxSelected>>",
+            lambda event: self._refresh_provider_status(),
+        )
+
+        ttk.Label(
+            provider_panel,
+            textvariable=self.destination_provider_status_var,
+            foreground="#4b5563",
+        ).grid(row=3, column=1, sticky="w", padx=(10, 0), pady=(4, 10))
+
+        ttk.Button(
+            provider_panel,
+            text="Connect Destination Provider",
+            state="disabled",
+            style="UtilityNeutral.TButton",
+        ).grid(row=2, column=2, padx=(10, 0), sticky="w")
 
         toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", padx=10, pady=(0, 10))
@@ -263,6 +331,16 @@ class MainWindow(tk.Tk):
         if self.settings.get("ignore_patterns"):
             parts.append("Your custom ignore patterns are in use.")
         return " ".join(parts)
+
+    def _refresh_provider_status(self):
+        local_ready = "Local folder mode is active. Remote providers are listed for future setup."
+        remote_planned = "Remote provider integration is planned and not active yet."
+        self.source_provider_status_var.set(
+            local_ready if self.source_provider_var.get() == self.provider_options[0] else remote_planned
+        )
+        self.destination_provider_status_var.set(
+            local_ready if self.destination_provider_var.get() == self.provider_options[0] else remote_planned
+        )
 
     def apply_filter(self, status):
         self.current_filter = status

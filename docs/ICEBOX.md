@@ -101,8 +101,6 @@ Potential future integrations.
 * [ ] Dropbox.
 * [ ] Network storage providers.
 
----
-
 # Enterprise Ideas
 
 Long-term possibilities.
