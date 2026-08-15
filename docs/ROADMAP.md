@@ -173,6 +173,13 @@ The current ignore system should remain simple unless a real office workflow dem
 - Kept compare → preview → confirm → sync workflow unchanged.
 - Preserved existing safety checks while allowing users to run selected copies only.
 
+### In Progress in v0.7.2
+
+- Human-Friendly File Identification.
+
+  - Replace technical file type identifiers with office-friendly labels.
+  - Keep this a presentation-focused improvement and avoid changing comparison or sync logic.
+
 ## v0.6 — Synchronization Transparency (Released)
 
 ### Completed in v0.6.1
@@ -351,6 +358,7 @@ The following capabilities remain candidates for future milestones and should no
 * Advanced ignore include/override rules.
 * Scheduled synchronization.
 * Automatic synchronization.
+* Remote/cloud provider onboarding and account-management UI.
 * Real-time folder monitoring.
 * Advanced conflict resolution.
 * Backup and rollback workflows.

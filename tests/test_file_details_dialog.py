@@ -51,6 +51,7 @@ class FileDetailsDialogTests(unittest.TestCase):
             self.assertEqual(dialog.file_relative_path_var.get(), "dpcr 2026.xlsx")
             self.assertEqual(dialog.file_status_var.get(), "The Local copy appears more recent.")
             self.assertEqual(dialog.file_type_var.get(), format_file_type("dpcr 2026.xlsx"))
+            self.assertEqual(dialog.file_type_var.get(), "Excel Spreadsheet")
             self.assertEqual(dialog.file_recommendation_var.get(), format_decision_recommendation(result.decision.recommendation))
             self.assertEqual(dialog.file_confidence_var.get(), format_decision_confidence(result.decision.confidence))
             self.assertEqual(dialog.file_reason_var.get(), format_decision_reason(result.decision.reason))

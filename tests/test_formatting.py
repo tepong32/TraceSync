@@ -22,5 +22,8 @@ class FormattingTests(unittest.TestCase):
         self.assertEqual(format_timestamp("bad"), "Invalid timestamp")
 
     def test_format_file_type_from_path(self):
-        self.assertIn("PDF", format_file_type("notes/report.PDF").upper())
+        self.assertEqual(format_file_type("notes/report.PDF"), "PDF Document")
+        self.assertEqual(format_file_type("notes/workbook.xlsx"), "Excel Spreadsheet")
+        self.assertEqual(format_file_type("notes/notes.docx"), "Word Document")
+        self.assertEqual(format_file_type("notes/images.zip"), "Compressed Archive")
         self.assertEqual(format_file_type(""), "Unknown")

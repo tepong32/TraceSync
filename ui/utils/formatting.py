@@ -2,9 +2,36 @@ from __future__ import annotations
 
 import mimetypes
 from datetime import datetime
+from pathlib import Path
 
 from models.comparison_decision import ConfidenceLevel
 
+OFFICE_FRIENDLY_FILE_TYPES = {
+    "pdf": "PDF Document",
+    "xlsx": "Excel Spreadsheet",
+    "xls": "Excel Spreadsheet",
+    "xlsm": "Excel Spreadsheet",
+    "xltx": "Excel Spreadsheet",
+    "doc": "Word Document",
+    "docx": "Word Document",
+    "docm": "Word Document",
+    "ppt": "PowerPoint Presentation",
+    "pptx": "PowerPoint Presentation",
+    "pptm": "PowerPoint Presentation",
+    "csv": "CSV File",
+    "tsv": "Tabular Text File",
+    "txt": "Text Document",
+    "rtf": "Text Document",
+    "zip": "Compressed Archive",
+    "7z": "Compressed Archive",
+    "rar": "Compressed Archive",
+    "tar": "Compressed Archive",
+    "gz": "Compressed Archive",
+}
+
+_MIME_DOCUMENT_TYPES = {
+    "application/pdf": "PDF Document",
+}
 
 def format_timestamp(timestamp: float | int | None) -> str:
     """Return a readable local timestamp string."""
@@ -43,10 +70,21 @@ def format_file_type(path: str | None) -> str:
     if not path or path == "Not Available" or path == "—":
         return "Unknown"
 
+    extension = Path(path).suffix.lower().lstrip(".")
+    if extension in OFFICE_FRIENDLY_FILE_TYPES:
+        return OFFICE_FRIENDLY_FILE_TYPES[extension]
+
     mime_type, _ = mimetypes.guess_type(path)
     if mime_type:
+        if mime_type in _MIME_DOCUMENT_TYPES:
+            return _MIME_DOCUMENT_TYPES[mime_type]
+
         major_minor = mime_type.split("/")
-        return major_minor[-1].replace("-", " ").upper()
+        if len(major_minor) == 2:
+            major, minor = major_minor
+            if major == "text":
+                return f"{minor.upper()} Text"
+            return f"{minor.replace('-', ' ').replace('_', ' ').title()} File"
 
     return "Unknown"
 
