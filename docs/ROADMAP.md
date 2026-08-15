@@ -165,6 +165,14 @@ The current ignore system should remain simple unless a real office workflow dem
 
 # Next Milestones
 
+## v0.7 — Selective Synchronization (In Development)
+
+### Completed in v0.7.1
+
+- Added optional per-row selection in the confirmation workflow.
+- Kept compare → preview → confirm → sync workflow unchanged.
+- Preserved existing safety checks while allowing users to run selected copies only.
+
 ## v0.6 — Synchronization Transparency (Released)
 
 ### Completed in v0.6.1
@@ -347,7 +355,6 @@ The following capabilities remain candidates for future milestones and should no
 * Advanced conflict resolution.
 * Backup and rollback workflows.
 * Human-Friendly File Identification.
-* Selective Synchronization.
 * File version history.
 * Hash-based verification.
 * Rename detection.

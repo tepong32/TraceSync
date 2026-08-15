@@ -82,18 +82,6 @@ Improve decision transparency for office users.
 
 # Selective Synchronization
 
-Give users control over which eligible synchronization candidates are executed.
-
-* [ ] Allow users to select a subset of eligible files in the preview workflow before confirming sync.
-* [ ] Keep existing safety behavior intact (ignore rules and safety checks) while syncing only selected files.
-* [ ] Support office-user scenarios where users want to:
-  * copy only one or two files first,
-  * test synchronization on a specific file,
-  * defer uncertain files until they are reviewed,
-  * run a cautious partial sync instead of copying all changed files at once.
-
----
-
 # Smart Filters
 
 Additional filtering options.
