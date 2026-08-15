@@ -70,16 +70,6 @@ Improve daily workflow.
 * [ ] Quick copy path.
 * [ ] Favorite folders.
 
-# Human-Friendly File Identification
-
-Improve decision transparency for office users.
-
-* [ ] Replace technical file type identifiers with plain office-friendly labels (for example:
-  * Excel Spreadsheet,
-  * PDF Document,
-  * Word Document,
-  * Compressed Archive).
-
 # Selective Synchronization
 
 # Smart Filters

@@ -173,7 +173,7 @@ The current ignore system should remain simple unless a real office workflow dem
 - Kept compare → preview → confirm → sync workflow unchanged.
 - Preserved existing safety checks while allowing users to run selected copies only.
 
-### In Progress in v0.7.2
+### Completed in v0.7.2
 
 - Human-Friendly File Identification.
 
@@ -362,7 +362,6 @@ The following capabilities remain candidates for future milestones and should no
 * Real-time folder monitoring.
 * Advanced conflict resolution.
 * Backup and rollback workflows.
-* Human-Friendly File Identification.
 * File version history.
 * Hash-based verification.
 * Rename detection.
