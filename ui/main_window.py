@@ -346,9 +346,19 @@ class MainWindow(tk.Tk):
         if not dialog.confirmed:
             self.status_var.set("Synchronization cancelled before any files were copied.")
             return
-        job = self.sync_service.create_job(preview)
+        selected_items = dialog.get_selected_items()
+        if not selected_items:
+            self.status_var.set("Synchronization cancelled: no files selected.")
+            return
+        selected_preview = preview.with_selected_items({item.relative_path for item in selected_items})
+        if not selected_preview.items:
+            self.status_var.set("Synchronization cancelled: no files selected.")
+            return
+        if len(selected_preview.items) < len(preview.items):
+            self.status_var.set(f"Synchronizing {len(selected_preview.items)} of {len(preview.items)} selected file(s).")
+        job = self.sync_service.create_job(selected_preview)
         self._set_sync_buttons(False)
-        self.sync_service.start_job(job, preview)
+        self.sync_service.start_job(job, selected_preview)
         SyncProgressDialog(self, job, self._sync_completed)
 
     def _sync_completed(self, job):

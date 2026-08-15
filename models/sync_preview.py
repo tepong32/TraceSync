@@ -53,3 +53,25 @@ class SyncPreview:
     @property
     def low_confidence_count(self) -> int:
         return sum(item.decision_confidence == "Low" for item in self.items)
+
+    def with_selected_items(self, selected_relative_paths: set[str]) -> "SyncPreview":
+        selected_items = tuple(
+            item
+            for item in self.items
+            if item.relative_path in selected_relative_paths
+        )
+        return SyncPreview(
+            direction=self.direction,
+            items=selected_items,
+            warnings=tuple(self._build_warnings(selected_items)),
+        )
+
+    @staticmethod
+    def _build_warnings(items: tuple[SyncPreviewItem, ...]) -> list[str]:
+        warnings: list[str] = []
+        overwrites = sum(item.overwrite for item in items)
+        if overwrites:
+            warnings.append(f"{overwrites} existing file(s) will be replaced.")
+        if not items:
+            warnings.append("No files were selected for synchronization.")
+        return warnings
