@@ -1,4 +1,4 @@
-﻿# TraceSync Roadmap
+# TraceSync Roadmap
 
 > **Simple. Safe. Predictable.**
 
@@ -165,7 +165,16 @@ The current ignore system should remain simple unless a real office workflow dem
 
 # Next Milestones
 
-## v0.7 — Selective Synchronization (In Development)
+## v0.8 — Remote and Cloud Preparation (In Development)
+
+### Planned in v0.8.1
+
+- Introduce a dedicated remote/cloud onboarding surface for future provider-backed synchronization.
+- Keep existing Local ⇄ Local folder workflow unchanged while this milestone is planning-focused.
+- Preserve `StorageProvider` abstraction boundaries so future providers can be added without rewriting `SyncService`.
+- Add roadmap-traceable settings/metadata placeholders only (no provider transport or auth logic).
+
+## v0.7 — Selective Synchronization (Completed milestone)
 
 ### Completed in v0.7.1
 
@@ -358,7 +367,6 @@ The following capabilities remain candidates for future milestones and should no
 * Advanced ignore include/override rules.
 * Scheduled synchronization.
 * Automatic synchronization.
-* Remote/cloud provider onboarding and account-management UI.
 * Real-time folder monitoring.
 * Advanced conflict resolution.
 * Backup and rollback workflows.

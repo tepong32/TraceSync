@@ -101,6 +101,16 @@ Potential future integrations.
 * [ ] Dropbox.
 * [ ] Network storage providers.
 
+# Provider Onboarding UX
+
+Potential UX groundwork before actual remote transport integrations.
+
+* [ ] Add a dedicated provider onboarding panel in the app shell.
+* [ ] Add provider selection (Local only / OneDrive / Google Drive / Dropbox).
+* [ ] Display provider connection status (connected, disconnected, error).
+* [ ] Capture provider metadata and friendly names in settings.
+* [ ] Add clear, non-technical guidance for first-time setup.
+
 ---
 
 # Enterprise Ideas
