@@ -141,6 +141,7 @@ class MainWindow(tk.Tk):
             lambda event: self._on_provider_selection_changed(),
         )
 
+        ttk.Label(provider_panel, text="Source connection status:").grid(row=1, column=0, sticky="w")
         ttk.Label(
             provider_panel,
             textvariable=self.source_provider_status_var,
@@ -149,7 +150,7 @@ class MainWindow(tk.Tk):
 
         ttk.Button(
             provider_panel,
-            text="Connect Source Provider",
+            text="Connect Source Provider (Planned)",
             state="disabled",
             style="UtilityNeutral.TButton",
         ).grid(row=0, column=2, padx=(10, 0), sticky="w")
@@ -168,6 +169,7 @@ class MainWindow(tk.Tk):
             lambda event: self._on_provider_selection_changed(),
         )
 
+        ttk.Label(provider_panel, text="Destination connection status:").grid(row=3, column=0, sticky="w")
         ttk.Label(
             provider_panel,
             textvariable=self.destination_provider_status_var,
@@ -176,7 +178,7 @@ class MainWindow(tk.Tk):
 
         ttk.Button(
             provider_panel,
-            text="Connect Destination Provider",
+            text="Connect Destination Provider (Planned)",
             state="disabled",
             style="UtilityNeutral.TButton",
         ).grid(row=2, column=2, padx=(10, 0), sticky="w")
@@ -347,8 +349,8 @@ class MainWindow(tk.Tk):
         return " ".join(parts)
 
     def _refresh_provider_status(self):
-        local_ready = "Local folder mode is active. Remote providers are listed for future setup."
-        remote_planned = "Remote provider integration is planned and not active yet."
+        local_ready = "Connected to local-folder mode (no remote sync yet)."
+        remote_planned = "Planned for a future remote setup. Continue local sync workflow."
         self.source_provider_status_var.set(
             local_ready if self.source_provider_var.get() == self.provider_options[0] else remote_planned
         )

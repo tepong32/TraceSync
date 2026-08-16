@@ -179,6 +179,11 @@ The current ignore system should remain simple unless a real office workflow dem
 - Persist provider profile selections (`Source provider` and `Destination provider`) in user settings.
 - Restore provider selections on launch for faster, continuity-friendly continuation of the office workflow.
 
+### Planned in v0.8.3
+
+- Add explicit provider connection-status messaging for the onboarding panel.
+- Clarify that the current source/destination provider controls are planning-focused and not yet active.
+
 ## v0.7 — Selective Synchronization (Completed milestone)
 
 ### Completed in v0.7.1
