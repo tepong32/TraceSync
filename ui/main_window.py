@@ -183,6 +183,27 @@ class MainWindow(tk.Tk):
             style="UtilityNeutral.TButton",
         ).grid(row=2, column=2, padx=(10, 0), sticky="w")
 
+
+        planning_panel = ttk.LabelFrame(self, text="Remote and Cloud Sync Planning", padding=10)
+        planning_panel.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Label(
+            planning_panel,
+            text=(
+                "TraceSync currently ships with Local Folder Sync only."
+                " Use the provider selections above to record where remote workflows are planned."
+            ),
+            wraplength=900,
+            justify="left",
+        ).pack(anchor="w")
+        ttk.Label(
+            planning_panel,
+            text=(
+                "Future releases will connect these provider settings to active remote/cloud workflows."
+                " No remote data is moved in this version."
+            ),
+            wraplength=900,
+            justify="left",
+        ).pack(anchor="w", pady=(6, 0))
         toolbar = ttk.Frame(self)
         toolbar.pack(fill="x", padx=10, pady=(0, 10))
         ttk.Button(

@@ -167,6 +167,12 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ## v0.8 — Remote and Cloud Preparation (In Development)
 
+### Planned in v0.8.4
+
+- Clarify the planning status of remote/cloud synchronization from the main result screen.
+- Preserve the local-first workflow while keeping the new remote/cloud planning panel as passive documentation.
+- No comparison/synchronization behavior changes.
+
 ### Completed in v0.8.1
 
 - Introduce a dedicated remote/cloud onboarding surface for future provider-backed synchronization.
@@ -185,7 +191,6 @@ The current ignore system should remain simple unless a real office workflow dem
 - Clarify that the current source/destination provider controls are planning-focused and not yet active.
 
 ## v0.7 — Selective Synchronization (Completed milestone)
-
 ### Completed in v0.7.1
 
 - Added optional per-row selection in the confirmation workflow.
@@ -436,5 +441,3 @@ The priority remains:
 > **Reliability before breadth.**
 
 TraceSync should become more capable without becoming more complicated for the people who use it.
-
-
