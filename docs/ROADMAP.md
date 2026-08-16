@@ -167,7 +167,7 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ## v0.8 — Remote and Cloud Preparation (In Development)
 
-### Planned in v0.8.4
+### Completed in v0.8.4
 
 - Clarify the planning status of remote/cloud synchronization from the main result screen.
 - Preserve the local-first workflow while keeping the new remote/cloud planning panel as passive documentation.
