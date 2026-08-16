@@ -12,7 +12,7 @@ from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
-from utils.settings import SettingsService
+from utils.settings import PROVIDER_OPTIONS, SettingsService
 
 
 class MainWindow(tk.Tk):
@@ -32,18 +32,14 @@ class MainWindow(tk.Tk):
         self._needs_attention_filter_key = "NEEDS_ATTENTION"
         self.status_var = tk.StringVar(value="Ready")
         self.summary_var = tk.StringVar(value="No comparison results.")
-        self.provider_options = [
-            "Local Folder (active)",
-            "OneDrive (coming soon)",
-            "Google Drive (coming soon)",
-            "Dropbox (coming soon)",
-        ]
+        self.provider_options = list(PROVIDER_OPTIONS)
         self.source_provider_var = tk.StringVar(value=self.provider_options[0])
         self.destination_provider_var = tk.StringVar(value=self.provider_options[0])
         self.source_provider_status_var = tk.StringVar(value="")
         self.destination_provider_status_var = tk.StringVar(value="")
         self._build_ui()
         self._load_saved_folders()
+        self._load_saved_providers()
         self._refresh_provider_status()
 
     def _build_ui(self):
@@ -142,7 +138,7 @@ class MainWindow(tk.Tk):
         source_provider_combo.grid(row=0, column=1, sticky="w", padx=(10, 0))
         source_provider_combo.bind(
             "<<ComboboxSelected>>",
-            lambda event: self._refresh_provider_status(),
+            lambda event: self._on_provider_selection_changed(),
         )
 
         ttk.Label(
@@ -169,7 +165,7 @@ class MainWindow(tk.Tk):
         destination_provider_combo.grid(row=2, column=1, sticky="w", padx=(10, 0))
         destination_provider_combo.bind(
             "<<ComboboxSelected>>",
-            lambda event: self._refresh_provider_status(),
+            lambda event: self._on_provider_selection_changed(),
         )
 
         ttk.Label(
@@ -278,6 +274,24 @@ class MainWindow(tk.Tk):
     def _load_saved_folders(self):
         self.local_var.set(self.settings.get("local_folder", ""))
         self.server_var.set(self.settings.get("server_folder", ""))
+
+    def _load_saved_providers(self):
+        providers = self.settings.get("providers", {})
+        self.source_provider_var.set(providers.get("source_provider", self.provider_options[0]))
+        self.destination_provider_var.set(
+            providers.get("destination_provider", self.provider_options[0]),
+        )
+
+    def _on_provider_selection_changed(self):
+        self._persist_provider_selection()
+        self._refresh_provider_status()
+
+    def _persist_provider_selection(self):
+        self.settings["providers"] = {
+            "source_provider": self.source_provider_var.get(),
+            "destination_provider": self.destination_provider_var.get(),
+        }
+        SettingsService.save(self.settings)
 
     def browse_local(self):
         self._browse_folder(self.local_var, "local_folder")

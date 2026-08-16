@@ -174,6 +174,11 @@ The current ignore system should remain simple unless a real office workflow dem
 - Preserve `StorageProvider` abstraction boundaries so future providers can be added without rewriting `SyncService`.
 - Add roadmap-traceable settings/metadata placeholders only (no provider transport or auth logic).
 
+### Planned in v0.8.2
+
+- Persist provider profile selections (`Source provider` and `Destination provider`) in user settings.
+- Restore provider selections on launch for faster, continuity-friendly continuation of the office workflow.
+
 ## v0.7 — Selective Synchronization (Completed milestone)
 
 ### Completed in v0.7.1
