@@ -173,6 +173,11 @@ The current ignore system should remain simple unless a real office workflow dem
 - Preserve the local-first workflow while keeping the new remote/cloud planning panel as passive documentation.
 - No comparison/synchronization behavior changes.
 
+### Completed in v0.8.5
+
+- Add a lightweight result-row context menu with quick access to file details and relative path copy.
+- Preserve existing compare → review → confirm → sync workflow and keep all remote/cloud planning behavior unchanged.
+
 ### Completed in v0.8.1
 
 - Introduce a dedicated remote/cloud onboarding surface for future provider-backed synchronization.
