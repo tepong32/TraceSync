@@ -264,6 +264,17 @@ class MainWindow(tk.Tk):
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         self.tree.bind("<Double-1>", self._open_selected_details)
+        self.tree.bind("<Button-3>", self._show_results_context_menu)
+        self.tree.bind("<Button-2>", self._show_results_context_menu)
+        self.results_context_menu = tk.Menu(self, tearoff=0)
+        self.results_context_menu.add_command(
+            label="View Details",
+            command=self._open_selected_details,
+        )
+        self.results_context_menu.add_command(
+            label="Copy Relative Path",
+            command=self._copy_selected_relative_path,
+        )
 
         ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(10, 5)).pack(fill="x")
         action_frame = ttk.Frame(self, padding=10)
@@ -443,6 +454,27 @@ class MainWindow(tk.Tk):
         result = next((item for item in self.results if item.relative_path == path), None)
         if result:
             FileDetailsDialog(self, result)
+
+    def _show_results_context_menu(self, event):
+        row_id = self.tree.identify_row(event.y)
+        if not row_id:
+            return
+        self.tree.selection_set(row_id)
+        try:
+            self.results_context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.results_context_menu.grab_release()
+
+    def _copy_selected_relative_path(self):
+        selection = self.tree.selection()
+        if not selection:
+            return
+        path = self.tree.item(selection[0], "values")[1]
+        if not path:
+            return
+        self.clipboard_clear()
+        self.clipboard_append(path)
+        self.status_var.set("Relative path copied to clipboard.")
 
     def open_selected_decision_details(self):
         selection = self.tree.selection()
