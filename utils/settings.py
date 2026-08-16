@@ -2,6 +2,38 @@ import json
 from pathlib import Path
 
 SETTINGS_FILE = Path("settings.json")
+PROVIDER_OPTIONS = (
+    "Local Folder (active)",
+    "OneDrive (coming soon)",
+    "Google Drive (coming soon)",
+    "Dropbox (coming soon)",
+)
+DEFAULT_PROVIDER = PROVIDER_OPTIONS[0]
+
+
+def _normalize_provider_value(raw_provider, provider_options):
+    if raw_provider in provider_options:
+        return raw_provider
+    return DEFAULT_PROVIDER
+
+
+def _normalize_provider_settings(raw_providers) -> dict[str, str]:
+    normalized = {
+        "source_provider": DEFAULT_PROVIDER,
+        "destination_provider": DEFAULT_PROVIDER,
+    }
+    if not isinstance(raw_providers, dict):
+        return normalized
+
+    normalized["source_provider"] = _normalize_provider_value(
+        raw_providers.get("source_provider"),
+        PROVIDER_OPTIONS,
+    )
+    normalized["destination_provider"] = _normalize_provider_value(
+        raw_providers.get("destination_provider"),
+        PROVIDER_OPTIONS,
+    )
+    return normalized
 
 
 def _normalize_ignore_patterns(raw_patterns) -> list[str]:
@@ -31,7 +63,10 @@ def _normalize_ignore_patterns(raw_patterns) -> list[str]:
 def _default_settings():
     return {
         "recent_pairs": [],
-        "providers": {},
+        "providers": {
+            "source_provider": DEFAULT_PROVIDER,
+            "destination_provider": DEFAULT_PROVIDER,
+        },
         "sync_preferences": {},
         "ignore_patterns": [],
     }
@@ -55,6 +90,9 @@ class SettingsService:
                 if not isinstance(loaded_settings, dict):
                     return settings
                 settings.update(loaded_settings)
+                settings["providers"] = _normalize_provider_settings(
+                    settings.get("providers"),
+                )
                 settings["ignore_patterns"] = _normalize_ignore_patterns(
                     settings.get("ignore_patterns"),
                 )
@@ -76,6 +114,9 @@ class SettingsService:
             settings_copy = dict(settings)
             settings_copy["ignore_patterns"] = _normalize_ignore_patterns(
                 settings_copy.get("ignore_patterns"),
+            )
+            settings_copy["providers"] = _normalize_provider_settings(
+                settings_copy.get("providers"),
             )
             json.dump(
                 settings_copy,
