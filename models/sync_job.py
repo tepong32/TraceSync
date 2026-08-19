@@ -61,6 +61,11 @@ class SyncJob:
     errors: list[SyncError] = field(default_factory=list)
     file_outcomes: list[SyncFileOutcomeRecord] = field(default_factory=list)
     cancellation_requested: bool = False
+    completion_ready: bool = False
+    history_run_id: str | None = None
+    history_finalization_error: str | None = None
+    history_maintenance_warning: str | None = None
+    history_finalization_exception: Exception | None = field(default=None, repr=False, compare=False)
     started_at: float | None = None
     finished_at: float | None = None
     lock: RLock = field(default_factory=RLock, init=False, repr=False, compare=False)
@@ -109,7 +114,7 @@ class SyncJob:
         with self.lock:
             elapsed_seconds = self.elapsed_seconds
             percentage = self.percentage
-            is_finished = self.is_finished
+            is_finished = self.is_finished and self.completion_ready
             return SyncJobSnapshot(
                 status=self.status,
                 current_file=self.current_file,

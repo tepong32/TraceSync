@@ -3,7 +3,9 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from core.sync_service import SyncService
+from core.sync_service import SyncExecutionStartError, SyncService
+from core.sync_history_service import HistoryPersistenceError
+from core.sync_history_lock import SyncAlreadyActiveError
 from models.compare_status import CompareStatus
 from models.sync_direction import SyncDirection
 from models.comparison_decision import ConfidenceLevel
@@ -28,9 +30,12 @@ class MainWindow(tk.Tk):
         self.current_filter = None
         self.filter_buttons = {}
         self.sync_service = SyncService()
+        history_recovery = self.sync_service.recover_interrupted_history()
         self.settings = SettingsService.load()
         self._needs_attention_filter_key = "NEEDS_ATTENTION"
-        self.status_var = tk.StringVar(value="Ready")
+        self.status_var = tk.StringVar(
+            value=self._history_recovery_status(history_recovery)
+        )
         self.summary_var = tk.StringVar(value="No comparison results.")
         self.provider_options = list(PROVIDER_OPTIONS)
         self.source_provider_var = tk.StringVar(value=self.provider_options[0])
@@ -41,6 +46,17 @@ class MainWindow(tk.Tk):
         self._load_saved_folders()
         self._load_saved_providers()
         self._refresh_provider_status()
+
+    @staticmethod
+    def _history_recovery_status(recovery) -> str:
+        if recovery.failed_runs:
+            return "Ready. Some interrupted history records could not be recovered."
+        if recovery.recovered_runs:
+            label = "run" if recovery.recovered_runs == 1 else "runs"
+            return f"Ready. Marked {recovery.recovered_runs} interrupted synchronization {label}."
+        if recovery.lock_unavailable:
+            return "Ready. History recovery was deferred while another synchronization is active."
+        return "Ready"
 
     def _build_ui(self):
         style = ttk.Style()
@@ -505,7 +521,19 @@ class MainWindow(tk.Tk):
             self.status_var.set(f"Synchronizing {len(selected_preview.items)} of {len(preview.items)} selected file(s).")
         job = self.sync_service.create_job(selected_preview)
         self._set_sync_buttons(False)
-        self.sync_service.start_job(job, selected_preview)
+        try:
+            self.sync_service.start_job(job, selected_preview)
+        except (
+            HistoryPersistenceError,
+            SyncAlreadyActiveError,
+            SyncExecutionStartError,
+            OSError,
+            ValueError,
+        ) as exc:
+            self._set_sync_buttons(True)
+            messagebox.showerror("Synchronization Not Started", str(exc))
+            self.status_var.set("Synchronization did not start. No files were copied.")
+            return
         SyncProgressDialog(self, job, self._sync_completed)
 
     def _sync_completed(self, job):
@@ -520,6 +548,8 @@ class MainWindow(tk.Tk):
             self._set_sync_buttons(False)
         self.status_var.set(f"Synchronization {job_state.status.value.lower()}: {summary.copied_files} copied, {len(summary.errors)} errors.")
         SyncSummaryDialog(self, job)
+        if job.history_finalization_error:
+            messagebox.showwarning("History Not Finalized", job.history_finalization_error)
 
     def edit_ignore_settings(self):
         dialog = IgnoreSettingsDialog(self, self.settings.get("ignore_patterns", []))
