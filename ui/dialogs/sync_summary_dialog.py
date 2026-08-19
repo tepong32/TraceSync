@@ -22,6 +22,8 @@ class SyncSummaryDialog(tk.Toplevel):
         ttk.Label(frame, text=f"Files copied: {summary.copied_files}").pack(anchor="w", pady=(10, 0))
         ttk.Label(frame, text=f"Files overwritten: {summary.overwritten_files}").pack(anchor="w")
         ttk.Label(frame, text=f"Files skipped: {summary.skipped_files}").pack(anchor="w")
+        ttk.Label(frame, text=f"Files failed: {summary.failed_files}").pack(anchor="w")
+        ttk.Label(frame, text=f"Files not attempted: {summary.not_attempted_files}").pack(anchor="w")
         ttk.Label(frame, text=f"Errors: {len(summary.errors)}").pack(anchor="w")
         ttk.Label(frame, text=f"Elapsed time: {summary.elapsed_seconds:.1f}s").pack(anchor="w")
         if summary.errors:

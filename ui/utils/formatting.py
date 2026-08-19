@@ -5,6 +5,11 @@ from datetime import datetime
 from pathlib import Path
 
 from models.comparison_decision import ConfidenceLevel
+from models.sync_history import (
+    StorageEndpointSnapshot,
+    SyncFileOutcome,
+    SyncRunOutcome,
+)
 
 OFFICE_FRIENDLY_FILE_TYPES = {
     "pdf": "PDF Document",
@@ -121,3 +126,49 @@ def format_decision_reason(reason: str | None) -> str:
         return "TraceSync could not determine the safest direction with confidence. Please review this file."
 
     return normalized
+
+
+def format_history_timestamp(timestamp: str | None) -> str:
+    """Return a persisted UTC timestamp in the user's local timezone."""
+    if timestamp is None:
+        return "Not available"
+    try:
+        parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        return parsed.astimezone().strftime("%b %d, %Y %I:%M:%S %p")
+    except (TypeError, ValueError):
+        return "Invalid timestamp"
+
+
+def format_history_duration(duration_ms: int | None) -> str:
+    if duration_ms is None:
+        return "Not available"
+    return f"{duration_ms / 1000:.1f}s"
+
+
+def format_history_endpoint(endpoint: StorageEndpointSnapshot) -> str:
+    if endpoint.display_name == endpoint.locator:
+        return endpoint.display_name
+    return f"{endpoint.display_name} ({endpoint.locator})"
+
+
+def format_sync_run_outcome(outcome: SyncRunOutcome) -> str:
+    return {
+        SyncRunOutcome.IN_PROGRESS: "In progress",
+        SyncRunOutcome.COMPLETED: "Completed",
+        SyncRunOutcome.COMPLETED_WITH_ISSUES: "Completed with issues",
+        SyncRunOutcome.CANCELLED: "Cancelled",
+        SyncRunOutcome.FAILED: "Failed",
+        SyncRunOutcome.INTERRUPTED: "Interrupted",
+        SyncRunOutcome.NO_CHANGES: "No changes",
+    }[outcome]
+
+
+def format_sync_file_outcome(outcome: SyncFileOutcome) -> str:
+    return {
+        SyncFileOutcome.PENDING: "Pending",
+        SyncFileOutcome.COPIED: "Copied",
+        SyncFileOutcome.SKIPPED: "Skipped",
+        SyncFileOutcome.FAILED: "Failed",
+        SyncFileOutcome.NOT_ATTEMPTED: "Not attempted",
+        SyncFileOutcome.UNKNOWN: "Unknown",
+    }[outcome]

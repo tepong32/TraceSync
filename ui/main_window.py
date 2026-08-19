@@ -12,6 +12,7 @@ from models.comparison_decision import ConfidenceLevel
 from ui.dialogs.file_details_dialog import FileDetailsDialog
 from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
+from ui.dialogs.sync_history_dialog import SyncHistoryDialog
 from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
 from utils.settings import PROVIDER_OPTIONS, SettingsService
@@ -229,6 +230,13 @@ class MainWindow(tk.Tk):
             style="MediumNeutral.TButton",
             width=16,
         ).pack(side="left")
+        ttk.Button(
+            toolbar,
+            text="History...",
+            command=self.open_sync_history,
+            style="MediumNeutral.TButton",
+            width=14,
+        ).pack(side="left", padx=(8, 0))
         ttk.Button(
             toolbar,
             text="View Decision Details",
@@ -550,6 +558,11 @@ class MainWindow(tk.Tk):
         SyncSummaryDialog(self, job)
         if job.history_finalization_error:
             messagebox.showwarning("History Not Finalized", job.history_finalization_error)
+        elif job.history_maintenance_warning:
+            messagebox.showwarning("History Cleanup Incomplete", job.history_maintenance_warning)
+
+    def open_sync_history(self):
+        SyncHistoryDialog(self, self.sync_service.history_service)
 
     def edit_ignore_settings(self):
         dialog = IgnoreSettingsDialog(self, self.settings.get("ignore_patterns", []))
