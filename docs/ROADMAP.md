@@ -8,25 +8,25 @@ The repository is the authoritative source of truth for the current implementati
 
 ---
 
-## Current Release
+## Current Release Candidate
 
-| Item      | Value                     |
-| --------- | ------------------------- |
-| Version   | **v0.6.0**                |
-| Milestone | **Synchronization Transparency** |
-| Status    | **Released**              |
+| Item      | Value                                           |
+| --------- | ----------------------------------------------- |
+| Version   | **v0.9.0**                                      |
+| Milestone | **Synchronization History & Auditability**      |
+| Status    | **Prepared on `master`; awaiting release tag**   |
 
 ---
 
-## Current Development Milestone
+## Development Status
 
 | Item       | Value                                                        |
 | ---------- | ------------------------------------------------------------ |
-| Milestone  | **v0.9 Synchronization History & Auditability**               |
-| Baseline   | **v0.8.5 (unreleased)**                                      |
-| Status     | **Implemented on the feature branch; not release-tagged**     |
+| Milestone  | **No active post-v0.9 milestone**                             |
+| Baseline   | **v0.9.0 release candidate**                                 |
+| Status     | **Release preparation only; future candidates remain deferred** |
 
-`VERSION`, the application title, and release tags remain at v0.6.0 until a formal release is performed. History reads this existing version metadata dynamically; development work does not assume `0.9.0`.
+`VERSION` and the application title report v0.9.0. The release tag is intentionally deferred until final release review.
 
 ---
 
@@ -175,9 +175,9 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ---
 
-# Post-Release Development Milestones
+# Development Milestones Included in v0.9.0
 
-## v0.9 — Synchronization History & Auditability (Implemented on feature branch; unreleased)
+## v0.9 — Synchronization History & Auditability (Completed)
 
 Core promise: after a synchronization, the user can inspect what TraceSync did, what it did not do, and why.
 
@@ -191,7 +191,7 @@ Core promise: after a synchronization, the user can inspect what TraceSync did, 
 - Export only the selected run to formula-hardened CSV with one row per approved file.
 - Keep all remote/cloud provider work architectural; no transport or authentication is included.
 
-## v0.8 — Remote and Cloud Preparation (Completed in source; unreleased)
+## v0.8 — Remote and Cloud Preparation (Completed)
 
 This milestone is architectural and planning-focused. No remote provider transport, authentication, or cloud synchronization is implemented.
 
@@ -223,7 +223,7 @@ This milestone is architectural and planning-focused. No remote provider transpo
 - Add explicit provider connection-status messaging for the onboarding panel.
 - Clarify that the current source/destination provider controls are planning-focused and not yet active.
 
-## v0.7 — Selective Synchronization (Completed in source; unreleased)
+## v0.7 — Selective Synchronization (Completed)
 ### Completed in v0.7.1
 
 - Added optional per-row selection in the confirmation workflow.
@@ -325,7 +325,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of the current v0.6.0 release.
+These are future capabilities and are not part of v0.9.0.
 
 ---
 

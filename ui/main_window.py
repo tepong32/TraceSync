@@ -15,6 +15,7 @@ from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_history_dialog import SyncHistoryDialog
 from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
+from utils.application_version import get_application_version
 from utils.settings import PROVIDER_OPTIONS, SettingsService
 
 
@@ -23,7 +24,7 @@ class MainWindow(tk.Tk):
 
     def __init__(self):
         super().__init__()
-        self.title("TraceSync v0.6.0")
+        self.title(f"TraceSync v{get_application_version()}")
         self.geometry("1000x650")
         self.minsize(800, 500)
         self.results = []

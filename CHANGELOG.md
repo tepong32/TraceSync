@@ -1,9 +1,11 @@
 # Changelog
-## Unreleased
+## [0.9.0] - 2026-08-19
 ### Added
-- v0.9 Synchronization History & Auditability: persist an atomic, versioned JSON record for every started synchronization; capture structured per-file outcomes; recover abandoned `in_progress` records as `interrupted`; retain the newest 500 runs; and enforce a lightweight single-active-sync lock.
-- Add a history list, run details, issues-only filtering, corrupt-record warnings, confirmed history clearing, and selected-run CSV export with spreadsheet formula-injection protection.
-- Package the existing `VERSION` resource so source and packaged history records use the same release-version mechanism without prematurely changing release metadata.
+- v0.9 Synchronization History & Auditability: persist an atomic, versioned JSON record for every started synchronization and capture structured outcomes for every approved file.
+- Recover abandoned `in_progress` records as `interrupted`, while keeping synchronization outcomes distinct from final history-write failures.
+- Add history review, run details, issues-only filtering, corrupt-record warnings, confirmed history clearing, newest-500-run retention, and selected-run CSV export with spreadsheet formula-injection protection.
+- Enforce a lightweight single-active-synchronization lock and record provider-safe endpoint snapshots without storing credentials.
+- Package the canonical `VERSION` resource so source and packaged runtimes report the same application version.
 - v0.7.1 Selective Synchronization: allow users to choose a subset of eligible files in the confirmation preview while preserving the existing pre-copy safety checks.
 - v0.7.2 Human-Friendly File Identification: show office-friendly file type labels in file details.
 - v0.8.1-v0.8.4 Remote and Cloud Preparation: add planning-only provider selections, persisted provider preferences, connection-status placeholders, and an explicit planning panel. These controls do not perform remote or cloud operations.
