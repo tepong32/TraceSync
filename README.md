@@ -2,7 +2,9 @@
 
 TraceSync is a Windows desktop utility for safely comparing and synchronizing two folders. It is designed for office and shared-file environments where users must understand a copy operation before it changes a file.
 
-Current release: **v0.6.0**
+Current tagged release: **v0.6.0**
+
+Current development baseline: **v0.8.5 (unreleased)**
 
 ## Workflow
 
@@ -17,18 +19,21 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 - Recursive folder scanning and relative-path comparison.
 - Clear statuses: Local Newer, Server Newer, Same, Local Only, and Server Only.
 - Color-coded and filterable result list, with file details on double-click.
+- Result-row context actions for opening file details and copying a relative path.
 - Local -> Server and Server -> Local synchronization previews.
+- Optional per-file selection in the synchronization confirmation preview.
 - Explicit confirmation showing new files, replacements, and warnings.
 - Background file copying with responsive progress, elapsed and estimated remaining time, and safe cancellation between files.
 - File-level error reporting; recoverable errors do not stop other approved copies.
 - Metadata validation immediately before each copy. Files changed after confirmation are skipped and require a new comparison.
 - JSON settings that retain the selected folders and can accommodate future provider-specific settings.
+- Planning-only provider selections and status messaging; these do not connect to or move data through remote services.
 
 ## Safety model
 
 TraceSync never starts a synchronization job until the user confirms the complete preview. Existing destination files are identified before confirmation. The job preserves timestamps where the local filesystem supports them and creates missing destination directories.
 
-No rollback, backup, automatic synchronization, cloud provider, or bidirectional conflict-resolution feature is included in v0.6.0.
+No rollback, backup, automatic synchronization, active cloud provider, or bidirectional conflict-resolution feature is included in the current development baseline.
 
 ## Architecture
 
