@@ -8,6 +8,7 @@ import utils.settings as settings_module
 from core.ignore.ignore_loader import IgnoreLoader
 from core.ignore.ignore_rule_engine import IgnoreRuleEngine
 from core.storage_provider import ProviderCapability, StorageProvider
+from models.sync_history import StorageEndpointSnapshot
 from core.sync_service import SyncService
 from models.file_record import FileRecord
 
@@ -30,6 +31,9 @@ class FakeStorageProvider(StorageProvider):
     @property
     def capabilities(self):
         return frozenset({ProviderCapability.TIMESTAMPS})
+
+    def describe_endpoint(self):
+        return StorageEndpointSnapshot("fake", self.name, str(self.root))
 
     def scan(self):
         return self.records

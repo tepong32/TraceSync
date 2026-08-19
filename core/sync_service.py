@@ -3,10 +3,15 @@ from core.ignore.ignore_engine import create_ignore_engine
 from core.local_storage_provider import LocalStorageProvider
 from core.storage_provider import StorageProvider
 from core.storage_scanner import StorageScanner
+from core.sync_history_service import SyncHistoryService
 from models.compare_status import CompareStatus
 from models.comparison_result import ComparisonResult
 from models.sync_direction import SyncDirection
 from models.sync_preview import SyncOperation, SyncPreview, SyncPreviewItem
+
+
+class SyncExecutionStartError(RuntimeError):
+    """Raised when a durable run exists but its worker cannot start."""
 
 
 
@@ -22,6 +27,7 @@ class SyncService:
         *,
         source_provider: StorageProvider | None = None,
         destination_provider: StorageProvider | None = None,
+        history_service: SyncHistoryService | None = None,
     ) -> None:
         if local_provider is not None and source_provider is not None:
             raise ValueError("Specify either local_provider or source_provider, not both.")
@@ -29,6 +35,7 @@ class SyncService:
             raise ValueError("Specify either server_provider or destination_provider, not both.")
         self.local_provider = source_provider or local_provider
         self.server_provider = destination_provider or server_provider
+        self.history_service = history_service or SyncHistoryService()
         # Created when compare() knows the project root.
         self._ignore_engine: IgnoreRuleEngine | None = None
         self.last_ignored_count = 0
@@ -139,7 +146,61 @@ class SyncService:
         from core.sync_job_runner import SyncJobRunner
 
         source, destination, _ = self._direction_context(preview.direction)
-        return SyncJobRunner(source, destination).run_async(job, preview)
+        history_context = self.history_service.begin_run(preview, source, destination)
+        with job.lock:
+            job.history_run_id = history_context.initial_record.run_id
+        try:
+            return SyncJobRunner(source, destination).run_async(
+                job,
+                preview,
+                on_finished=lambda finished_job: self.history_service.finalize_run(
+                    history_context,
+                    finished_job,
+                ),
+            )
+        except Exception as exc:
+            self._mark_job_start_failed(job, preview)
+            self.history_service.finalize_run(history_context, job)
+            with job.lock:
+                job.completion_ready = True
+            raise SyncExecutionStartError(
+                "Synchronization could not start. No files were copied."
+            ) from exc
+
+    def recover_interrupted_history(self):
+        return self.history_service.recover_interrupted_runs()
+
+    @staticmethod
+    def _mark_job_start_failed(job, preview: SyncPreview) -> None:
+        from time import monotonic
+
+        from models.sync_history import (
+            SyncFileOutcome,
+            SyncFileOutcomeRecord,
+            SyncReasonCode,
+        )
+        from models.sync_job import SyncError, SyncJobStatus
+
+        timestamp = monotonic()
+        with job.lock:
+            job.status = SyncJobStatus.FAILED
+            job.started_at = timestamp
+            job.finished_at = timestamp
+            job.errors.append(
+                SyncError("", "Synchronization could not start its background worker.")
+            )
+            job.file_outcomes = [
+                SyncFileOutcomeRecord(
+                    relative_path=item.relative_path,
+                    operation=item.operation.value.lower(),
+                    overwrite=item.overwrite,
+                    outcome=SyncFileOutcome.NOT_ATTEMPTED,
+                    reason_code=SyncReasonCode.RUN_FAILED,
+                    message="Synchronization stopped before this file could be attempted.",
+                )
+                for item in preview.items
+            ]
+            job.not_attempted_files = len(job.file_outcomes)
 
     def _providers(self) -> tuple[StorageProvider, StorageProvider]:
         if self.local_provider is None or self.server_provider is None:

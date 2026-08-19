@@ -3,6 +3,8 @@ from enum import Enum
 from threading import RLock
 from time import monotonic
 
+from models.sync_history import SyncFileOutcomeRecord
+
 
 class SyncJobStatus(str, Enum):
     PENDING = "Pending"
@@ -10,6 +12,7 @@ class SyncJobStatus(str, Enum):
     COMPLETED = "Completed"
     CANCELLED = "Cancelled"
     COMPLETED_WITH_ERRORS = "Completed with errors"
+    FAILED = "Failed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +26,10 @@ class SyncSummary:
     copied_files: int
     overwritten_files: int
     skipped_files: int
+    failed_files: int
+    not_attempted_files: int
     errors: tuple[SyncError, ...]
+    file_outcomes: tuple[SyncFileOutcomeRecord, ...]
     elapsed_seconds: float
     cancelled: bool
 
@@ -50,8 +56,16 @@ class SyncJob:
     copied_files: int = 0
     overwritten_files: int = 0
     skipped_files: int = 0
+    failed_files: int = 0
+    not_attempted_files: int = 0
     errors: list[SyncError] = field(default_factory=list)
+    file_outcomes: list[SyncFileOutcomeRecord] = field(default_factory=list)
     cancellation_requested: bool = False
+    completion_ready: bool = False
+    history_run_id: str | None = None
+    history_finalization_error: str | None = None
+    history_maintenance_warning: str | None = None
+    history_finalization_exception: Exception | None = field(default=None, repr=False, compare=False)
     started_at: float | None = None
     finished_at: float | None = None
     lock: RLock = field(default_factory=RLock, init=False, repr=False, compare=False)
@@ -78,6 +92,7 @@ class SyncJob:
             SyncJobStatus.COMPLETED,
             SyncJobStatus.CANCELLED,
             SyncJobStatus.COMPLETED_WITH_ERRORS,
+            SyncJobStatus.FAILED,
         }
 
     def summary(self) -> SyncSummary:
@@ -86,7 +101,10 @@ class SyncJob:
                 copied_files=self.copied_files,
                 overwritten_files=self.overwritten_files,
                 skipped_files=self.skipped_files,
+                failed_files=self.failed_files,
+                not_attempted_files=self.not_attempted_files,
                 errors=tuple(self.errors),
+                file_outcomes=tuple(self.file_outcomes),
                 elapsed_seconds=self.elapsed_seconds,
                 cancelled=self.status is SyncJobStatus.CANCELLED,
             )
@@ -96,7 +114,7 @@ class SyncJob:
         with self.lock:
             elapsed_seconds = self.elapsed_seconds
             percentage = self.percentage
-            is_finished = self.is_finished
+            is_finished = self.is_finished and self.completion_ready
             return SyncJobSnapshot(
                 status=self.status,
                 current_file=self.current_file,

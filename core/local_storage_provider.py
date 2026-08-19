@@ -3,6 +3,7 @@ import shutil
 
 from core.storage_provider import ProviderCapability, StorageProvider
 from models.file_record import FileRecord
+from models.sync_history import StorageEndpointSnapshot
 
 
 class LocalStorageProvider(StorageProvider):
@@ -19,6 +20,13 @@ class LocalStorageProvider(StorageProvider):
     @property
     def capabilities(self) -> frozenset[ProviderCapability]:
         return frozenset({ProviderCapability.TIMESTAMPS, ProviderCapability.METADATA})
+
+    def describe_endpoint(self) -> StorageEndpointSnapshot:
+        return StorageEndpointSnapshot(
+            provider_type="local",
+            display_name=self.display_name,
+            locator=str(self.root.resolve()),
+        )
 
     def scan(self) -> dict[str, FileRecord]:
         if not self.root.exists():

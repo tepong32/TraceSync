@@ -25,8 +25,6 @@ Improve the comparison experience for Microsoft Excel workbooks.
 Enhance the File Details dialog.
 
 * [ ] Display file icons based on extension.
-* [ ] Human-readable timestamps.
-* [ ] Human-readable file sizes.
 * [ ] Display file extension badges.
 * [ ] Display file attributes.
 * [ ] Display creation timestamp.
@@ -67,10 +65,7 @@ Improve daily workflow.
 * [ ] Open Windows File Properties.
 * [ ] Refresh selected file.
 * [ ] Recompare selected file.
-* [ ] Quick copy path.
 * [ ] Favorite folders.
-
-# Selective Synchronization
 
 # Smart Filters
 
@@ -103,15 +98,13 @@ Improve comparison summaries.
 
 ---
 
-# Synchronization History
+# Synchronization History Follow-ups
 
-Track previous operations.
+Potential extensions beyond the completed v0.9 history milestone.
 
-* [ ] Synchronization history.
-* [ ] View previous runs.
 * [ ] Restore from backup.
 * [ ] Search history.
-* [ ] Export history.
+* [ ] Add advanced history filters beyond the v0.9 Issues Only option.
 
 ---
 
