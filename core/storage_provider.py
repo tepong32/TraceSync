@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from models.file_record import FileRecord
+from models.sync_history import StorageEndpointSnapshot
 
 
 class ProviderCapability(str, Enum):
@@ -29,6 +30,10 @@ class StorageProvider(ABC):
     @abstractmethod
     def capabilities(self) -> frozenset[ProviderCapability]:
         """Features available from this provider."""
+
+    @abstractmethod
+    def describe_endpoint(self) -> StorageEndpointSnapshot:
+        """Return an allowlisted, credential-free location description."""
 
     @abstractmethod
     def scan(self) -> dict[str, FileRecord]:

@@ -5,6 +5,11 @@ from core.sync_service import SyncService
 from models.file_record import FileRecord
 from models.sync_direction import SyncDirection
 from models.sync_job import SyncJobStatus
+from models.sync_history import (
+    StorageEndpointSnapshot,
+    SyncFileOutcome,
+    SyncReasonCode,
+)
 
 
 class FakeStorageProvider(StorageProvider):
@@ -13,6 +18,8 @@ class FakeStorageProvider(StorageProvider):
         self.records = records or {}
         self.failing_paths = failing_paths or set()
         self.copied_paths = []
+        self.record_failure_paths = set()
+        self.after_copy = None
 
     @property
     def display_name(self):
@@ -22,10 +29,15 @@ class FakeStorageProvider(StorageProvider):
     def capabilities(self):
         return frozenset({ProviderCapability.TIMESTAMPS})
 
+    def describe_endpoint(self):
+        return StorageEndpointSnapshot("fake", self.name, self.name)
+
     def scan(self):
         return self.records
 
     def get_record(self, relative_path):
+        if relative_path in self.record_failure_paths:
+            raise RuntimeError(relative_path)
         return self.records.get(relative_path)
 
     def destination_path(self, relative_path):
@@ -36,6 +48,8 @@ class FakeStorageProvider(StorageProvider):
             raise PermissionError(relative_path)
         self.copied_paths.append(relative_path)
         self.records[relative_path] = source.get_record(relative_path)
+        if self.after_copy is not None:
+            self.after_copy()
 
 
 def record(path, modified_time):
@@ -73,6 +87,7 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(server.copied_paths, ["reports/july.txt"])
         self.assertEqual(job.status, SyncJobStatus.COMPLETED)
         self.assertEqual(job.copied_files, 1)
+        self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.COPIED)
 
     def test_file_failure_does_not_stop_other_files(self):
         local = FakeStorageProvider("local", {
@@ -89,6 +104,11 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
         self.assertEqual(server.copied_paths, ["kept.txt"])
         self.assertEqual(len(job.errors), 1)
+        failed = next(result for result in job.file_outcomes if result.relative_path == "blocked.txt")
+        self.assertEqual(failed.outcome, SyncFileOutcome.FAILED)
+        self.assertEqual(failed.reason_code, SyncReasonCode.PERMISSION_DENIED)
+        self.assertEqual(job.failed_files, 1)
+        self.assertEqual(job.skipped_files, 0)
 
     def test_job_rejects_a_destination_that_changed_after_preview(self):
         local = FakeStorageProvider("local", {"report.txt": record("local/report.txt", 20)})
@@ -103,6 +123,8 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
         self.assertFalse(server.copied_paths)
         self.assertEqual(job.skipped_files, 1)
+        self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.SKIPPED)
+        self.assertEqual(job.file_outcomes[0].reason_code, SyncReasonCode.DESTINATION_APPEARED)
 
     def test_job_rejects_a_source_that_changed_after_preview(self):
         local = FakeStorageProvider("local", {"report.txt": record("local/report.txt", 20)})
@@ -117,6 +139,8 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
         self.assertFalse(server.copied_paths)
         self.assertEqual(job.skipped_files, 1)
+        self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.SKIPPED)
+        self.assertEqual(job.file_outcomes[0].reason_code, SyncReasonCode.SOURCE_CHANGED)
 
     def test_requested_cancellation_prevents_the_next_file_from_copying(self):
         local = FakeStorageProvider("local", {"report.txt": record("local/report.txt", 20)})
@@ -130,3 +154,57 @@ class SynchronizationTests(unittest.TestCase):
 
         self.assertEqual(job.status, SyncJobStatus.CANCELLED)
         self.assertFalse(server.copied_paths)
+        self.assertEqual(job.not_attempted_files, 1)
+        self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.NOT_ATTEMPTED)
+        self.assertEqual(job.file_outcomes[0].reason_code, SyncReasonCode.CANCELLED)
+
+    def test_cancellation_after_partial_completion_records_remaining_files(self):
+        local = FakeStorageProvider("local", {
+            "a.txt": record("local/a.txt", 20),
+            "b.txt": record("local/b.txt", 20),
+        })
+        server = FakeStorageProvider("server")
+        service = SyncService(local, server)
+        preview = service.create_preview(service.compare(), SyncDirection.LOCAL_TO_SERVER)
+        job = service.create_job(preview)
+        server.after_copy = job.request_cancel
+
+        service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.CANCELLED)
+        self.assertEqual(server.copied_paths, ["a.txt"])
+        self.assertEqual(
+            [result.outcome for result in job.file_outcomes],
+            [SyncFileOutcome.COPIED, SyncFileOutcome.NOT_ATTEMPTED],
+        )
+
+    def test_run_level_failure_preserves_copy_and_marks_remaining_files(self):
+        local = FakeStorageProvider("local", {
+            "a.txt": record("local/a.txt", 20),
+            "b.txt": record("local/b.txt", 20),
+            "c.txt": record("local/c.txt", 20),
+        })
+        server = FakeStorageProvider("server")
+        service = SyncService(local, server)
+        preview = service.create_preview(service.compare(), SyncDirection.LOCAL_TO_SERVER)
+        job = service.create_job(preview)
+        local.record_failure_paths.add("b.txt")
+
+        service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.FAILED)
+        self.assertEqual(server.copied_paths, ["a.txt"])
+        self.assertEqual(
+            [result.outcome for result in job.file_outcomes],
+            [
+                SyncFileOutcome.COPIED,
+                SyncFileOutcome.NOT_ATTEMPTED,
+                SyncFileOutcome.NOT_ATTEMPTED,
+            ],
+        )
+        self.assertTrue(
+            all(
+                result.reason_code is SyncReasonCode.RUN_FAILED
+                for result in job.file_outcomes[1:]
+            )
+        )

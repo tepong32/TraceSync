@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+from urllib.parse import urlsplit
 from uuid import UUID
 
 from models.sync_direction import SyncDirection
@@ -59,6 +60,10 @@ class StorageEndpointSnapshot:
             raise ValueError("Provider display name is required.")
         if not self.locator.strip():
             raise ValueError("Provider locator is required.")
+        if "://" in self.locator:
+            parsed = urlsplit(self.locator)
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Provider locators cannot contain credentials.")
 
     def to_dict(self) -> dict[str, str]:
         return {
