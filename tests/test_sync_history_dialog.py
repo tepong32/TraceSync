@@ -149,6 +149,22 @@ class SyncHistoryDialogTests(unittest.TestCase):
         self.assertIn("1 history record", dialog.warning_var.get())
         self.assertIn("Other valid records", dialog.warning_var.get())
 
+    def test_duplicate_identities_are_excluded_before_tree_rows_are_created(self):
+        duplicate = make_record()
+        valid = make_record(interrupted=True)
+        self.store.create(duplicate)
+        duplicate_path = self.store.history_directory / f"{{{duplicate.run_id}}}.json"
+        duplicate_path.write_text(
+            (self.store.history_directory / f"{duplicate.run_id}.json").read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        self.store.create(valid)
+
+        dialog = SyncHistoryDialog(self.root, self.service)
+
+        self.assertEqual(dialog.history_tree.get_children(), (valid.run_id,))
+        self.assertIn("2 history record", dialog.warning_var.get())
+
     def test_clear_history_requires_confirmation_and_refreshes(self):
         self.store.create(make_record())
         dialog = SyncHistoryDialog(self.root, self.service)

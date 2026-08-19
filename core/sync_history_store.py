@@ -20,6 +20,12 @@ class HistoryLoadResult:
     unreadable_files: tuple[Path, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class _ValidatedHistoryFile:
+    record: SyncRunRecord
+    source_path: Path
+
+
 class SyncHistoryStore(Protocol):
     def create(self, record: SyncRunRecord) -> None: ...
 
@@ -69,39 +75,36 @@ class JsonSyncHistoryStore:
     def list_records(self, limit: int | None = None) -> HistoryLoadResult:
         if limit is not None and limit < 0:
             raise ValueError("History list limit cannot be negative.")
-        if not self.history_directory.is_dir():
-            return HistoryLoadResult(records=())
-
-        records: list[SyncRunRecord] = []
-        unreadable: list[Path] = []
-        for path in self.history_directory.glob("*.json"):
-            try:
-                records.append(self._read_record(path))
-            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-                unreadable.append(path)
-
-        records.sort(key=lambda record: record.started_at_utc, reverse=True)
+        validated_files, unreadable = self._load_validated_files()
         if limit is not None:
-            records = records[:limit]
+            validated_files = validated_files[:limit]
         return HistoryLoadResult(
-            records=tuple(records),
-            unreadable_files=tuple(sorted(unreadable)),
+            records=tuple(item.record for item in validated_files),
+            unreadable_files=unreadable,
         )
 
     def apply_retention(self, protected_run_id: str | None = None) -> int:
-        loaded = self.list_records()
-        protected = [record for record in loaded.records if record.run_id == protected_run_id]
-        candidates = [record for record in loaded.records if record.run_id != protected_run_id]
+        validated_files, _unreadable = self._load_validated_files()
+        protected_uuid = UUID(protected_run_id) if protected_run_id is not None else None
+        protected = [
+            item
+            for item in validated_files
+            if protected_uuid is not None and UUID(item.record.run_id) == protected_uuid
+        ]
+        candidates = [item for item in validated_files if item not in protected]
         keep_count = self.retention_limit - len(protected)
-        kept_ids = {record.run_id for record in candidates[:max(0, keep_count)]}
-        kept_ids.update(record.run_id for record in protected)
+        kept_paths = {
+            item.source_path
+            for item in candidates[:max(0, keep_count)]
+        }
+        kept_paths.update(item.source_path for item in protected)
 
         deleted = 0
-        for record in loaded.records:
-            if record.run_id in kept_ids:
+        for item in validated_files:
+            if item.source_path in kept_paths:
                 continue
             try:
-                self._record_path(record.run_id).unlink()
+                item.source_path.unlink()
                 deleted += 1
             except FileNotFoundError:
                 continue
@@ -134,6 +137,41 @@ class JsonSyncHistoryStore:
         if not isinstance(data, dict):
             raise ValueError("History record must be a JSON object.")
         return SyncRunRecord.from_dict(data)
+
+    def _load_validated_files(
+        self,
+    ) -> tuple[list[_ValidatedHistoryFile], tuple[Path, ...]]:
+        if not self.history_directory.is_dir():
+            return [], ()
+
+        files_by_run_id: dict[UUID, list[_ValidatedHistoryFile]] = {}
+        unreadable: list[Path] = []
+        for path in self.history_directory.glob("*.json"):
+            try:
+                filename_run_id = UUID(path.stem)
+                record = self._read_record(path)
+                payload_run_id = UUID(record.run_id)
+                if filename_run_id != payload_run_id:
+                    raise ValueError("History filename does not match its run ID.")
+            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                unreadable.append(path)
+                continue
+            files_by_run_id.setdefault(payload_run_id, []).append(
+                _ValidatedHistoryFile(record=record, source_path=path)
+            )
+
+        validated_files: list[_ValidatedHistoryFile] = []
+        for matching_files in files_by_run_id.values():
+            if len(matching_files) > 1:
+                unreadable.extend(item.source_path for item in matching_files)
+                continue
+            validated_files.extend(matching_files)
+
+        validated_files.sort(
+            key=lambda item: item.record.started_at_utc,
+            reverse=True,
+        )
+        return validated_files, tuple(sorted(unreadable))
 
     def _write_atomic(self, record: SyncRunRecord, target: Path) -> None:
         self.history_directory.mkdir(parents=True, exist_ok=True)
