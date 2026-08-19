@@ -133,7 +133,7 @@ class SyncHistoryDialog(tk.Toplevel):
     def _view_details(self, _event=None) -> None:
         record = self._selected_record()
         if record is not None:
-            SyncHistoryDetailsDialog(self, record)
+            SyncHistoryDetailsDialog(self, record, self.history_service)
 
     def _clear_history(self) -> None:
         if not messagebox.askyesno(

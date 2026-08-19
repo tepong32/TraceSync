@@ -1,6 +1,8 @@
 import tkinter as tk
-from tkinter import ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
 
+from core.sync_history_service import SyncHistoryService
 from models.sync_history import SyncFileOutcome, SyncRunRecord
 from ui.utils.formatting import (
     format_history_duration,
@@ -14,9 +16,15 @@ from ui.utils.formatting import (
 class SyncHistoryDetailsDialog(tk.Toplevel):
     """Displays the durable summary and per-file outcomes for one run."""
 
-    def __init__(self, parent, record: SyncRunRecord) -> None:
+    def __init__(
+        self,
+        parent,
+        record: SyncRunRecord,
+        history_service: SyncHistoryService,
+    ) -> None:
         super().__init__(parent)
         self.record = record
+        self.history_service = history_service
         self.issues_only_var = tk.BooleanVar(value=False)
         self.run_id_var = tk.StringVar(value=record.run_id)
         self.version_var = tk.StringVar(value=record.application_version)
@@ -91,7 +99,14 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
 
-        ttk.Button(main, text="Close", command=self.destroy).pack(anchor="e", pady=(12, 0))
+        buttons = ttk.Frame(main)
+        buttons.pack(fill="x", pady=(12, 0))
+        ttk.Button(
+            buttons,
+            text="Export Run to CSV...",
+            command=self._export_csv,
+        ).pack(side="left")
+        ttk.Button(buttons, text="Close", command=self.destroy).pack(side="right")
 
     def _counts_text(self) -> str:
         counts = self.record.counts
@@ -117,3 +132,24 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
                     item.message or "",
                 ),
             )
+
+    def _export_csv(self) -> None:
+        destination = filedialog.asksaveasfilename(
+            parent=self,
+            title="Export Synchronization Run",
+            defaultextension=".csv",
+            filetypes=(("CSV files", "*.csv"), ("All files", "*.*")),
+            initialfile=f"tracesync-sync-{self.record.run_id}.csv",
+        )
+        if not destination:
+            return
+        try:
+            self.history_service.export_run(self.record.run_id, Path(destination))
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("History Not Exported", str(exc), parent=self)
+            return
+        messagebox.showinfo(
+            "History Exported",
+            "The selected synchronization run was exported successfully.",
+            parent=self,
+        )

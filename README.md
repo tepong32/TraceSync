@@ -4,12 +4,14 @@ TraceSync is a Windows desktop utility for safely comparing and synchronizing tw
 
 Current tagged release: **v0.6.0**
 
-Current development baseline: **v0.8.5 (unreleased)**
+Current development milestone: **v0.9 Synchronization History & Auditability (unreleased)**
+
+The application version remains tied to the formal release metadata in `VERSION`; v0.9 development does not manufacture a `0.9.0` version value.
 
 ## Workflow
 
 ```text
-Compare -> Review results -> Select direction -> Preview -> Confirm -> Synchronize -> Summary
+Compare -> Review results -> Select direction -> Preview -> Confirm -> Synchronize -> Summary -> Review history
 ```
 
 TraceSync only performs one-way synchronization. It does not automatically resolve conflicts or schedule background runs.
@@ -26,12 +28,17 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 - Background file copying with responsive progress, elapsed and estimated remaining time, and safe cancellation between files.
 - File-level error reporting; recoverable errors do not stop other approved copies.
 - Metadata validation immediately before each copy. Files changed after confirmation are skipped and require a new comparison.
+- Durable synchronization history with structured run and per-file outcomes, interrupted-run recovery, and a newest-500-run retention limit.
+- History review and selected-run CSV export, including spreadsheet formula-injection protection.
+- A lightweight operating-system lock that permits only one active synchronization per user profile.
 - JSON settings that retain the selected folders and can accommodate future provider-specific settings.
 - Planning-only provider selections and status messaging; these do not connect to or move data through remote services.
 
 ## Safety model
 
-TraceSync never starts a synchronization job until the user confirms the complete preview. Existing destination files are identified before confirmation. The job preserves timestamps where the local filesystem supports them and creates missing destination directories.
+TraceSync never starts a synchronization job until the user confirms the complete preview and the initial `in_progress` history record is safely persisted. Existing destination files are identified before confirmation. The job preserves timestamps where the local filesystem supports them and creates missing destination directories.
+
+If the final history update fails after copying, TraceSync preserves the real synchronization result and warns the user. The durable record remains `in_progress`; on a later launch it is honestly classified as `interrupted` because completion cannot be proven from the history store.
 
 No rollback, backup, automatic synchronization, active cloud provider, or bidirectional conflict-resolution feature is included in the current development baseline.
 
@@ -43,6 +50,7 @@ MainWindow
      -> StorageScanner -> StorageProvider
      -> comparer -> ComparisonResult
      -> SyncPreview -> SyncJobRunner -> SyncJob
+     -> SyncHistoryService -> JsonSyncHistoryStore
 ```
 
 `LocalStorageProvider` is the only concrete provider. The provider abstraction keeps scanning and synchronization independent of the local filesystem API, ready for later storage backends without changing the UI workflow.
@@ -66,10 +74,10 @@ python -m unittest discover -s tests -v
 ## Project layout
 
 ```text
-core/       comparison, providers, preview orchestration, and job execution
-models/     lightweight comparison and synchronization dataclasses/enums
-ui/         Tkinter window and dialogs
-utils/      settings persistence
-tests/      synchronization behavior tests
+core/       comparison, providers, synchronization execution, history, and CSV export
+models/     lightweight comparison, synchronization, and history dataclasses/enums
+ui/         Tkinter window and dialogs, including history review
+utils/      settings and application-version utilities
+tests/      synchronization, persistence, export, and UI behavior tests
 docs/       vision, roadmap, architecture, backlog, and icebox
 ```

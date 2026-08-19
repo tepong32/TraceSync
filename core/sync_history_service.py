@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from core.storage_provider import StorageProvider
 from core.sync_history_lock import SyncAlreadyActiveError, SyncHistoryLock
+from core.sync_history_export import export_sync_run_csv
 from core.sync_history_store import (
     HistoryLoadResult,
     JsonSyncHistoryStore,
@@ -162,6 +163,12 @@ class SyncHistoryService:
             return self.store.clear()
         finally:
             clear_lock.release()
+
+    def export_run(self, run_id: str, destination: Path) -> None:
+        record = self.store.get(run_id)
+        if record is None:
+            raise ValueError("The selected synchronization history record no longer exists.")
+        export_sync_run_csv(record, destination)
 
     def _build_initial_record(
         self,

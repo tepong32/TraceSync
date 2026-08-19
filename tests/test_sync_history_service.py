@@ -121,6 +121,9 @@ class SyncHistoryLifecycleTests(unittest.TestCase):
         self.assertEqual(record.files[0].outcome, SyncFileOutcome.COPIED)
         self.assertEqual(job.status, SyncJobStatus.COMPLETED)
         self.assertTrue(job.completion_ready)
+        persisted_payload = next((self.history_root / "runs").glob("*.json")).read_text(encoding="utf-8")
+        self.assertNotIn(self.local.secret_token, persisted_payload)
+        self.assertNotIn(self.server.secret_token, persisted_payload)
 
     def test_initial_history_failure_prevents_copying(self):
         service, preview, job = self.make_operation()
@@ -146,6 +149,14 @@ class SyncHistoryLifecycleTests(unittest.TestCase):
         durable_record = self.store.get(job.history_run_id)
         self.assertIsNotNone(durable_record)
         self.assertEqual(durable_record.outcome, SyncRunOutcome.IN_PROGRESS)
+
+        recovery = self.history_service.recover_interrupted_runs()
+
+        self.assertEqual(recovery.recovered_runs, 1)
+        self.assertEqual(
+            self.store.get(job.history_run_id).outcome,
+            SyncRunOutcome.INTERRUPTED,
+        )
 
     def test_retention_failure_does_not_falsify_finalized_history(self):
         service, preview, job = self.make_operation()

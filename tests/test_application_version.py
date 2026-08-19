@@ -7,6 +7,11 @@ from utils.application_version import UNKNOWN_VERSION, get_application_version
 
 
 class ApplicationVersionTests(unittest.TestCase):
+    def test_pyinstaller_spec_packages_version_resource(self):
+        spec_path = Path(__file__).resolve().parents[1] / "TraceSync.spec"
+
+        self.assertIn("('VERSION', '.')", spec_path.read_text(encoding="utf-8"))
+
     def test_reads_valid_version_file(self):
         with tempfile.TemporaryDirectory() as workspace:
             version_file = Path(workspace) / "VERSION"

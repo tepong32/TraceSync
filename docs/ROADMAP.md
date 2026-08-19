@@ -18,15 +18,15 @@ The repository is the authoritative source of truth for the current implementati
 
 ---
 
-## Current Development Baseline
+## Current Development Milestone
 
 | Item       | Value                                                        |
 | ---------- | ------------------------------------------------------------ |
-| Version    | **v0.8.5 (unreleased)**                                      |
-| Milestones | **v0.7 Selective Synchronization; v0.8 Remote and Cloud Preparation** |
-| Status     | **Completed in source; not release-tagged**                   |
+| Milestone  | **v0.9 Synchronization History & Auditability**               |
+| Baseline   | **v0.8.5 (unreleased)**                                      |
+| Status     | **Implemented on the feature branch; not release-tagged**     |
 
-`VERSION`, the application title, and release tags remain at v0.6.0 until a formal release is performed.
+`VERSION`, the application title, and release tags remain at v0.6.0 until a formal release is performed. History reads this existing version metadata dynamically; development work does not assume `0.9.0`.
 
 ---
 
@@ -176,6 +176,20 @@ The current ignore system should remain simple unless a real office workflow dem
 ---
 
 # Post-Release Development Milestones
+
+## v0.9 — Synchronization History & Auditability (Implemented on feature branch; unreleased)
+
+Core promise: after a synchronization, the user can inspect what TraceSync did, what it did not do, and why.
+
+- Persist an initial `in_progress` record before file copying can begin.
+- Record structured terminal run and per-file outcomes without changing synchronization candidate selection or copying behavior.
+- Mark abandoned `in_progress` records as `interrupted` on a later launch instead of claiming success.
+- Keep the real synchronization outcome distinct from a final history-write failure.
+- Enforce one active synchronization with a lightweight operating-system file lock.
+- Store one atomic, versioned JSON document per run and retain the newest 500.
+- Review the newest 100 runs, inspect details, filter issues, clear history with confirmation, and warn about unreadable individual records.
+- Export only the selected run to formula-hardened CSV with one row per approved file.
+- Keep all remote/cloud provider work architectural; no transport or authentication is included.
 
 ## v0.8 — Remote and Cloud Preparation (Completed in source; unreleased)
 

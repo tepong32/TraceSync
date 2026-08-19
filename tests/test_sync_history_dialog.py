@@ -1,3 +1,4 @@
+import gc
 import tempfile
 import tkinter as tk
 import unittest
@@ -76,6 +77,8 @@ class SyncHistoryDialogTests(unittest.TestCase):
                     child.destroy()
             finally:
                 self.root.destroy()
+                del self.root
+                gc.collect()
 
     def test_empty_history_has_clear_empty_state(self):
         dialog = SyncHistoryDialog(self.root, self.service)
@@ -100,7 +103,7 @@ class SyncHistoryDialogTests(unittest.TestCase):
 
     def test_details_show_run_and_filter_to_issues(self):
         record = make_record()
-        dialog = SyncHistoryDetailsDialog(self.root, record)
+        dialog = SyncHistoryDetailsDialog(self.root, record, self.service)
 
         self.assertEqual(dialog.run_id_var.get(), record.run_id)
         self.assertEqual(dialog.outcome_var.get(), "Completed with issues")
@@ -115,6 +118,25 @@ class SyncHistoryDialogTests(unittest.TestCase):
         self.assertEqual(values[0], "changed.docx")
         self.assertEqual(values[2], "Skipped")
         self.assertEqual(values[3], "Destination Changed")
+
+    def test_details_export_only_the_displayed_run(self):
+        record = make_record()
+        self.store.create(record)
+        destination = Path(self.workspace.name) / "selected-run.csv"
+        dialog = SyncHistoryDetailsDialog(self.root, record, self.service)
+
+        with (
+            patch(
+                "ui.dialogs.sync_history_details_dialog.filedialog.asksaveasfilename",
+                return_value=str(destination),
+            ),
+            patch("ui.dialogs.sync_history_details_dialog.messagebox.showinfo") as success,
+        ):
+            dialog._export_csv()
+
+        self.assertTrue(destination.is_file())
+        self.assertIn(record.run_id, destination.read_text(encoding="utf-8-sig"))
+        success.assert_called_once()
 
     def test_corrupt_record_warning_does_not_hide_valid_history(self):
         record = make_record()
