@@ -19,6 +19,7 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 - Recursive folder scanning and relative-path comparison.
 - Clear statuses: Local Newer, Server Newer, Same, Local Only, and Server Only.
 - Color-coded and filterable result list, with file details on double-click.
+- Color-coded next-step guidance and hover help for the main folder and synchronization controls.
 - Result-row context actions for opening file details and copying a relative path.
 - Local -> Server and Server -> Local synchronization previews.
 - Optional per-file selection in the synchronization confirmation preview.
@@ -30,7 +31,7 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 - History review and selected-run CSV export, including spreadsheet formula-injection protection.
 - A lightweight operating-system lock that permits only one active synchronization per user profile.
 - JSON settings that retain the selected folders and can accommodate future provider-specific settings.
-- Planning-only provider selections and status messaging; these do not connect to or move data through remote services.
+- Collapsible, planning-only provider selections and status messaging; these are hidden by default and do not connect to or move data through remote services.
 
 ## Safety model
 

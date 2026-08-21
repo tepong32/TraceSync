@@ -1,4 +1,11 @@
 # Changelog
+## Unreleased
+### Changed
+- Keep the planning-only Provider Onboarding and remote/cloud information hidden by default, with a toolbar control to show or hide the section when needed.
+- Increase the results list's requested height to 15 visible file rows.
+- Keep the synchronization direction buttons docked and visible below the expanded results list.
+- Add a text-supported, color-coded next-step guide and delayed hover help for the main workflow controls.
+
 ## [0.9.0] - 2026-08-19
 ### Added
 - v0.9 Synchronization History & Auditability: persist an atomic, versioned JSON record for every started synchronization and capture structured outcomes for every approved file.
