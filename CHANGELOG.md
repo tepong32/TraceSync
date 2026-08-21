@@ -1,5 +1,5 @@
 # Changelog
-## Unreleased
+## [0.9.1] - 2026-08-21
 ### Changed
 - Keep the planning-only Provider Onboarding and remote/cloud information hidden by default, with a toolbar control to show or hide the section when needed.
 - Increase the results list's requested height to 15 visible file rows.

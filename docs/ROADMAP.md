@@ -8,25 +8,25 @@ The repository is the authoritative source of truth for the current implementati
 
 ---
 
-## Current Release Candidate
+## Current Release
 
-| Item      | Value                                           |
-| --------- | ----------------------------------------------- |
-| Version   | **v0.9.0**                                      |
-| Milestone | **Synchronization History & Auditability**      |
-| Status    | **Prepared on `master`; awaiting release tag**   |
+| Item      | Value                                                |
+| --------- | ---------------------------------------------------- |
+| Version   | **v0.9.1**                                           |
+| Milestone | **v0.9 Workflow Usability Maintenance**              |
+| Status    | **Released as the v0.9.1 maintenance patch**          |
 
 ---
 
 ## Development Status
 
-| Item       | Value                                                        |
-| ---------- | ------------------------------------------------------------ |
-| Milestone  | **No active post-v0.9 milestone**                             |
-| Baseline   | **v0.9.0 release candidate**                                 |
-| Status     | **Release preparation only; future candidates remain deferred** |
+| Item       | Value                                             |
+| ---------- | ------------------------------------------------- |
+| Milestone  | **No active post-v0.9 milestone**                  |
+| Baseline   | **v0.9.1**                                        |
+| Status     | **v0.9 maintenance complete; future work deferred** |
 
-`VERSION` and the application title report v0.9.0. The release tag is intentionally deferred until final release review.
+`VERSION` and the application title report v0.9.1. The patch preserves synchronization behavior while simplifying the local-first interface.
 
 ---
 
@@ -175,7 +175,7 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ---
 
-# Development Milestones Included in v0.9.0
+# Development Milestones Included in v0.9.1
 
 ## v0.9 — Synchronization History & Auditability (Completed)
 
@@ -325,7 +325,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of v0.9.0.
+These are future capabilities and are not part of v0.9.1.
 
 ---
 
