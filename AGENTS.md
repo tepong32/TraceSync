@@ -72,6 +72,7 @@ Services
 
 * Folder comparison
 * Synchronization
+* Backup and restore
 * Settings
 
 ---
@@ -196,6 +197,8 @@ storage_provider.py
 local_storage_provider.py
 storage_scanner.py
 sync_job_runner.py
+backup_service.py
+backup_store.py
 
 models/
 

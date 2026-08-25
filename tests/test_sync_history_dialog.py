@@ -3,9 +3,10 @@ import tempfile
 import tkinter as tk
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
+from core.backup_service import RestoreResult
 from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from models.sync_direction import SyncDirection
@@ -22,7 +23,7 @@ from ui.dialogs.sync_history_details_dialog import SyncHistoryDetailsDialog
 from ui.dialogs.sync_history_dialog import SyncHistoryDialog
 
 
-def make_record(*, interrupted: bool = False) -> SyncRunRecord:
+def make_record(*, interrupted: bool = False, backup_id: str | None = None) -> SyncRunRecord:
     copied = SyncFileOutcomeRecord(
         relative_path="copied.xlsx",
         operation="copy",
@@ -36,6 +37,7 @@ def make_record(*, interrupted: bool = False) -> SyncRunRecord:
         outcome=SyncFileOutcome.UNKNOWN if interrupted else SyncFileOutcome.SKIPPED,
         reason_code=(SyncReasonCode.INTERRUPTED if interrupted else SyncReasonCode.DESTINATION_CHANGED),
         message="The destination could not be safely updated.",
+        backup_id=backup_id,
     )
     return SyncRunRecord(
         run_id=str(uuid4()),
@@ -117,7 +119,7 @@ class SyncHistoryDialogTests(unittest.TestCase):
         values = dialog.files_tree.item(rows[0], "values")
         self.assertEqual(values[0], "changed.docx")
         self.assertEqual(values[2], "Skipped")
-        self.assertEqual(values[3], "Destination Changed")
+        self.assertEqual(values[4], "Destination Changed")
 
     def test_details_export_only_the_displayed_run(self):
         record = make_record()
@@ -137,6 +139,39 @@ class SyncHistoryDialogTests(unittest.TestCase):
         self.assertTrue(destination.is_file())
         self.assertIn(record.run_id, destination.read_text(encoding="utf-8-sig"))
         success.assert_called_once()
+
+    def test_details_restore_uses_the_selected_history_backup(self):
+        backup_id = str(uuid4())
+        safety_backup_id = str(uuid4())
+        record = make_record(backup_id=backup_id)
+        backup_service = Mock()
+        backup_service.backup_ids_for_run.return_value = {}
+        backup_service.restore.return_value = RestoreResult(
+            restored_backup_id=backup_id,
+            safety_backup_id=safety_backup_id,
+        )
+        dialog = SyncHistoryDetailsDialog(
+            self.root,
+            record,
+            self.service,
+            backup_service,
+        )
+        issue_row = dialog.files_tree.get_children()[1]
+        dialog.files_tree.selection_set(issue_row)
+        dialog._on_file_selection()
+
+        self.assertEqual(str(dialog.restore_button["state"]), "normal")
+        with (
+            patch(
+                "ui.dialogs.sync_history_details_dialog.messagebox.askyesno",
+                return_value=True,
+            ),
+            patch("ui.dialogs.sync_history_details_dialog.messagebox.showinfo") as success,
+        ):
+            dialog._restore_selected_backup()
+
+        backup_service.restore.assert_called_once_with(backup_id)
+        self.assertIn("latest recovery point", success.call_args.args[1])
 
     def test_corrupt_record_warning_does_not_hide_valid_history(self):
         record = make_record()

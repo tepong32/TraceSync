@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from core.backup_service import BackupService
 from core.sync_history_service import SyncHistoryService
 from models.sync_history import SyncRunRecord
 from ui.dialogs.sync_history_details_dialog import SyncHistoryDetailsDialog
@@ -17,9 +18,15 @@ class SyncHistoryDialog(tk.Toplevel):
 
     DISPLAY_LIMIT = 100
 
-    def __init__(self, parent, history_service: SyncHistoryService) -> None:
+    def __init__(
+        self,
+        parent,
+        history_service: SyncHistoryService,
+        backup_service: BackupService | None = None,
+    ) -> None:
         super().__init__(parent)
         self.history_service = history_service
+        self.backup_service = backup_service
         self.records_by_id: dict[str, SyncRunRecord] = {}
         self.warning_var = tk.StringVar(value="")
         self.empty_var = tk.StringVar(value="")
@@ -133,7 +140,12 @@ class SyncHistoryDialog(tk.Toplevel):
     def _view_details(self, _event=None) -> None:
         record = self._selected_record()
         if record is not None:
-            SyncHistoryDetailsDialog(self, record, self.history_service)
+            SyncHistoryDetailsDialog(
+                self,
+                record,
+                self.history_service,
+                self.backup_service,
+            )
 
     def _clear_history(self) -> None:
         if not messagebox.askyesno(

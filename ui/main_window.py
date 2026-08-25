@@ -901,7 +901,11 @@ class MainWindow(tk.Tk):
             messagebox.showwarning("History Cleanup Incomplete", job.history_maintenance_warning)
 
     def open_sync_history(self):
-        SyncHistoryDialog(self, self.sync_service.history_service)
+        SyncHistoryDialog(
+            self,
+            self.sync_service.history_service,
+            self.sync_service.backup_service,
+        )
 
     def edit_ignore_settings(self):
         dialog = IgnoreSettingsDialog(self, self.settings.get("ignore_patterns", []))

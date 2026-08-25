@@ -37,6 +37,7 @@ CSV_COLUMNS = (
     "file_outcome",
     "reason_code",
     "message",
+    "backup_id",
 )
 
 
@@ -110,6 +111,7 @@ def _file_row(record, file_outcome) -> dict[str, object]:
         "file_outcome": file_outcome.outcome.value,
         "reason_code": file_outcome.reason_code.value if file_outcome.reason_code else "",
         "message": file_outcome.message or "",
+        "backup_id": file_outcome.backup_id or "",
     }
 
 

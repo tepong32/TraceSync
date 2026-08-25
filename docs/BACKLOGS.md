@@ -101,7 +101,8 @@ Improve comparison summaries.
 
 Potential extensions beyond the completed v0.9 history milestone.
 
-* [ ] Restore from backup.
+Restore from a TraceSync pre-overwrite backup has been promoted to the active Backup Before Overwrite roadmap milestone. Broader backup browsing and whole-run rollback remain uncommitted.
+
 * [ ] Search history.
 * [ ] Add advanced history filters beyond the v0.9 Issues Only option.
 
