@@ -60,9 +60,63 @@ def _normalize_ignore_patterns(raw_patterns) -> list[str]:
     return normalized
 
 
+def _normalize_folder_pairs(raw_pairs) -> list[dict[str, str]]:
+    """Return valid, uniquely named Local/Server folder relationships."""
+    normalized: list[dict[str, str]] = []
+    seen_names: set[str] = set()
+    if not isinstance(raw_pairs, (list, tuple)):
+        return normalized
+
+    for pair in raw_pairs:
+        if not isinstance(pair, dict):
+            continue
+
+        name = pair.get("name")
+        local_folder = pair.get("local_folder")
+        server_folder = pair.get("server_folder")
+        if not all(
+            isinstance(value, str)
+            for value in (name, local_folder, server_folder)
+        ):
+            continue
+
+        normalized_pair = {
+            "name": name.strip(),
+            "local_folder": local_folder.strip(),
+            "server_folder": server_folder.strip(),
+        }
+        if not all(normalized_pair.values()):
+            continue
+
+        name_key = normalized_pair["name"].casefold()
+        if name_key in seen_names:
+            continue
+        seen_names.add(name_key)
+        normalized.append(normalized_pair)
+
+    return normalized
+
+
+def _normalize_active_folder_pair(raw_name, folder_pairs) -> str:
+    """Resolve an active pair name to its canonical persisted capitalization."""
+    if not isinstance(raw_name, str):
+        return ""
+
+    name_key = raw_name.strip().casefold()
+    if not name_key:
+        return ""
+
+    for pair in folder_pairs:
+        if pair["name"].casefold() == name_key:
+            return pair["name"]
+    return ""
+
+
 def _default_settings():
     return {
         "recent_pairs": [],
+        "folder_pairs": [],
+        "active_folder_pair": "",
         "providers": {
             "source_provider": DEFAULT_PROVIDER,
             "destination_provider": DEFAULT_PROVIDER,
@@ -96,6 +150,17 @@ class SettingsService:
                 settings["ignore_patterns"] = _normalize_ignore_patterns(
                     settings.get("ignore_patterns"),
                 )
+                if "folder_pairs" in loaded_settings:
+                    raw_folder_pairs = loaded_settings.get("folder_pairs")
+                else:
+                    raw_folder_pairs = loaded_settings.get("recent_pairs", [])
+                settings["folder_pairs"] = _normalize_folder_pairs(
+                    raw_folder_pairs,
+                )
+                settings["active_folder_pair"] = _normalize_active_folder_pair(
+                    settings.get("active_folder_pair"),
+                    settings["folder_pairs"],
+                )
                 return settings
 
         except (
@@ -117,6 +182,16 @@ class SettingsService:
             )
             settings_copy["providers"] = _normalize_provider_settings(
                 settings_copy.get("providers"),
+            )
+            settings_copy["folder_pairs"] = _normalize_folder_pairs(
+                settings_copy.get(
+                    "folder_pairs",
+                    settings_copy.get("recent_pairs", []),
+                ),
+            )
+            settings_copy["active_folder_pair"] = _normalize_active_folder_pair(
+                settings_copy.get("active_folder_pair"),
+                settings_copy["folder_pairs"],
             )
             json.dump(
                 settings_copy,
