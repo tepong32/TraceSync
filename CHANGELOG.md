@@ -1,5 +1,5 @@
 # Changelog
-## [0.10.0] - Release Candidate - 2026-08-25
+## [0.10.0] - 2026-08-25
 ### Added
 - Add named Local ↔ Server Folder Pairs that can be selected from the main window without repeatedly browsing for both paths.
 - Add a dedicated manager for creating, editing, renaming, and deleting Folder Pairs, including useful name suggestions from the chosen folders.

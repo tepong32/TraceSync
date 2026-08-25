@@ -2,9 +2,9 @@
 
 TraceSync is a Windows desktop utility for safely comparing and synchronizing two folders. It is designed for office and shared-file environments where users must understand a copy operation before it changes a file.
 
-Current release candidate: **v0.10.0**
+Current release: **v0.10.0**
 
-This release candidate builds on the merged v0.9.1 baseline and adds Saved Folder Pairs for recurring Local ↔ Server relationships. The existing one-comparison-at-a-time workflow is unchanged, and planning-only provider controls remain hidden by default. The application version is read from the canonical `VERSION` resource in both source and packaged runtimes.
+This release builds on the merged v0.9.1 baseline and adds Saved Folder Pairs for recurring Local ↔ Server relationships. The existing one-comparison-at-a-time workflow is unchanged, and planning-only provider controls remain hidden by default. The application version is read from the canonical `VERSION` resource in both source and packaged runtimes.
 
 ## Workflow
 
@@ -41,7 +41,7 @@ TraceSync never starts a synchronization job until the user confirms the complet
 
 If the final history update fails after copying, TraceSync preserves the real synchronization result and warns the user. The durable record remains `in_progress`; on a later launch it is honestly classified as `interrupted` because completion cannot be proven from the history store.
 
-No rollback, backup, automatic synchronization, active cloud provider, or bidirectional conflict-resolution feature is included in this release candidate.
+No rollback, backup, automatic synchronization, active cloud provider, or bidirectional conflict-resolution feature is included in v0.10.0.
 
 ## Architecture
 

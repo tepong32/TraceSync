@@ -6,29 +6,29 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 The repository is the authoritative source of truth for the current implementation and release state.
 
-> **Current status: v0.10 Folder Pair Workflow release candidate.**
+> **Current status: v0.10 Folder Pair Workflow released.**
 >
-> v0.10 is the active milestone. Backlog and icebox entries remain unscheduled unless explicitly promoted into this document.
+> The committed roadmap is complete through v0.10.0. There is no active post-v0.10 milestone; backlog and icebox entries remain unscheduled unless explicitly promoted into this document.
 
 ---
 
-## Current Release Candidate
+## Current Release
 
-| Item      | Value                                               |
-| --------- | --------------------------------------------------- |
-| Version   | **v0.10.0**                                         |
-| Milestone | **Folder Pair Workflow**                            |
-| Status    | **Implementation complete; release review pending** |
+| Item      | Value                       |
+| --------- | --------------------------- |
+| Version   | **v0.10.0**                 |
+| Milestone | **Folder Pair Workflow**    |
+| Status    | **Released on 2026-08-25**  |
 
 ---
 
 ## Development Status
 
-| Item      | Value                                         |
-| --------- | --------------------------------------------- |
-| Milestone | **v0.10 Folder Pair Workflow**                |
-| Baseline  | **Merged v0.9.1**                             |
-| Status    | **Release candidate prepared for validation** |
+| Item      | Value                                     |
+| --------- | ----------------------------------------- |
+| Milestone | **No active post-v0.10 milestone**       |
+| Baseline  | **v0.10.0**                              |
+| Status    | **v0.10 complete; future work deferred** |
 
 `VERSION` and the application title report v0.10.0. Folder Pairs add saved endpoint selection without changing the compare → review → confirm → synchronize workflow. The v0.9.1 provider-planning section remains hidden by default.
 
@@ -48,9 +48,9 @@ Only ROADMAP items are development commitments. A backlog item is not an implied
 
 ---
 
-# Active Milestone
+# Completed Milestones
 
-## v0.10 — Folder Pair Workflow (Release Candidate)
+## v0.10 — Folder Pair Workflow (Released)
 
 Core promise: recurring Local ↔ Server folder relationships can be selected quickly without turning the main comparison workflow into a multi-job workspace.
 
@@ -63,11 +63,9 @@ Core promise: recurring Local ↔ Server folder relationships can be selected qu
 - Preserve one comparison at a time and the existing preview, confirmation, validation, execution, and history safeguards.
 - Keep planning-only provider controls hidden by default; no remote/cloud transport or authentication is added.
 
-Release review requires the full automated suite, Folder Pair UI coverage, compile validation, and a clean final diff.
+Release validation completed with the full automated suite, Folder Pair UI coverage, compile validation, and a clean final diff.
 
 ---
-
-# Completed Milestones
 
 ## Foundation and Results Exploration
 

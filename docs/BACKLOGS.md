@@ -123,7 +123,7 @@ TraceSync already has friendly comparison statuses, decision explanations, and v
 
 # Folder Pair Follow-ups
 
-Potential extensions beyond the v0.10 Folder Pair Workflow. These are not part of the release candidate.
+Potential extensions beyond the released v0.10 Folder Pair Workflow. These are not part of v0.10.0.
 
 * [ ] Import and export saved Folder Pairs.
 * [ ] Pin or favorite frequently used Folder Pairs if real office workflows demonstrate the need.
