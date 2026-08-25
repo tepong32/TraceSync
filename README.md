@@ -16,6 +16,44 @@ Compare -> Review results -> Select direction -> Preview -> Confirm -> Synchroni
 
 TraceSync only performs one-way synchronization. It does not automatically resolve conflicts or schedule background runs.
 
+## v0.10.0 product tour
+
+The following captures come from the tagged v0.10.0 release and use representative office documents. They show the released workflow only; post-v0.10 backup work is not depicted or claimed here.
+
+### Confidence-aware comparison
+
+![TraceSync comparison workspace showing status filters, a Needs Attention count, and explicit copy directions.](docs/images/v0.10.0/confidence-comparison.png)
+
+**What it does:** Classifies same, newer, and one-sided files, then isolates ambiguous metadata under **Needs Attention**.
+
+**What it guarantees or avoids:** Comparing is read-only. It does not copy, replace, or delete files, and it does not guess a direction for the operator.
+
+### Saved Folder Pairs
+
+![TraceSync Saved Folder Pairs manager with named Local and Server folder relationships.](docs/images/v0.10.0/saved-folder-pairs.png)
+
+**What it does:** Remembers named Local ↔ Server relationships for recurring workflows without repeated folder browsing.
+
+**What it guarantees or avoids:** Selecting a pair only fills the two paths. It never starts a comparison or synchronization by itself, and changing an endpoint clears stale results.
+
+### Selective synchronization preview
+
+![TraceSync synchronization preview showing direction, replacements, per-file selection, recommendations, and confidence.](docs/images/v0.10.0/selective-preview.png)
+
+**What it does:** Shows the one-way direction, creates, replacements, warnings, per-file recommendations, and confidence before execution. Operators can exclude individual files.
+
+**What it guarantees or avoids:** No job starts without explicit confirmation. Approved files are revalidated immediately before copying, so metadata changed after preview causes a safe skip instead of a blind overwrite.
+
+### Durable synchronization history
+
+![TraceSync synchronization history listing completed runs, directions, copied files, issues, and duration.](docs/images/v0.10.0/synchronization-history.png)
+
+**What it does:** Records direction, outcome, copied totals, issues, duration, and structured per-file results for each run.
+
+**What it guarantees or avoids:** Changed, skipped, or failed files are not reported as successful copies. Interrupted records are recovered honestly when completion cannot be proven.
+
+> **Scope boundary:** v0.10.0 does not provide automatic synchronization, active cloud providers, bidirectional conflict resolution, backup, or rollback.
+
 ## Features
 
 - Recursive folder scanning and relative-path comparison.
