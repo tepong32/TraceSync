@@ -54,7 +54,7 @@ MainWindow
 
 `LocalStorageProvider` is the only concrete provider. The provider abstraction keeps scanning and synchronization independent of the local filesystem API, ready for later storage backends without changing the UI workflow.
 
-See [Architecture](docs/ARCHITECTURE.md) for the module responsibilities and [Roadmap](docs/ROADMAP.md) for deferred work.
+See [Architecture](docs/ARCHITECTURE.md) for module responsibilities, [Roadmap](docs/ROADMAP.md) for completed commitments and current status, and the [v0.1-v0.9.1 Retrospective](docs/RETROSPECTIVE_V0.1_V0.9.1.md) for the reconciled product history. Future possibilities remain separately classified in the [Backlog](docs/BACKLOGS.md) and [Icebox](docs/ICEBOX.md); neither is a development commitment.
 
 ## Running locally
 
@@ -78,5 +78,5 @@ models/     lightweight comparison, synchronization, and history dataclasses/enu
 ui/         Tkinter window and dialogs, including history review
 utils/      settings and application-version utilities
 tests/      synchronization, persistence, export, and UI behavior tests
-docs/       vision, roadmap, architecture, backlog, and icebox
+docs/       vision, roadmap, retrospective, architecture, backlog, and icebox
 ```
