@@ -6,31 +6,31 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 The repository is the authoritative source of truth for the current implementation and release state.
 
-> **Current status: Mature baseline; committed roadmap complete through v0.9.1.**
+> **Current status: v0.10 Folder Pair Workflow release candidate.**
 >
-> There is no active post-v0.9.1 milestone. Only items in this document that are explicitly identified as active commitments are commitments; backlog and icebox entries are not scheduled work.
+> v0.10 is the active milestone. Backlog and icebox entries remain unscheduled unless explicitly promoted into this document.
 
 ---
 
-## Current Release
+## Current Release Candidate
 
-| Item      | Value                                                |
-| --------- | ---------------------------------------------------- |
-| Version   | **v0.9.1**                                           |
-| Milestone | **v0.9.1 Workflow Usability Maintenance**            |
-| Status    | **Released as the v0.9.1 maintenance patch**          |
+| Item      | Value                                               |
+| --------- | --------------------------------------------------- |
+| Version   | **v0.10.0**                                         |
+| Milestone | **Folder Pair Workflow**                            |
+| Status    | **Implementation complete; release review pending** |
 
 ---
 
 ## Development Status
 
-| Item       | Value                                             |
-| ---------- | ------------------------------------------------- |
-| Milestone  | **No active post-v0.9.1 milestone**                |
-| Baseline   | **v0.9.1**                                        |
-| Status     | **v0.9.1 maintenance complete; no active milestone** |
+| Item      | Value                                         |
+| --------- | --------------------------------------------- |
+| Milestone | **v0.10 Folder Pair Workflow**                |
+| Baseline  | **Merged v0.9.1**                             |
+| Status    | **Release candidate prepared for validation** |
 
-`VERSION` and the application title report v0.9.1. The patch preserves synchronization behavior while simplifying the local-first interface.
+`VERSION` and the application title report v0.10.0. Folder Pairs add saved endpoint selection without changing the compare → review → confirm → synchronize workflow. The v0.9.1 provider-planning section remains hidden by default.
 
 The detailed historical reconciliation, including release-numbering irregularities and superseded early plans, is in [RETROSPECTIVE_V0.1_V0.9.1.md](RETROSPECTIVE_V0.1_V0.9.1.md).
 
@@ -45,6 +45,25 @@ VISION        Why TraceSync exists and what principles guide it
 ```
 
 Only ROADMAP items are development commitments. A backlog item is not an implied commitment, and a retrospective entry is not a future requirement.
+
+---
+
+# Active Milestone
+
+## v0.10 — Folder Pair Workflow (Release Candidate)
+
+Core promise: recurring Local ↔ Server folder relationships can be selected quickly without turning the main comparison workflow into a multi-job workspace.
+
+- Select a named Folder Pair above the existing Local and Server fields.
+- Create, edit, rename, and delete saved relationships through a dedicated manager.
+- Offer a useful pair-name suggestion based on the selected folder names.
+- Persist the active pair while keeping `local_folder`, `server_folder`, and legacy `recent_pairs` settings compatible.
+- Keep manual folder entry and Browse behavior intact; manual changes do not modify saved relationships.
+- Invalidate stale comparison results and disable synchronization whenever either endpoint changes.
+- Preserve one comparison at a time and the existing preview, confirmation, validation, execution, and history safeguards.
+- Keep planning-only provider controls hidden by default; no remote/cloud transport or authentication is added.
+
+Release review requires the full automated suite, Folder Pair UI coverage, compile validation, and a clean final diff.
 
 ---
 
@@ -66,12 +85,12 @@ Completed foundational capabilities:
 
 ---
 
-## v0.3.x â€” Synchronization
+## v0.3.x — Synchronization
 
 Completed synchronization foundation:
 
-* One-way Local â†’ Server synchronization.
-* One-way Server â†’ Local synchronization.
+* One-way Local → Server synchronization.
+* One-way Server → Local synchronization.
 * Synchronization candidate selection.
 * Immutable synchronization previews.
 * Explicit synchronization confirmation.
@@ -87,11 +106,11 @@ Completed synchronization foundation:
 
 ---
 
-# v0.4.x â€” Smart Synchronization
+# v0.4.x — Smart Synchronization
 
 The v0.4 milestone focused on making TraceSync smarter about which files should participate in comparison and synchronization while keeping the normal office workflow simple.
 
-## v0.4.1 â€” Ignore Engine Foundation
+## v0.4.1 — Ignore Engine Foundation
 
 Completed.
 
@@ -110,7 +129,7 @@ The ignore evaluator remains centralized so individual storage and synchronizati
 
 ---
 
-## v0.4.2 â€” Project Ignore Support
+## v0.4.2 — Project Ignore Support
 
 Completed.
 
@@ -131,7 +150,7 @@ Project ignore patterns automatically affect:
 
 ---
 
-## v0.4.3 â€” User-Configurable Ignore Rules
+## v0.4.3 — User-Configurable Ignore Rules
 
 Completed.
 
@@ -177,13 +196,13 @@ Project Rules
       +
 User Rules
 (Settings)
-      â†“
+      ↓
 IgnoreLoader
-      â†“
+      ↓
 IgnoreRuleEngine
-      â†“
+      ↓
 StorageScanner
-      â†“
+      ↓
 Comparison / Preview / Synchronization
 ```
 
@@ -343,7 +362,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of v0.9.1.
+These are future capabilities and are not part of v0.10.0.
 
 ---
 
@@ -414,11 +433,11 @@ The goal is:
 
 ```text
 SyncService
-    â†“
+    ↓
 StorageProvider
-    â†“
+    ↓
 Remote Provider
-    â†“
+    ↓
 Authentication / Authorization / Transport
 ```
 
@@ -475,15 +494,15 @@ TraceSync should evolve from:
 
 ```text
 Safe folder comparison
-        â†“
+        ↓
 Safe local/server synchronization
-        â†“
+        ↓
 Smart synchronization rules
-        â†“
+        ↓
 Improved synchronization safety
-        â†“
+        ↓
 Additional storage providers
-        â†“
+        ↓
 Secure remote/cloud synchronization
 ```
 

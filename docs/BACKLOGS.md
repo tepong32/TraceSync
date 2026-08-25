@@ -65,7 +65,6 @@ Improve daily workflow.
 * [ ] Open Windows File Properties.
 * [ ] Refresh selected file.
 * [ ] Recompare selected file.
-* [ ] Favorite folders.
 
 # Smart Filters
 
@@ -119,3 +118,14 @@ TraceSync already has friendly comparison statuses, decision explanations, and v
 * [ ] Guided synchronization wizard beyond the current next-step guide.
 * [ ] Direction guidance beyond the current confidence recommendations.
 * [ ] Additional beginner-friendly explanations.
+
+---
+
+# Folder Pair Follow-ups
+
+Potential extensions beyond the v0.10 Folder Pair Workflow. These are not part of the release candidate.
+
+* [ ] Import and export saved Folder Pairs.
+* [ ] Pin or favorite frequently used Folder Pairs if real office workflows demonstrate the need.
+* [ ] Optional recent-comparison history separate from intentionally saved pairs.
+* [ ] Pair-specific ignore rules only if users demonstrate a need for different rules per recurring relationship.

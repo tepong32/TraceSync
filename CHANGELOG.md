@@ -1,4 +1,15 @@
 # Changelog
+## [0.10.0] - Release Candidate - 2026-08-25
+### Added
+- Add named Local ↔ Server Folder Pairs that can be selected from the main window without repeatedly browsing for both paths.
+- Add a dedicated manager for creating, editing, renaming, and deleting Folder Pairs, including useful name suggestions from the chosen folders.
+- Persist the active Folder Pair while retaining compatibility with existing `local_folder`, `server_folder`, and legacy `recent_pairs` settings.
+- Keep manual folder entry and Browse behavior available; manual changes never modify a saved relationship.
+
+### Safety
+- Clear stale comparison results and disable synchronization actions whenever either endpoint changes, including when a different Folder Pair is selected.
+- Keep the v0.9.1 planning-only provider section hidden by default; Folder Pairs do not activate remote or cloud synchronization.
+
 ## [0.9.1] - 2026-08-21
 ### Changed
 - Keep the planning-only Provider Onboarding and remote/cloud information hidden by default, with a toolbar control to show or hide the section when needed.
@@ -60,7 +71,7 @@ Testing
   - ignore rule merge order (built-in + project + user)
   - user pattern filtering in compare results
 ## [0.4.2] - 2026-08-03
-### Ã¢Å“Â¨ Added
+### ✨ Added
 VM: Implement project-level ignore rule architecture
 
 Architecture
@@ -82,7 +93,7 @@ Foundation
 - Established a modular ignore subsystem ready for future user-defined and workspace-specific ignore rule sources without altering synchronization logic.
 
 ## [0.4.1] - 2026-08-03
-### Ã¢Å“Â¨ Added
+### ✨ Added
 Smart Synchronization Phase 1 (Ignore Engine Foundation)
 
 - Introduced the IgnoreRuleEngine as the centralized component for evaluating synchronization ignore rules.
@@ -94,7 +105,7 @@ Smart Synchronization Phase 1 (Ignore Engine Foundation)
 - Adopted the project design principle: TraceSync prioritizes office workflows over technical workflows, keeping synchronization simple for non-technical users.
 
 ## [0.3.3] - 2026-07-31
-### Ã¢Å“Â¨ Added
+### ✨ Added
 - Release v0.3.3: synchronize folders safely with reviewed previews, background progress, cancellation, and provider-ready storage services.
 
 ## [0.3.2] - 2026-07-30
@@ -109,7 +120,7 @@ Smart Synchronization Phase 1 (Ignore Engine Foundation)
 - Updated the main window synchronization buttons from placeholders to safe one-way copy actions.
 
 ## [0.3.0] - 2026-06-26
-### Ã¢Å“Â¨ Added
+### ✨ Added
 Finished results exploration enhancements:
 - Added File Details dialog for inspecting comparison results
 - Implemented double-click support to open file details from the Results list
@@ -125,7 +136,7 @@ Finished results exploration enhancements:
 - Removed development-only Test Dialog after integration
 
 ## [0.2.0] - 2026-06-17
-### Ã¢Å“Â¨ Added
+### ✨ Added
 feat(ui): complete v0.1.5 layout refresh and UX improvements
 
 - add side-by-side folder selector panels
@@ -140,7 +151,7 @@ feat(ui): complete v0.1.5 layout refresh and UX improvements
 
 ## [0.1.4] - 2026-06-16
 
-### Ã¢Å“Â¨ Added
+### ✨ Added
 feat: remember last selected folders
 
 - Added SettingsService
@@ -150,7 +161,7 @@ feat: remember last selected folders
 - Folder paths automatically restore on startup
 
 ## [0.1.3] - 2026-06-16
-### Ã¢Å“Â¨ Added
+### ✨ Added
 feat: improve comparison results UX
 
 - Added color-coded Treeview rows based on CompareStatus
@@ -161,7 +172,7 @@ feat: improve comparison results UX
 - Improved navigation of large comparison result sets
 
 ## [0.1.2] - 2026-06-10
-### Ã¢Å“Â¨ Added
+### ✨ Added
 TraceSync v0.1.2 progress
 
 - Added CompareStatus enum as centralized status source
@@ -177,12 +188,12 @@ TraceSync v0.1.2 progress
 - Established foundation for filtering, row colors, and future reporting
 
 ## [0.1.1] - 2026-06-10
-### Ã¢Å“Â¨ Added
+### ✨ Added
 - working comparer + gui window with folder selection option now working
 
 ## [0.1.0] - 2026-06-10
 initial commit
-### Ã¢Å“Â¨ Added
+### ✨ Added
 - FileRecord model
 - Recursive folder scanner
 - Folder comparison engine
