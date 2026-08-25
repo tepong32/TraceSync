@@ -2,6 +2,7 @@ from collections.abc import Callable
 from threading import Thread
 from time import monotonic
 
+from core.backup_service import BackupCreationError, BackupService
 from core.storage_provider import StorageProvider
 from models.sync_history import (
     SyncFileOutcome,
@@ -22,9 +23,15 @@ class _SafetySkip(Exception):
 class SyncJobRunner:
     """Executes approved previews independently of the Tkinter interface."""
 
-    def __init__(self, source_provider: StorageProvider, destination_provider: StorageProvider) -> None:
+    def __init__(
+        self,
+        source_provider: StorageProvider,
+        destination_provider: StorageProvider,
+        backup_service: BackupService | None = None,
+    ) -> None:
         self.source_provider = source_provider
         self.destination_provider = destination_provider
+        self.backup_service = backup_service
 
     def run_async(
         self,
@@ -116,6 +123,40 @@ class SyncJobRunner:
             )
             return
 
+        backup_id: str | None = None
+        if item.overwrite:
+            try:
+                if self.backup_service is None or job.history_run_id is None:
+                    raise BackupCreationError("Backup service is unavailable.")
+                backup = self.backup_service.create_backup(
+                    self.destination_provider,
+                    item.relative_path,
+                    job.history_run_id,
+                )
+                backup_id = backup.backup_id
+            except BackupCreationError as exc:
+                self._record_issue(
+                    job,
+                    item,
+                    SyncFileOutcome.FAILED,
+                    SyncReasonCode.BACKUP_FAILED,
+                    str(exc),
+                )
+                return
+
+            try:
+                self._validate_preview_item(item)
+            except _SafetySkip as exc:
+                self._record_issue(
+                    job,
+                    item,
+                    SyncFileOutcome.SKIPPED,
+                    exc.reason_code,
+                    exc.message,
+                    backup_id,
+                )
+                return
+
         try:
             self.destination_provider.copy_from(self.source_provider, item.relative_path)
         except Exception as exc:
@@ -126,6 +167,7 @@ class SyncJobRunner:
                 SyncFileOutcome.FAILED,
                 reason_code,
                 message,
+                backup_id,
             )
             return
 
@@ -134,7 +176,7 @@ class SyncJobRunner:
             if item.overwrite:
                 job.overwritten_files += 1
             job.file_outcomes.append(
-                self._file_outcome(item, SyncFileOutcome.COPIED)
+                self._file_outcome(item, SyncFileOutcome.COPIED, backup_id=backup_id)
             )
             job.completed_files += 1
 
@@ -145,6 +187,7 @@ class SyncJobRunner:
         outcome: SyncFileOutcome,
         reason_code: SyncReasonCode,
         message: str,
+        backup_id: str | None = None,
     ) -> None:
         with job.lock:
             if outcome is SyncFileOutcome.SKIPPED:
@@ -153,7 +196,7 @@ class SyncJobRunner:
                 job.failed_files += 1
             job.errors.append(SyncError(item.relative_path, message))
             job.file_outcomes.append(
-                self._file_outcome(item, outcome, reason_code, message)
+                self._file_outcome(item, outcome, reason_code, message, backup_id)
             )
             job.completed_files += 1
 
@@ -199,6 +242,11 @@ class SyncJobRunner:
                 SyncReasonCode.DESTINATION_APPEARED,
                 "A destination file appeared after the preview was created. Compare again before copying.",
             )
+        if item.overwrite and destination_record is None:
+            raise _SafetySkip(
+                SyncReasonCode.DESTINATION_MISSING,
+                "The destination file disappeared after the preview was created. Compare again before copying.",
+            )
         if item.overwrite and destination_record is not None and (
             destination_record.modified_time != item.destination_modified_time
             or destination_record.size != item.destination_size
@@ -214,6 +262,7 @@ class SyncJobRunner:
         outcome: SyncFileOutcome,
         reason_code: SyncReasonCode | None = None,
         message: str | None = None,
+        backup_id: str | None = None,
     ) -> SyncFileOutcomeRecord:
         return SyncFileOutcomeRecord(
             relative_path=item.relative_path,
@@ -222,6 +271,7 @@ class SyncJobRunner:
             outcome=outcome,
             reason_code=reason_code,
             message=message,
+            backup_id=backup_id,
         )
 
     @classmethod
@@ -230,6 +280,8 @@ class SyncJobRunner:
             return SyncReasonCode.PERMISSION_DENIED, cls._friendly_error(error)
         if isinstance(error, NotImplementedError):
             return SyncReasonCode.PROVIDER_UNSUPPORTED, cls._friendly_error(error)
+        if isinstance(error, ValueError):
+            return SyncReasonCode.SOURCE_CHANGED, cls._friendly_error(error)
         if isinstance(error, OSError):
             return SyncReasonCode.COPY_ERROR, cls._friendly_error(error)
         return (

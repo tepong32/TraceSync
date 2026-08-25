@@ -2,8 +2,9 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from core.backup_service import BackupService
 from core.sync_history_service import SyncHistoryService
-from models.sync_history import SyncFileOutcome, SyncRunRecord
+from models.sync_history import SyncFileOutcome, SyncFileOutcomeRecord, SyncRunRecord
 from ui.utils.formatting import (
     format_history_duration,
     format_history_endpoint,
@@ -21,10 +22,14 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
         parent,
         record: SyncRunRecord,
         history_service: SyncHistoryService,
+        backup_service: BackupService | None = None,
     ) -> None:
         super().__init__(parent)
         self.record = record
         self.history_service = history_service
+        self.backup_service = backup_service
+        self.files_by_row: dict[str, SyncFileOutcomeRecord] = {}
+        self.backup_ids_by_row: dict[str, str] = {}
         self.issues_only_var = tk.BooleanVar(value=False)
         self.run_id_var = tk.StringVar(value=record.run_id)
         self.version_var = tk.StringVar(value=record.application_version)
@@ -77,16 +82,24 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
 
         tree_frame = ttk.Frame(main)
         tree_frame.pack(fill="both", expand=True)
-        columns = ("file", "operation", "outcome", "reason", "message")
+        columns = ("file", "operation", "outcome", "backup", "reason", "message")
         self.files_tree = ttk.Treeview(tree_frame, columns=columns, show="headings")
         headings = {
             "file": "File",
             "operation": "Action",
             "outcome": "Outcome",
+            "backup": "Backup",
             "reason": "Reason",
             "message": "Message",
         }
-        widths = {"file": 230, "operation": 90, "outcome": 110, "reason": 130, "message": 280}
+        widths = {
+            "file": 210,
+            "operation": 85,
+            "outcome": 105,
+            "backup": 75,
+            "reason": 125,
+            "message": 250,
+        }
         for column in columns:
             self.files_tree.heading(column, text=headings[column])
             self.files_tree.column(column, width=widths[column], stretch=column in {"file", "message"})
@@ -98,6 +111,7 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
         horizontal.grid(row=1, column=0, sticky="ew")
         tree_frame.rowconfigure(0, weight=1)
         tree_frame.columnconfigure(0, weight=1)
+        self.files_tree.bind("<<TreeviewSelect>>", self._on_file_selection)
 
         buttons = ttk.Frame(main)
         buttons.pack(fill="x", pady=(12, 0))
@@ -106,6 +120,13 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
             text="Export Run to CSV...",
             command=self._export_csv,
         ).pack(side="left")
+        self.restore_button = ttk.Button(
+            buttons,
+            text="Restore Selected Backup...",
+            command=self._restore_selected_backup,
+            state="disabled",
+        )
+        self.restore_button.pack(side="left", padx=(8, 0))
         ttk.Button(buttons, text="Close", command=self.destroy).pack(side="right")
 
     def _counts_text(self) -> str:
@@ -118,20 +139,76 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
 
     def _populate_files(self) -> None:
         self.files_tree.delete(*self.files_tree.get_children())
+        self.files_by_row.clear()
+        self.backup_ids_by_row.clear()
+        discovered_backups = (
+            self.backup_service.backup_ids_for_run(self.record.run_id)
+            if self.backup_service is not None
+            else {}
+        )
         for item in self.record.files:
             if self.issues_only_var.get() and item.outcome is SyncFileOutcome.COPIED:
                 continue
-            self.files_tree.insert(
+            backup_id = item.backup_id or discovered_backups.get(item.relative_path)
+            row_id = self.files_tree.insert(
                 "",
                 "end",
                 values=(
                     item.relative_path,
                     item.operation.replace("_", " ").title(),
                     format_sync_file_outcome(item.outcome),
+                    "Available" if backup_id else "",
                     item.reason_code.value.replace("_", " ").title() if item.reason_code else "",
                     item.message or "",
                 ),
             )
+            self.files_by_row[row_id] = item
+            if backup_id:
+                self.backup_ids_by_row[row_id] = backup_id
+        self._on_file_selection()
+
+    def _on_file_selection(self, _event=None) -> None:
+        selected = self.files_tree.selection()
+        item = self.files_by_row.get(selected[0]) if selected else None
+        available = (
+            self.backup_service is not None
+            and item is not None
+            and selected[0] in self.backup_ids_by_row
+        )
+        self.restore_button.configure(state="normal" if available else "disabled")
+
+    def _restore_selected_backup(self) -> None:
+        selected = self.files_tree.selection()
+        item = self.files_by_row.get(selected[0]) if selected else None
+        backup_id = self.backup_ids_by_row.get(selected[0]) if selected else None
+        if self.backup_service is None or not backup_id:
+            return
+        if not messagebox.askyesno(
+            "Restore Backup",
+            (
+                f"Restore the saved destination version of:\n\n{item.relative_path}\n\n"
+                "The file currently at the destination will first receive its own safety backup. "
+                "Restoring this history item again will use the latest recovery point."
+            ),
+            parent=self,
+        ):
+            return
+        try:
+            result = self.backup_service.restore(backup_id)
+        except (OSError, RuntimeError, ValueError, NotImplementedError) as exc:
+            messagebox.showerror("Backup Not Restored", str(exc), parent=self)
+            return
+        safety_note = (
+            "\n\nA safety backup of the replaced file was also created and is now the latest "
+            f"recovery point (ID {result.safety_backup_id})."
+            if result.safety_backup_id
+            else ""
+        )
+        messagebox.showinfo(
+            "Backup Restored",
+            f"The backup was restored successfully.{safety_note}",
+            parent=self,
+        )
 
     def _export_csv(self) -> None:
         destination = filedialog.asksaveasfilename(

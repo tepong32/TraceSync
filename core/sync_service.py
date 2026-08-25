@@ -1,3 +1,4 @@
+from core.backup_service import BackupService
 from core.comparer import compare_folders
 from core.ignore.ignore_engine import create_ignore_engine
 from core.local_storage_provider import LocalStorageProvider
@@ -28,6 +29,7 @@ class SyncService:
         source_provider: StorageProvider | None = None,
         destination_provider: StorageProvider | None = None,
         history_service: SyncHistoryService | None = None,
+        backup_service: BackupService | None = None,
     ) -> None:
         if local_provider is not None and source_provider is not None:
             raise ValueError("Specify either local_provider or source_provider, not both.")
@@ -36,6 +38,7 @@ class SyncService:
         self.local_provider = source_provider or local_provider
         self.server_provider = destination_provider or server_provider
         self.history_service = history_service or SyncHistoryService()
+        self.backup_service = backup_service or BackupService()
         # Created when compare() knows the project root.
         self._ignore_engine: IgnoreRuleEngine | None = None
         self.last_ignored_count = 0
@@ -130,7 +133,9 @@ class SyncService:
         warnings: list[str] = []
         overwrites = sum(item.overwrite for item in items)
         if overwrites:
-            warnings.append(f"{overwrites} existing file(s) will be replaced.")
+            warnings.append(
+                f"{overwrites} existing file(s) will be backed up, then replaced."
+            )
         if not items:
             warnings.append("No files need to be copied in this direction.")
         return SyncPreview(direction=direction, items=tuple(items), warnings=tuple(warnings))
@@ -150,7 +155,7 @@ class SyncService:
         with job.lock:
             job.history_run_id = history_context.initial_record.run_id
         try:
-            return SyncJobRunner(source, destination).run_async(
+            return SyncJobRunner(source, destination, self.backup_service).run_async(
                 job,
                 preview,
                 on_finished=lambda finished_job: self.history_service.finalize_run(

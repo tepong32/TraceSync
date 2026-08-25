@@ -6,9 +6,9 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 The repository is the authoritative source of truth for the current implementation and release state.
 
-> **Current status: v0.10 Folder Pair Workflow released.**
+> **Current status: v0.10 Folder Pair Workflow released; Backup Before Overwrite is in development.**
 >
-> The committed roadmap is complete through v0.10.0. There is no active post-v0.10 milestone; backlog and icebox entries remain unscheduled unless explicitly promoted into this document.
+> The v0.10.0 release remains the baseline. Backup Before Overwrite has been explicitly promoted as the active post-v0.10 milestone; its release version is not assigned yet.
 
 ---
 
@@ -24,13 +24,15 @@ The repository is the authoritative source of truth for the current implementati
 
 ## Development Status
 
-| Item      | Value                                     |
-| --------- | ----------------------------------------- |
-| Milestone | **No active post-v0.10 milestone**       |
-| Baseline  | **v0.10.0**                              |
-| Status    | **v0.10 complete; future work deferred** |
+| Item      | Value                                |
+| --------- | ------------------------------------ |
+| Milestone | **Backup Before Overwrite**          |
+| Baseline  | **v0.10.0**                          |
+| Status    | **In development; version TBD**      |
 
 `VERSION` and the application title report v0.10.0. Folder Pairs add saved endpoint selection without changing the compare → review → confirm → synchronize workflow. The v0.9.1 provider-planning section remains hidden by default.
+
+The active milestone adds a narrow recovery layer without changing eligibility or direction rules: only approved replacements create backups; new-file copies remain direct. It does not add automatic synchronization, whole-run rollback, remote/cloud transport, or bidirectional conflict resolution.
 
 The detailed historical reconciliation, including release-numbering irregularities and superseded early plans, is in [RETROSPECTIVE_V0.1_V0.9.1.md](RETROSPECTIVE_V0.1_V0.9.1.md).
 
@@ -45,6 +47,27 @@ VISION        Why TraceSync exists and what principles guide it
 ```
 
 Only ROADMAP items are development commitments. A backlog item is not an implied commitment, and a retrospective entry is not a future requirement.
+
+---
+
+# Active Milestone
+
+## Active — Backup Before Overwrite (Version TBD)
+
+Core promise: an existing destination file must remain recoverable when TraceSync replaces it.
+
+- Create and verify an application-managed backup before every approved overwrite.
+- Block the overwrite if its backup cannot be completed.
+- Keep backup content outside the synchronized Local and Server roots.
+- Stage copies beside the destination and atomically replace the target.
+- Revalidate source and destination metadata after backup creation.
+- Link backups to per-file synchronization history and CSV export.
+- Allow an explicit, confirmed restore from history details.
+- Back up the current destination again before restoring an older version.
+- Retain at most two versions per destination file, with a 5 GB global content cap and a 500-entry absolute ceiling.
+- Preserve the one-comparison-at-a-time workflow and hidden-by-default provider planning UI.
+
+This milestone provides file-level recovery for TraceSync overwrites. It is not an independent off-device backup system or a transactional rollback of an entire synchronization run.
 
 ---
 
@@ -452,7 +475,7 @@ The following capabilities remain candidates for future milestones and should no
 * Automatic synchronization.
 * Real-time folder monitoring.
 * Advanced conflict resolution.
-* Backup and rollback workflows.
+* Whole-run transactional rollback workflows.
 * File version history.
 * Hash-based verification.
 * Rename detection.

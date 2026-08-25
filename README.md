@@ -6,6 +6,8 @@ Current release: **v0.10.0**
 
 This release builds on the merged v0.9.1 baseline and adds Saved Folder Pairs for recurring Local ↔ Server relationships. The existing one-comparison-at-a-time workflow is unchanged, and planning-only provider controls remain hidden by default. The application version is read from the canonical `VERSION` resource in both source and packaged runtimes.
 
+Development status: the current post-v0.10 branch implements Backup Before Overwrite. The tagged v0.10.0 release remains the latest release; no unreleased version number has been assigned.
+
 ## Workflow
 
 ```text
@@ -29,19 +31,23 @@ TraceSync only performs one-way synchronization. It does not automatically resol
 - Background file copying with responsive progress, elapsed and estimated remaining time, and safe cancellation between files.
 - File-level error reporting; recoverable errors do not stop other approved copies.
 - Metadata validation immediately before each copy. Files changed after confirmation are skipped and require a new comparison.
+- Required pre-overwrite backups in application-managed local storage; a failed backup blocks that file's overwrite.
+- Atomic destination replacement so a failed or interrupted file copy does not leave a partial destination file.
 - Durable synchronization history with structured run and per-file outcomes, interrupted-run recovery, and a newest-500-run retention limit.
-- History review and selected-run CSV export, including spreadsheet formula-injection protection.
+- History review, backup restore, and selected-run CSV export, including spreadsheet formula-injection protection.
 - A lightweight operating-system lock that permits only one active synchronization per user profile.
 - JSON settings that retain selected folders, saved Folder Pairs, the active pair, and future provider-specific settings.
 - Collapsible, planning-only provider selections and status messaging; these are hidden by default and do not connect to or move data through remote services.
 
 ## Safety model
 
-TraceSync never starts a synchronization job until the user confirms the complete preview and the initial `in_progress` history record is safely persisted. Existing destination files are identified before confirmation. The job preserves timestamps where the local filesystem supports them and creates missing destination directories.
+TraceSync never starts a synchronization job until the user confirms the complete preview and the initial `in_progress` history record is safely persisted. Existing destination files are identified before confirmation. Each approved overwrite first creates and verifies a backup under `%LOCALAPPDATA%\TraceSync\backups\`; if that backup fails, the existing destination is left unchanged. The replacement is staged beside the destination and committed atomically. New-file copies do not create unnecessary backups.
+
+History details identify files with backups and provide a confirmed Restore action. Restore first saves the current destination as another safety backup. Automatic retention keeps at most two versions per destination file, up to 5 GB of valid backup content globally and 500 valid entries overall. The oldest eligible backups are removed first, while the backup required by the active operation is protected. These backups protect against logical overwrites; because they remain on the same computer by default, they are not a substitute for an independent disaster-recovery backup.
 
 If the final history update fails after copying, TraceSync preserves the real synchronization result and warns the user. The durable record remains `in_progress`; on a later launch it is honestly classified as `interrupted` because completion cannot be proven from the history store.
 
-No rollback, backup, automatic synchronization, active cloud provider, or bidirectional conflict-resolution feature is included in v0.10.0.
+The tagged v0.10.0 release did not include backup or restore; those capabilities are under development on this branch. Automatic synchronization, active cloud providers, and bidirectional conflict resolution remain out of scope.
 
 ## Architecture
 
@@ -52,6 +58,7 @@ MainWindow
      -> StorageScanner -> StorageProvider
      -> comparer -> ComparisonResult
      -> SyncPreview -> SyncJobRunner -> SyncJob
+     -> BackupService -> JsonBackupStore
      -> SyncHistoryService -> JsonSyncHistoryStore
 ```
 
@@ -76,8 +83,8 @@ python -m unittest discover -s tests -v
 ## Project layout
 
 ```text
-core/       comparison, providers, synchronization execution, history, and CSV export
-models/     lightweight comparison, synchronization, and history dataclasses/enums
+core/       comparison, providers, synchronization, backup/restore, history, and CSV export
+models/     lightweight comparison, synchronization, backup, and history dataclasses/enums
 ui/         Tkinter window and dialogs, including history review
 utils/      settings and application-version utilities
 tests/      synchronization, persistence, export, and UI behavior tests

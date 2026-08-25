@@ -1,4 +1,17 @@
 # Changelog
+## [Unreleased]
+### Added
+- Back up every existing destination file before TraceSync replaces it, using application-managed storage outside the synchronized folders.
+- Link successful pre-overwrite backups to per-file synchronization history and CSV exports.
+- Show backup availability in synchronization history details and allow a confirmed restore of the selected version.
+- Create a second safety backup of the current destination before a historical version is restored.
+
+### Safety
+- Block an overwrite when its required backup cannot be created and verified.
+- Copy through a temporary sibling file and atomically replace the destination so an interrupted copy does not leave a partial replacement.
+- Revalidate the confirmed source and destination after backup creation.
+- Retain at most two versions per destination file, 5 GB of valid backup content globally, and 500 valid entries overall; delete the oldest eligible backups first while protecting the backup required by the active operation.
+
 ## [0.10.0] - 2026-08-25
 ### Added
 - Add named Local ↔ Server Folder Pairs that can be selected from the main window without repeatedly browsing for both paths.

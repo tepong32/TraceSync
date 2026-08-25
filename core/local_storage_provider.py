@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 import shutil
+import tempfile
 
 from core.storage_provider import ProviderCapability, StorageProvider
 from models.file_record import FileRecord
@@ -82,5 +84,38 @@ class LocalStorageProvider(StorageProvider):
         if not source_path.is_file():
             raise FileNotFoundError("The source file is no longer available.")
 
+        self.replace_from_file(source_path, relative_path)
+
+    def replace_from_file(self, source_path: Path, relative_path: str) -> None:
+        """Copy to a sibling temporary file before atomically replacing the target."""
+        destination_path = Path(self.destination_path(relative_path))
+        if not source_path.is_file():
+            raise FileNotFoundError("The source file is no longer available.")
         destination_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, destination_path)
+        temporary_path: Path | None = None
+        try:
+            source_stat = source_path.stat()
+            with tempfile.NamedTemporaryFile(
+                prefix=f".{destination_path.name}.",
+                suffix=".tmp",
+                dir=destination_path.parent,
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+            shutil.copy2(source_path, temporary_path)
+            with temporary_path.open("r+b") as copied_file:
+                os.fsync(copied_file.fileno())
+            final_source_stat = source_path.stat()
+            temporary_stat = temporary_path.stat()
+            if (
+                source_stat.st_size != final_source_stat.st_size
+                or source_stat.st_mtime != final_source_stat.st_mtime
+                or temporary_stat.st_size != final_source_stat.st_size
+                or temporary_stat.st_mtime != final_source_stat.st_mtime
+            ):
+                raise ValueError("The source file changed while it was being copied.")
+            os.replace(temporary_path, destination_path)
+        except Exception:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
+            raise

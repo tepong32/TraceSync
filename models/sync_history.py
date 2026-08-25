@@ -40,6 +40,7 @@ class SyncReasonCode(str, Enum):
     DESTINATION_MISSING = "destination_missing"
     PERMISSION_DENIED = "permission_denied"
     PROVIDER_UNSUPPORTED = "provider_unsupported"
+    BACKUP_FAILED = "backup_failed"
     COPY_ERROR = "copy_error"
     UNEXPECTED_ERROR = "unexpected_error"
     CANCELLED = "cancelled"
@@ -89,12 +90,15 @@ class SyncFileOutcomeRecord:
     outcome: SyncFileOutcome
     reason_code: SyncReasonCode | None = None
     message: str | None = None
+    backup_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.relative_path:
             raise ValueError("Relative path is required.")
         if not self.operation:
             raise ValueError("Operation is required.")
+        if self.backup_id is not None:
+            UUID(self.backup_id)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -104,6 +108,7 @@ class SyncFileOutcomeRecord:
             "outcome": self.outcome.value,
             "reason_code": self.reason_code.value if self.reason_code else None,
             "message": self.message,
+            "backup_id": self.backup_id,
         }
 
     @classmethod
@@ -119,6 +124,7 @@ class SyncFileOutcomeRecord:
             outcome=SyncFileOutcome(data["outcome"]),
             reason_code=SyncReasonCode(reason_code) if reason_code else None,
             message=str(data["message"]) if data.get("message") is not None else None,
+            backup_id=str(data["backup_id"]) if data.get("backup_id") is not None else None,
         )
 
 

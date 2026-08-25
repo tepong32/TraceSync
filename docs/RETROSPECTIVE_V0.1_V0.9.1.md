@@ -1,6 +1,8 @@
 # TraceSync v0.1-v0.9.1 Retrospective
 
 > **Historical scope:** This retrospective ends at v0.9.1. The current release is v0.10.0; see [ROADMAP.md](ROADMAP.md) for current status.
+>
+> **Post-v0.10 note:** Backup Before Overwrite is now an active development milestone. Statements below that backup or restore was absent describe the v0.9.1 historical baseline, not the current development branch.
 
 ## 1. Purpose
 
