@@ -15,6 +15,8 @@ from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_history_dialog import SyncHistoryDialog
 from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
+from ui.widgets.tooltip import HoverTooltip
+from ui.widgets.workflow_guide import WorkflowGuide
 from utils.application_version import get_application_version
 from utils.settings import PROVIDER_OPTIONS, SettingsService
 
@@ -31,6 +33,7 @@ class MainWindow(tk.Tk):
         self.visible_results = []
         self.current_filter = None
         self.filter_buttons = {}
+        self.comparison_completed = False
         self.sync_service = SyncService()
         history_recovery = self.sync_service.recover_interrupted_history()
         self.settings = SettingsService.load()
@@ -39,6 +42,7 @@ class MainWindow(tk.Tk):
             value=self._history_recovery_status(history_recovery)
         )
         self.summary_var = tk.StringVar(value="No comparison results.")
+        self._tooltips: list[HoverTooltip] = []
         self.provider_options = list(PROVIDER_OPTIONS)
         self.source_provider_var = tk.StringVar(value=self.provider_options[0])
         self.destination_provider_var = tk.StringVar(value=self.provider_options[0])
@@ -73,6 +77,7 @@ class MainWindow(tk.Tk):
                 ("!disabled", "#d9dde5"),
             ],
         )
+        WorkflowGuide.configure_styles(style)
         style.configure(
             "MediumNeutral.TButton",
             font=("Segoe UI", 10),
@@ -139,22 +144,41 @@ class MainWindow(tk.Tk):
         folder_frame.columnconfigure((0, 1), weight=1)
         self.local_var = tk.StringVar()
         self.server_var = tk.StringVar()
-        self._build_folder_panel(folder_frame, 0, "Local Folder", self.local_var, self.browse_local, (0, 5))
-        self._build_folder_panel(folder_frame, 1, "Server Folder", self.server_var, self.browse_server, (5, 0))
+        self.local_entry, self.local_browse_button = self._build_folder_panel(
+            folder_frame,
+            0,
+            "Local Folder",
+            self.local_var,
+            self.browse_local,
+            (0, 5),
+        )
+        self.server_entry, self.server_browse_button = self._build_folder_panel(
+            folder_frame,
+            1,
+            "Server Folder",
+            self.server_var,
+            self.browse_server,
+            (5, 0),
+        )
 
-        provider_panel = ttk.LabelFrame(self, text="Provider Onboarding (Planned)", padding=10)
+        self.provider_section = ttk.Frame(self)
+        provider_panel = ttk.LabelFrame(
+            self.provider_section,
+            text="Provider Onboarding (Planned)",
+            padding=10,
+        )
         provider_panel.pack(fill="x", padx=10, pady=(0, 10))
 
         ttk.Label(provider_panel, text="Source provider:").grid(row=0, column=0, sticky="w")
-        source_provider_combo = ttk.Combobox(
+        self.source_provider_combo = ttk.Combobox(
             provider_panel,
             textvariable=self.source_provider_var,
             values=self.provider_options,
             state="readonly",
             width=36,
         )
-        source_provider_combo.grid(row=0, column=1, sticky="w", padx=(10, 0))
-        source_provider_combo.bind(
+        self.source_provider_combo.grid(row=0, column=1, sticky="w", padx=(10, 0))
+        self.source_provider_combo.bind(
             "<<ComboboxSelected>>",
             lambda event: self._on_provider_selection_changed(),
         )
@@ -174,15 +198,15 @@ class MainWindow(tk.Tk):
         ).grid(row=0, column=2, padx=(10, 0), sticky="w")
 
         ttk.Label(provider_panel, text="Destination provider:").grid(row=2, column=0, sticky="w")
-        destination_provider_combo = ttk.Combobox(
+        self.destination_provider_combo = ttk.Combobox(
             provider_panel,
             textvariable=self.destination_provider_var,
             values=self.provider_options,
             state="readonly",
             width=36,
         )
-        destination_provider_combo.grid(row=2, column=1, sticky="w", padx=(10, 0))
-        destination_provider_combo.bind(
+        self.destination_provider_combo.grid(row=2, column=1, sticky="w", padx=(10, 0))
+        self.destination_provider_combo.bind(
             "<<ComboboxSelected>>",
             lambda event: self._on_provider_selection_changed(),
         )
@@ -202,7 +226,11 @@ class MainWindow(tk.Tk):
         ).grid(row=2, column=2, padx=(10, 0), sticky="w")
 
 
-        planning_panel = ttk.LabelFrame(self, text="Remote and Cloud Sync Planning", padding=10)
+        planning_panel = ttk.LabelFrame(
+            self.provider_section,
+            text="Remote and Cloud Sync Planning",
+            padding=10,
+        )
         planning_panel.pack(fill="x", padx=10, pady=(0, 10))
         ttk.Label(
             planning_panel,
@@ -222,36 +250,53 @@ class MainWindow(tk.Tk):
             wraplength=900,
             justify="left",
         ).pack(anchor="w", pady=(6, 0))
-        toolbar = ttk.Frame(self)
-        toolbar.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Button(
-            toolbar,
+
+        self.workflow_guide = WorkflowGuide(self)
+        self.workflow_guide.pack(fill="x")
+        self.workflow_hint_var = self.workflow_guide.hint_var
+
+        self.toolbar = ttk.Frame(self)
+        self.toolbar.pack(fill="x", padx=10, pady=(0, 10))
+        self.ignore_settings_button = ttk.Button(
+            self.toolbar,
             text="Ignore Settings",
             command=self.edit_ignore_settings,
             style="MediumNeutral.TButton",
             width=16,
-        ).pack(side="left")
-        ttk.Button(
-            toolbar,
+        )
+        self.ignore_settings_button.pack(side="left")
+        self.provider_toggle_button = ttk.Button(
+            self.toolbar,
+            text="Show Provider Options",
+            command=self.toggle_provider_section,
+            style="MediumNeutral.TButton",
+            width=22,
+        )
+        self.provider_toggle_button.pack(side="left", padx=(8, 0))
+        self.history_button = ttk.Button(
+            self.toolbar,
             text="History...",
             command=self.open_sync_history,
             style="MediumNeutral.TButton",
             width=14,
-        ).pack(side="left", padx=(8, 0))
-        ttk.Button(
-            toolbar,
+        )
+        self.history_button.pack(side="left", padx=(8, 0))
+        self.decision_details_button = ttk.Button(
+            self.toolbar,
             text="View Decision Details",
             command=self.open_selected_decision_details,
             style="MediumNeutral.TButton",
             width=24,
-        ).pack(side="left", padx=(8, 0))
-        ttk.Button(
-            toolbar,
+        )
+        self.decision_details_button.pack(side="left", padx=(8, 0))
+        self.compare_button = ttk.Button(
+            self.toolbar,
             text="Compare Folders",
             command=self.compare_folders,
             style="MediumNeutral.TButton",
             width=25,
-        ).pack(side="left", padx=(8, 0))
+        )
+        self.compare_button.pack(side="left", padx=(8, 0))
         ttk.Label(self, textvariable=self.summary_var, anchor="w", padding=(10, 5)).pack(fill="x")
 
         filter_frame = ttk.Frame(self)
@@ -273,7 +318,12 @@ class MainWindow(tk.Tk):
         ttk.Label(self, text="Results").pack(anchor="w", padx=10, pady=(5, 5))
         tree_frame = ttk.Frame(self)
         tree_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        self.tree = ttk.Treeview(tree_frame, columns=("status", "relative_path"), show="headings")
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=("status", "relative_path"),
+            show="headings",
+            height=15,
+        )
         self.tree.heading("status", text="Status")
         self.tree.heading("relative_path", text="File")
         self.tree.column("status", width=130, anchor="center", stretch=False)
@@ -301,8 +351,18 @@ class MainWindow(tk.Tk):
             command=self._copy_selected_relative_path,
         )
 
-        ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(10, 5)).pack(fill="x")
-        action_frame = ttk.Frame(self, padding=10)
+        # Reserve the synchronization controls at the bottom before the expandable
+        # results area is allocated. This keeps the actions visible when the
+        # Treeview requests enough height for 15 rows.
+        self.action_dock = ttk.Frame(self)
+        self.action_dock.pack(fill="x", side="bottom", before=folder_frame)
+        ttk.Label(
+            self.action_dock,
+            textvariable=self.status_var,
+            anchor="w",
+            padding=(10, 5),
+        ).pack(fill="x")
+        action_frame = ttk.Frame(self.action_dock, padding=10)
         action_frame.pack(fill="x")
         action_frame.columnconfigure((0, 1), weight=1)
         self.local_to_server_button = ttk.Button(
@@ -322,13 +382,105 @@ class MainWindow(tk.Tk):
         self.local_to_server_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         self.server_to_local_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
+        self.workflow_guide.bind_controls(
+            local_browse_button=self.local_browse_button,
+            server_browse_button=self.server_browse_button,
+            compare_button=self.compare_button,
+            local_to_server_button=self.local_to_server_button,
+            server_to_local_button=self.server_to_local_button,
+        )
+        self.local_var.trace_add("write", self._on_folder_value_changed)
+        self.server_var.trace_add("write", self._on_folder_value_changed)
+        self._configure_tooltips()
+        self._refresh_workflow_guidance()
+
     @staticmethod
     def _build_folder_panel(parent, column, title, variable, command, padding):
         frame = ttk.LabelFrame(parent, text=title, padding=10)
         frame.grid(row=0, column=column, sticky="nsew", padx=padding)
         frame.columnconfigure(0, weight=1)
-        ttk.Entry(frame, textvariable=variable).grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        ttk.Button(frame, text="Browse", command=command).grid(row=0, column=1)
+        entry = ttk.Entry(frame, textvariable=variable)
+        entry.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        browse_button = ttk.Button(
+            frame,
+            text="Browse",
+            command=command,
+            style="UtilityNeutral.TButton",
+        )
+        browse_button.grid(row=0, column=1)
+        return entry, browse_button
+
+    def _configure_tooltips(self):
+        tooltip_text = (
+            (
+                self.local_entry,
+                "The folder on this computer or your primary working location.",
+            ),
+            (
+                self.local_browse_button,
+                "Choose the Local folder to compare. Selecting a folder does not copy any files.",
+            ),
+            (
+                self.server_entry,
+                "The shared, mapped-drive, or server folder to compare with the Local folder.",
+            ),
+            (
+                self.server_browse_button,
+                "Choose the Server folder to compare. Selecting a folder does not copy any files.",
+            ),
+            (
+                self.provider_toggle_button,
+                "Show or hide planning-only provider options. Remote and cloud synchronization is not active.",
+            ),
+            (
+                self.source_provider_combo,
+                "Records a planned source provider preference. It does not enable remote synchronization.",
+            ),
+            (
+                self.destination_provider_combo,
+                "Records a planned destination provider preference. It does not enable remote synchronization.",
+            ),
+            (
+                self.ignore_settings_button,
+                "Choose filename patterns that TraceSync should leave out of comparisons and synchronization.",
+            ),
+            (
+                self.history_button,
+                "Review previous synchronization runs and their per-file outcomes.",
+            ),
+            (
+                self.decision_details_button,
+                "Explain the recommendation and confidence for the selected result row.",
+            ),
+            (
+                self.compare_button,
+                "Scan both folders and show differences. Comparing does not copy or overwrite files.",
+            ),
+            (
+                self.local_to_server_button,
+                "Review files eligible to copy from Local to Server. Confirmation is required before copying.",
+            ),
+            (
+                self.server_to_local_button,
+                "Review files eligible to copy from Server to Local. Confirmation is required before copying.",
+            ),
+        )
+        self._tooltips = [
+            HoverTooltip(widget, text)
+            for widget, text in tooltip_text
+        ]
+
+    def _on_folder_value_changed(self, *_args):
+        self.comparison_completed = False
+        self._refresh_workflow_guidance()
+
+    def _refresh_workflow_guidance(self):
+        self.workflow_guide.refresh(
+            local_folder=self.local_var.get(),
+            server_folder=self.server_var.get(),
+            comparison_completed=self.comparison_completed,
+            results=self.results,
+        )
 
     def _load_saved_folders(self):
         self.local_var.set(self.settings.get("local_folder", ""))
@@ -344,6 +496,15 @@ class MainWindow(tk.Tk):
     def _on_provider_selection_changed(self):
         self._persist_provider_selection()
         self._refresh_provider_status()
+
+    def toggle_provider_section(self):
+        if self.provider_section.winfo_manager():
+            self.provider_section.pack_forget()
+            self.provider_toggle_button.configure(text="Show Provider Options")
+            return
+
+        self.provider_section.pack(fill="x", before=self.workflow_guide)
+        self.provider_toggle_button.configure(text="Hide Provider Options")
 
     def _persist_provider_selection(self):
         self.settings["providers"] = {
@@ -371,6 +532,7 @@ class MainWindow(tk.Tk):
             messagebox.showwarning("Missing Folder", "Please select both a Local Folder and a Server Folder.")
             return
         try:
+            self.workflow_guide.show_progress("Comparing folders...")
             self.status_var.set("Comparing folders...")
             self.update_idletasks()
             self.results = self.sync_service.compare(
@@ -378,9 +540,12 @@ class MainWindow(tk.Tk):
                 server_folder,
                 user_ignore_patterns=self.settings.get("ignore_patterns", []),
             )
+            self.comparison_completed = True
             self._show_comparison_results()
         except (OSError, ValueError) as exc:
+            self.comparison_completed = False
             self._set_sync_buttons(False)
+            self._refresh_workflow_guidance()
             messagebox.showerror("Comparison Error", str(exc))
             self.status_var.set("Comparison failed.")
 
@@ -392,6 +557,7 @@ class MainWindow(tk.Tk):
         self.summary_var.set("\n".join(line for line in status_lines if line))
         self.apply_filter(self.current_filter)
         self._set_sync_buttons(True)
+        self._refresh_workflow_guidance()
 
     def _build_ignore_status_line(self) -> str:
         parts: list[str] = []
@@ -540,9 +706,11 @@ class MainWindow(tk.Tk):
             ValueError,
         ) as exc:
             self._set_sync_buttons(True)
+            self._refresh_workflow_guidance()
             messagebox.showerror("Synchronization Not Started", str(exc))
             self.status_var.set("Synchronization did not start. No files were copied.")
             return
+        self.workflow_guide.show_progress("Synchronization in progress...")
         SyncProgressDialog(self, job, self._sync_completed)
 
     def _sync_completed(self, job):
@@ -552,9 +720,12 @@ class MainWindow(tk.Tk):
             self.results = self.sync_service.compare(
                 user_ignore_patterns=self.settings.get("ignore_patterns", []),
             )
+            self.comparison_completed = True
             self._show_comparison_results()
         except OSError:
+            self.comparison_completed = False
             self._set_sync_buttons(False)
+            self._refresh_workflow_guidance()
         self.status_var.set(f"Synchronization {job_state.status.value.lower()}: {summary.copied_files} copied, {len(summary.errors)} errors.")
         SyncSummaryDialog(self, job)
         if job.history_finalization_error:

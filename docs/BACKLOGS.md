@@ -1,8 +1,8 @@
 # TraceSync Backlog
 
-> **Ideas that are likely to become future milestones.**
+> **Evaluated future work with plausible product value, not current commitments.**
 >
-> Items in this document have been discussed and are considered valuable additions to TraceSync, but are not currently scheduled for implementation.
+> Items in this document have been discussed, but are not scheduled for implementation. An item becomes committed only when it is explicitly promoted into [ROADMAP.md](ROADMAP.md) as an active milestone.
 
 ---
 
@@ -112,9 +112,10 @@ Potential extensions beyond the completed v0.9 history milestone.
 
 Improve usability for non-technical users.
 
-* [ ] Friendly status descriptions.
-* [ ] Simple language mode.
+TraceSync already has friendly comparison statuses, decision explanations, and v0.9.1 next-step guidance. The possibilities below would extend that work rather than fill a missing roadmap commitment.
+
+* [ ] Broader simple-language mode.
 * [ ] Large icon mode.
-* [ ] Guided synchronization wizard.
-* [ ] Recommended synchronization direction.
-* [ ] Beginner-friendly explanations.
+* [ ] Guided synchronization wizard beyond the current next-step guide.
+* [ ] Direction guidance beyond the current confidence recommendations.
+* [ ] Additional beginner-friendly explanations.

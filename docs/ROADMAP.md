@@ -6,27 +6,45 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 The repository is the authoritative source of truth for the current implementation and release state.
 
+> **Current status: Mature baseline; committed roadmap complete through v0.9.1.**
+>
+> There is no active post-v0.9.1 milestone. Only items in this document that are explicitly identified as active commitments are commitments; backlog and icebox entries are not scheduled work.
+
 ---
 
-## Current Release Candidate
+## Current Release
 
-| Item      | Value                                           |
-| --------- | ----------------------------------------------- |
-| Version   | **v0.9.0**                                      |
-| Milestone | **Synchronization History & Auditability**      |
-| Status    | **Prepared on `master`; awaiting release tag**   |
+| Item      | Value                                                |
+| --------- | ---------------------------------------------------- |
+| Version   | **v0.9.1**                                           |
+| Milestone | **v0.9.1 Workflow Usability Maintenance**            |
+| Status    | **Released as the v0.9.1 maintenance patch**          |
 
 ---
 
 ## Development Status
 
-| Item       | Value                                                        |
-| ---------- | ------------------------------------------------------------ |
-| Milestone  | **No active post-v0.9 milestone**                             |
-| Baseline   | **v0.9.0 release candidate**                                 |
-| Status     | **Release preparation only; future candidates remain deferred** |
+| Item       | Value                                             |
+| ---------- | ------------------------------------------------- |
+| Milestone  | **No active post-v0.9.1 milestone**                |
+| Baseline   | **v0.9.1**                                        |
+| Status     | **v0.9.1 maintenance complete; no active milestone** |
 
-`VERSION` and the application title report v0.9.0. The release tag is intentionally deferred until final release review.
+`VERSION` and the application title report v0.9.1. The patch preserves synchronization behavior while simplifying the local-first interface.
+
+The detailed historical reconciliation, including release-numbering irregularities and superseded early plans, is in [RETROSPECTIVE_V0.1_V0.9.1.md](RETROSPECTIVE_V0.1_V0.9.1.md).
+
+## Documentation Hierarchy
+
+```text
+ROADMAP       Committed development direction
+BACKLOG       Evaluated future work with plausible product value
+ICEBOX        Speculative or long-term possibilities
+RETROSPECTIVE Historical record of what actually happened
+VISION        Why TraceSync exists and what principles guide it
+```
+
+Only ROADMAP items are development commitments. A backlog item is not an implied commitment, and a retrospective entry is not a future requirement.
 
 ---
 
@@ -175,7 +193,7 @@ The current ignore system should remain simple unless a real office workflow dem
 
 ---
 
-# Development Milestones Included in v0.9.0
+# Development Milestones Included in v0.9.1
 
 ## v0.9 — Synchronization History & Auditability (Completed)
 
@@ -283,13 +301,13 @@ V0.5 focuses on helping office users decide what is safe to copy before approval
   - Count low-confidence files before execution.
   - Keep explicit uncertainty messaging visible at the approval step.
 
-### v0.6.x Deferred (non-blocking)
+### Deferred (non-blocking)
 
 - Advanced ignore include/override behavior remains intentionally deferred.
 
 ---
 
-# Product Direction
+# Product Principles (Not an Active Milestone)
 
 TraceSync should continue becoming more capable internally while remaining simple on the surface.
 
@@ -313,7 +331,7 @@ If the answer is no, the feature should generally remain deferred or belong in a
 
 ---
 
-# Future Storage Providers
+# Uncommitted Storage-Provider Direction
 
 The current architecture intentionally preserves the `StorageProvider` abstraction so TraceSync can eventually work with storage beyond local and mapped filesystem folders.
 
@@ -325,11 +343,11 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of v0.9.0.
+These are future capabilities and are not part of v0.9.1.
 
 ---
 
-# Future Remote and Cloud Synchronization
+# Uncommitted Remote/Cloud Design Constraints
 
 Remote and cloud synchronization is a longer-term capability.
 
@@ -451,7 +469,7 @@ The repository remains the authoritative source of truth.
 
 ---
 
-# Long-Term Direction
+# Long-Term Direction (Vision, Not Commitment)
 
 TraceSync should evolve from:
 

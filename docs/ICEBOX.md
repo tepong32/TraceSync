@@ -1,8 +1,8 @@
 # TraceSync Icebox
 
-> **Interesting ideas that are intentionally not scheduled.**
+> **Speculative or long-term ideas that are intentionally not scheduled.**
 >
-> These ideas may become future milestones if they align with TraceSync's vision and priorities.
+> These ideas have not been accepted as roadmap commitments. They require evidence, evaluation, and explicit promotion before implementation is scheduled.
 
 ---
 
@@ -87,8 +87,7 @@ Ideas for team environments.
 
 * [ ] Shared comparison sessions.
 * [ ] Comments on files.
-* [ ] Audit trail.
-* [ ] User activity log.
+* [ ] Team/user activity log distinct from the shipped synchronization audit history.
 
 ---
 
