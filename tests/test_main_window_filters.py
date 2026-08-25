@@ -1,6 +1,7 @@
 import unittest
 import tkinter as tk
 from types import SimpleNamespace
+from unittest.mock import patch
 
 from core.comparison_confidence import build_decision
 from models.compare_status import CompareStatus
@@ -111,6 +112,69 @@ class MainWindowProviderSectionTests(unittest.TestCase):
             "Show Provider Options",
         )
 
+    def test_folder_pair_controls_are_present_without_showing_provider_ui(self):
+        self.assertIsNotNone(self.window.folder_pair_combo)
+        self.assertIsNotNone(self.window.folder_pair_manage_button)
+        self.assertIsNotNone(self.window.folder_pair_save_button)
+        self.assertEqual(self.window.provider_section.winfo_manager(), "")
+
+    def test_selecting_folder_pair_invalidates_previous_comparison(self):
+        self.window.settings["folder_pairs"] = [
+            {
+                "name": "Accounting",
+                "local_folder": r"C:\Local\Accounting",
+                "server_folder": r"\\server\Accounting",
+            }
+        ]
+        self.window._refresh_folder_pair_values()
+        self.window.results = [object()]
+        self.window.visible_results = list(self.window.results)
+        self.window.comparison_completed = True
+        self.window._set_sync_buttons(True)
+        self.window.folder_pair_var.set("Accounting")
+
+        with patch("ui.main_window.SettingsService.save") as save_settings:
+            self.window._on_folder_pair_selected()
+
+        self.assertEqual(self.window.local_var.get(), r"C:\Local\Accounting")
+        self.assertEqual(self.window.server_var.get(), r"\\server\Accounting")
+        self.assertEqual(self.window.results, [])
+        self.assertFalse(self.window.comparison_completed)
+        self.assertEqual(str(self.window.local_to_server_button.cget("state")), "disabled")
+        self.assertEqual(str(self.window.server_to_local_button.cget("state")), "disabled")
+        self.assertEqual(self.window.folder_pair_var.get(), "Accounting")
+        save_settings.assert_called_once()
+
+    def test_manual_equivalent_paths_select_the_saved_pair(self):
+        self.window.settings["folder_pairs"] = [
+            {
+                "name": "Accounting",
+                "local_folder": r"C:\Local\Accounting",
+                "server_folder": r"\\server\Accounting",
+            }
+        ]
+        self.window._refresh_folder_pair_values()
+
+        self.window.local_var.set("c:/local/accounting/")
+        self.window.server_var.set("//SERVER/ACCOUNTING/")
+
+        self.assertEqual(self.window.folder_pair_var.get(), "Accounting")
+        self.assertEqual(self.window.settings["active_folder_pair"], "Accounting")
+
+    def test_manage_and_save_current_open_distinct_manager_modes(self):
+        dialog = SimpleNamespace(confirmed=False)
+        with (
+            patch("ui.main_window.FolderPairManagerDialog", return_value=dialog) as dialog_type,
+            patch.object(self.window, "wait_window"),
+        ):
+            self.window.open_folder_pair_manager()
+            manage_call = dialog_type.call_args
+            self.window.save_current_folder_pair()
+            save_call = dialog_type.call_args
+
+        self.assertFalse(manage_call.kwargs["start_new"])
+        self.assertTrue(save_call.kwargs["start_new"])
+
     def test_results_list_requests_fifteen_visible_rows(self):
         self.assertEqual(int(self.window.tree.cget("height")), 15)
 
@@ -160,6 +224,9 @@ class MainWindowProviderSectionTests(unittest.TestCase):
 
         self.assertIn(self.window.local_entry, tooltip_text)
         self.assertIn(self.window.server_entry, tooltip_text)
+        self.assertIn(self.window.folder_pair_combo, tooltip_text)
+        self.assertIn(self.window.folder_pair_manage_button, tooltip_text)
+        self.assertIn(self.window.folder_pair_save_button, tooltip_text)
         self.assertIn(self.window.compare_button, tooltip_text)
         self.assertIn(self.window.local_to_server_button, tooltip_text)
         self.assertIn(self.window.server_to_local_button, tooltip_text)

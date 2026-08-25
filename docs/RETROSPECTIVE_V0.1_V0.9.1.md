@@ -1,5 +1,7 @@
 # TraceSync v0.1-v0.9.1 Retrospective
 
+> **Historical scope:** This retrospective ends at v0.9.1. The current release is v0.10.0; see [ROADMAP.md](ROADMAP.md) for current status.
+
 ## 1. Purpose
 
 This retrospective records how TraceSync evolved from its first comparison build to the v0.9.1 mature baseline. It reconciles Git history, release tags, the changelog, current source code, tests, and planning documents.

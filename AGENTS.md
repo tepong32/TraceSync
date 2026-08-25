@@ -56,6 +56,7 @@ Examples:
 Dialogs
 
 * FileDetailsDialog
+* FolderPairManagerDialog
 * AboutDialog
 
 Menus
@@ -274,6 +275,9 @@ When introducing new UI features:
 1. Check whether the feature deserves its own module.
 2. Keep MainWindow focused on orchestration.
 3. Avoid duplicate logic.
+4. Keep saved-workflow configuration in settings/services rather than embedding persistence rules in dialogs.
+
+For recurring folder workflows, prefer named Folder Pairs over multi-job dashboards. A Folder Pair changes the current comparison endpoints; it must not bypass the existing compare → review → confirm → sync safety flow.
 
 When uncertain, choose the solution that is easier to maintain rather than the one requiring fewer lines of code.
 

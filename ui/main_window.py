@@ -1,4 +1,5 @@
 from collections import Counter
+import ntpath
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -10,6 +11,7 @@ from models.compare_status import CompareStatus
 from models.sync_direction import SyncDirection
 from models.comparison_decision import ConfidenceLevel
 from ui.dialogs.file_details_dialog import FileDetailsDialog
+from ui.dialogs.folder_pair_manager_dialog import FolderPairManagerDialog
 from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_history_dialog import SyncHistoryDialog
@@ -48,6 +50,7 @@ class MainWindow(tk.Tk):
         self.destination_provider_var = tk.StringVar(value=self.provider_options[0])
         self.source_provider_status_var = tk.StringVar(value="")
         self.destination_provider_status_var = tk.StringVar(value="")
+        self.folder_pair_var = tk.StringVar(value="")
         self._build_ui()
         self._load_saved_folders()
         self._load_saved_providers()
@@ -138,6 +141,36 @@ class MainWindow(tk.Tk):
                 ("!disabled", "#d9dde5"),
             ],
         )
+
+        pair_toolbar = ttk.Frame(self, padding=(10, 10, 10, 0))
+        pair_toolbar.pack(fill="x")
+        pair_toolbar.columnconfigure(1, weight=1)
+        ttk.Label(pair_toolbar, text="Folder Pair:").grid(row=0, column=0, sticky="w")
+        self.folder_pair_combo = ttk.Combobox(
+            pair_toolbar,
+            textvariable=self.folder_pair_var,
+            state="readonly",
+            width=44,
+        )
+        self.folder_pair_combo.grid(row=0, column=1, sticky="ew", padx=(10, 8))
+        self.folder_pair_combo.bind(
+            "<<ComboboxSelected>>",
+            self._on_folder_pair_selected,
+        )
+        self.folder_pair_manage_button = ttk.Button(
+            pair_toolbar,
+            text="Manage...",
+            command=self.open_folder_pair_manager,
+            style="MediumNeutral.TButton",
+        )
+        self.folder_pair_manage_button.grid(row=0, column=2, padx=(0, 6))
+        self.folder_pair_save_button = ttk.Button(
+            pair_toolbar,
+            text="Save Current...",
+            command=self.save_current_folder_pair,
+            style="UtilityNeutral.TButton",
+        )
+        self.folder_pair_save_button.grid(row=0, column=3)
 
         folder_frame = ttk.Frame(self, padding=10)
         folder_frame.pack(fill="x")
@@ -413,6 +446,18 @@ class MainWindow(tk.Tk):
     def _configure_tooltips(self):
         tooltip_text = (
             (
+                self.folder_pair_combo,
+                "Choose a saved Local ↔ Server relationship. Selecting one changes the two folder paths but never copies files.",
+            ),
+            (
+                self.folder_pair_manage_button,
+                "Add, rename, edit, or remove saved folder relationships.",
+            ),
+            (
+                self.folder_pair_save_button,
+                "Create a named pair from the Local and Server folders currently displayed.",
+            ),
+            (
                 self.local_entry,
                 "The folder on this computer or your primary working location.",
             ),
@@ -471,7 +516,17 @@ class MainWindow(tk.Tk):
         ]
 
     def _on_folder_value_changed(self, *_args):
+        had_comparison = self.comparison_completed or bool(self.results)
         self.comparison_completed = False
+        self._sync_folder_pair_selection_from_paths()
+        if had_comparison:
+            self.results = []
+            self.visible_results = []
+            self.populate_tree([])
+            self._set_sync_buttons(False)
+            self._refresh_filter_labels()
+            self.summary_var.set("No comparison results.")
+            self.status_var.set("Folders changed. Compare again before synchronizing.")
         self._refresh_workflow_guidance()
 
     def _refresh_workflow_guidance(self):
@@ -483,8 +538,117 @@ class MainWindow(tk.Tk):
         )
 
     def _load_saved_folders(self):
+        self._refresh_folder_pair_values()
+        active_pair = self._find_folder_pair_by_name(
+            self.settings.get("active_folder_pair", ""),
+        )
+        if active_pair is not None:
+            self.folder_pair_var.set(active_pair["name"])
+            self.local_var.set(active_pair["local_folder"])
+            self.server_var.set(active_pair["server_folder"])
+            return
+
+        self.folder_pair_var.set("")
         self.local_var.set(self.settings.get("local_folder", ""))
         self.server_var.set(self.settings.get("server_folder", ""))
+        self._sync_folder_pair_selection_from_paths()
+
+    @staticmethod
+    def _folder_path_identity(folder_path):
+        folder_path = folder_path.strip()
+        if not folder_path:
+            return ""
+        normalized_path = ntpath.normcase(ntpath.normpath(folder_path))
+        drive, tail = ntpath.splitdrive(normalized_path)
+        trimmed_tail = tail.rstrip("\\/")
+        if trimmed_tail:
+            return f"{drive}{trimmed_tail}"
+        if tail and len(drive) == 2 and drive.endswith(":"):
+            return f"{drive}\\"
+        return drive
+
+    def _find_folder_pair_by_name(self, pair_name):
+        if not pair_name:
+            return None
+        name_key = pair_name.casefold()
+        return next(
+            (
+                pair
+                for pair in self.settings.get("folder_pairs", [])
+                if pair["name"].casefold() == name_key
+            ),
+            None,
+        )
+
+    def _find_folder_pair_by_paths(self, local_folder, server_folder):
+        local_identity = self._folder_path_identity(local_folder)
+        server_identity = self._folder_path_identity(server_folder)
+        if not local_identity or not server_identity:
+            return None
+        return next(
+            (
+                pair
+                for pair in self.settings.get("folder_pairs", [])
+                if self._folder_path_identity(pair["local_folder"]) == local_identity
+                and self._folder_path_identity(pair["server_folder"]) == server_identity
+            ),
+            None,
+        )
+
+    def _refresh_folder_pair_values(self):
+        names = [pair["name"] for pair in self.settings.get("folder_pairs", [])]
+        self.folder_pair_combo.configure(values=names)
+        if not names:
+            self.folder_pair_var.set("")
+            self.folder_pair_combo.configure(state="disabled")
+            return
+        if self.folder_pair_var.get() not in names:
+            self.folder_pair_var.set("")
+        self.folder_pair_combo.configure(state="readonly")
+
+    def _sync_folder_pair_selection_from_paths(self):
+        local_folder = self.local_var.get().strip()
+        server_folder = self.server_var.get().strip()
+        matched_pair = self._find_folder_pair_by_paths(local_folder, server_folder)
+        active_pair_name = matched_pair["name"] if matched_pair else ""
+        self.folder_pair_var.set(active_pair_name)
+        self.settings["active_folder_pair"] = active_pair_name
+        self.settings["local_folder"] = local_folder
+        self.settings["server_folder"] = server_folder
+
+    def _on_folder_pair_selected(self, _event=None):
+        pair = self._find_folder_pair_by_name(self.folder_pair_var.get())
+        if pair is None:
+            return
+        self.local_var.set(pair["local_folder"])
+        self.server_var.set(pair["server_folder"])
+        self._sync_folder_pair_selection_from_paths()
+        SettingsService.save(self.settings)
+        self.status_var.set(f"Selected folder pair: {pair['name']}")
+
+    def _show_folder_pair_manager(self, *, start_new):
+        dialog = FolderPairManagerDialog(
+            self,
+            self.settings.get("folder_pairs", []),
+            current_local=self.local_var.get().strip(),
+            current_server=self.server_var.get().strip(),
+            selected_name=self.folder_pair_var.get(),
+            start_new=start_new,
+        )
+        self.wait_window(dialog)
+        if not dialog.confirmed:
+            return
+        self.settings["folder_pairs"] = dialog.pairs
+        self._refresh_folder_pair_values()
+        self._sync_folder_pair_selection_from_paths()
+        SettingsService.save(self.settings)
+        self.status_var.set("Folder pairs updated.")
+
+    def open_folder_pair_manager(self):
+        self._show_folder_pair_manager(start_new=False)
+
+    def save_current_folder_pair(self):
+        self._show_folder_pair_manager(start_new=True)
 
     def _load_saved_providers(self):
         providers = self.settings.get("providers", {})
@@ -540,6 +704,9 @@ class MainWindow(tk.Tk):
                 server_folder,
                 user_ignore_patterns=self.settings.get("ignore_patterns", []),
             )
+            self.settings["local_folder"] = local_folder
+            self.settings["server_folder"] = server_folder
+            SettingsService.save(self.settings)
             self.comparison_completed = True
             self._show_comparison_results()
         except (OSError, ValueError) as exc:
@@ -684,7 +851,7 @@ class MainWindow(tk.Tk):
         if not dialog.confirmed:
             self.status_var.set("Synchronization cancelled before any files were copied.")
             return
-        selected_items = dialog.get_selected_items()
+        selected_items = dialog.selected_items
         if not selected_items:
             self.status_var.set("Synchronization cancelled: no files selected.")
             return

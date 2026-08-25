@@ -87,6 +87,24 @@ class SyncConfirmationDialogTests(unittest.TestCase):
         finally:
             dialog.destroy()
 
+    def test_confirmation_preserves_selected_items_after_widgets_are_destroyed(self):
+        preview = SyncPreview(
+            direction=SyncDirection.LOCAL_TO_SERVER,
+            items=(self.make_item("alpha.txt"), self.make_item("beta.txt")),
+        )
+        dialog = SyncConfirmationDialog(self.root, preview)
+        tree = dialog._tree
+        assert tree is not None
+        _first_row, second_row = tree.get_children()
+        tree.selection_remove(second_row)
+
+        dialog._confirm()
+
+        self.assertTrue(dialog.confirmed)
+        self.assertEqual(dialog.winfo_exists(), 0)
+        self.assertEqual(dialog.selected_items, (preview.items[0],))
+        self.assertEqual(dialog.get_selected_items(), (preview.items[0],))
+
 
 class SyncPreviewSelectionTests(unittest.TestCase):
     def test_with_selected_items_filters_preview(self):

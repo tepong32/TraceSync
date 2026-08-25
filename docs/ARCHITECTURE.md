@@ -9,6 +9,7 @@ MainWindow -> SyncService.compare() -> StorageScanner -> StorageProvider
                                       -> SyncJobRunner -> StorageProvider.copy_from()
                                       -> SyncHistoryService.finalize_run()
            -> SyncJob -> progress and summary dialogs
+MainWindow -> FolderPairManagerDialog -> SettingsService
 MainWindow -> SyncHistoryDialog -> SyncHistoryService -> JsonSyncHistoryStore
 ```
 
@@ -24,7 +25,9 @@ Immediately before each copy, the runner verifies that the source and destinatio
 
 ## Settings compatibility
 
-Settings remain a JSON dictionary so existing `local_folder` and `server_folder` entries continue to work. New provider-specific settings can be added as nested keys without changing the current UI contract.
+Settings remain a JSON dictionary so existing `local_folder` and `server_folder` entries continue to work. v0.10 adds normalized `folder_pairs` and `active_folder_pair` values for named Local ↔ Server relationships. Existing `recent_pairs` data is accepted as a migration source only when `folder_pairs` is absent.
+
+`FolderPairManagerDialog` owns the editing interaction, while `MainWindow` applies a selected relationship to the current folder fields. Changing either endpoint invalidates stale comparison results before synchronization can be enabled again. Folder Pairs do not introduce another comparison engine, background job queue, multi-job workspace, or provider transport.
 
 ## Synchronization history
 
