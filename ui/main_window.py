@@ -851,7 +851,7 @@ class MainWindow(tk.Tk):
         if not dialog.confirmed:
             self.status_var.set("Synchronization cancelled before any files were copied.")
             return
-        selected_items = dialog.get_selected_items()
+        selected_items = dialog.selected_items
         if not selected_items:
             self.status_var.set("Synchronization cancelled: no files selected.")
             return

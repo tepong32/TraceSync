@@ -15,6 +15,7 @@ class SyncConfirmationDialog(tk.Toplevel):
     def __init__(self, parent, preview: SyncPreview) -> None:
         super().__init__(parent)
         self.confirmed = False
+        self.selected_items: tuple = ()
         self._decision_items: dict[str, object] = {}
         self._tree: ttk.Treeview | None = None
 
@@ -155,6 +156,11 @@ class SyncConfirmationDialog(tk.Toplevel):
         return len(self.get_selected_items())
 
     def get_selected_items(self) -> tuple:
+        if self.confirmed:
+            return self.selected_items
+        return self._read_selected_items()
+
+    def _read_selected_items(self) -> tuple:
         if not self._tree:
             return ()
         selected_paths = []
@@ -165,9 +171,11 @@ class SyncConfirmationDialog(tk.Toplevel):
         return tuple(self._decision_items[path] for path in selected_paths if path in self._decision_items)
 
     def _confirm(self) -> None:
-        if not self.get_selected_items():
+        selected_items = self._read_selected_items()
+        if not selected_items:
             messagebox.showwarning("No files selected", "Select at least one file before starting synchronization.")
             return
+        self.selected_items = selected_items
         self.confirmed = True
         self.destroy()
 

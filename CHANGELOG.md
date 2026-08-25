@@ -10,6 +10,9 @@
 - Clear stale comparison results and disable synchronization actions whenever either endpoint changes, including when a different Folder Pair is selected.
 - Keep the v0.9.1 planning-only provider section hidden by default; Folder Pairs do not activate remote or cloud synchronization.
 
+### Fixed
+- Preserve the approved file selection before closing the synchronization confirmation dialog so a confirmed copy can start without accessing destroyed UI controls.
+
 ## [0.9.1] - 2026-08-21
 ### Changed
 - Keep the planning-only Provider Onboarding and remote/cloud information hidden by default, with a toolbar control to show or hide the section when needed.
