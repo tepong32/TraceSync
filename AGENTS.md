@@ -181,6 +181,11 @@ Avoid deeply nested logic where possible.
 
 # Future Architecture
 
+Provider item identity is represented by the provider-neutral `StorageLocation`
+value object. Generic models may retain legacy path strings for local backward
+compatibility, but new provider behavior should use `StorageLocation` rather
+than coercing provider-native identities into `pathlib.Path`.
+
 Target structure:
 
 ui/

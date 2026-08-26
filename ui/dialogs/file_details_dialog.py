@@ -477,8 +477,8 @@ class FileDetailsDialog(tk.Toplevel):
             extension_var.set("Not Available")
             return
 
-        path_var.set(record.absolute_path)
-        extension = Path(record.absolute_path).suffix.lower()
+        path_var.set(record.display_location)
+        extension = Path(record.relative_path).suffix.lower()
         extension_var.set(extension or "No extension")
 
         modified_var.set(
@@ -492,7 +492,7 @@ class FileDetailsDialog(tk.Toplevel):
                 record.size
             )
         )
-        type_var.set(format_file_type(record.absolute_path))
+        type_var.set(format_file_type(record.relative_path))
 
     def _derive_file_type(self) -> str:
         if not self.result or not (self.result.local_record or self.result.server_record):
@@ -501,4 +501,4 @@ class FileDetailsDialog(tk.Toplevel):
         record = self.result.local_record or self.result.server_record
         if record is None:
             return "Unknown"
-        return format_file_type(record.absolute_path)
+        return format_file_type(record.relative_path)

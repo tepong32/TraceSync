@@ -11,6 +11,7 @@ from core.storage_provider import ProviderCapability, StorageProvider
 from models.sync_history import StorageEndpointSnapshot
 from core.sync_service import SyncService
 from models.file_record import FileRecord
+from models.storage_location import StorageLocation
 
 
 def _record(path: str, modified_time: float) -> FileRecord:
@@ -41,8 +42,9 @@ class FakeStorageProvider(StorageProvider):
     def get_record(self, relative_path):
         return self.records.get(relative_path)
 
-    def destination_path(self, relative_path):
-        return f"{self.name}/{relative_path}"
+    def location_for(self, relative_path):
+        value = f"{self.name}/{relative_path}"
+        return StorageLocation("fake", value, value)
 
     def copy_from(self, source, relative_path):
         if relative_path in self.failing_paths:

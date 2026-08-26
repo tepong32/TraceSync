@@ -5,6 +5,7 @@
 - Link successful pre-overwrite backups to per-file synchronization history and CSV exports.
 - Show backup availability in synchronization history details and allow a confirmed restore of the selected version.
 - Create a second safety backup of the current destination before a historical version is restored.
+- Add provider-neutral item locations that preserve local paths while allowing future providers to use native object identities and separate display text.
 
 ### Safety
 - Block an overwrite when its required backup cannot be created and verified.

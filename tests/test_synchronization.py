@@ -8,6 +8,7 @@ from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
 from models.file_record import FileRecord
+from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
 from models.sync_job import SyncJobStatus
 from models.sync_history import (
@@ -46,8 +47,9 @@ class FakeStorageProvider(StorageProvider):
             raise RuntimeError(relative_path)
         return self.records.get(relative_path)
 
-    def destination_path(self, relative_path):
-        return f"{self.name}/{relative_path}"
+    def location_for(self, relative_path):
+        value = f"{self.name}/{relative_path}"
+        return StorageLocation("fake", value, value)
 
     def copy_from(self, source, relative_path):
         if relative_path in self.failing_paths:
@@ -59,7 +61,12 @@ class FakeStorageProvider(StorageProvider):
 
 
 def record(path, modified_time):
-    return FileRecord(path, path, modified_time, 1)
+    return FileRecord.from_location(
+        StorageLocation("fake", path, path),
+        path,
+        modified_time,
+        1,
+    )
 
 
 class SynchronizationTests(unittest.TestCase):
@@ -93,6 +100,10 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual([item.relative_path for item in preview.items], ["newer.txt", "only-local.txt"])
         self.assertEqual(preview.create_count, 1)
         self.assertEqual(preview.overwrite_count, 1)
+        self.assertEqual(preview.items[0].source_location.provider_type, "fake")
+        self.assertEqual(preview.items[0].source_location.native_id, "local/newer.txt")
+        self.assertEqual(preview.items[0].destination_location.provider_type, "fake")
+        self.assertEqual(preview.items[0].destination_location.native_id, "server/newer.txt")
 
     def test_job_executes_the_reviewed_preview(self):
         local = FakeStorageProvider("local", {"reports/july.txt": record("local/reports/july.txt", 100)})

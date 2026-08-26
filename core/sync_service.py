@@ -115,11 +115,12 @@ class SyncService:
             if source_record is None:
                 continue
             overwrite = destination_record is not None
+            destination_location = destination.location_for(result.relative_path)
             items.append(
                 SyncPreviewItem(
                     relative_path=result.relative_path,
-                    source=source_record.absolute_path,
-                    destination=destination.destination_path(result.relative_path),
+                    source=source_record.display_location,
+                    destination=destination_location.display_location,
                     direction=direction,
                     comparison_status=result.status,
                     operation=SyncOperation.COPY,
@@ -132,6 +133,8 @@ class SyncService:
                     decision_reason=(result.decision.reason if result.decision else None),
                     destination_modified_time=(destination_record.modified_time if destination_record else None),
                     destination_size=(destination_record.size if destination_record else None),
+                    source_location=source_record.storage_location,
+                    destination_location=destination_location,
                 )
             )
 

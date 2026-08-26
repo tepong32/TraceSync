@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from models.compare_status import CompareStatus
+from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
 
 
@@ -28,6 +29,22 @@ class SyncPreviewItem:
     source_size: int | None = None
     destination_modified_time: float | None = None
     destination_size: int | None = None
+    source_location: StorageLocation | None = None
+    destination_location: StorageLocation | None = None
+
+    def __post_init__(self) -> None:
+        if self.source_location is None:
+            object.__setattr__(
+                self,
+                "source_location",
+                StorageLocation.local(self.source, resolve=False),
+            )
+        if self.destination_location is None:
+            object.__setattr__(
+                self,
+                "destination_location",
+                StorageLocation.local(self.destination, resolve=False),
+            )
 
 
 @dataclass(frozen=True, slots=True)

@@ -82,7 +82,7 @@ class BackupService:
             recovery_group_id=recovery_group_id or backup_id,
         )
         try:
-            self.store.create(record, Path(destination_record.absolute_path))
+            self.store.create(record, destination_record.storage_location.as_local_path())
         except Exception as exc:
             raise BackupCreationError(
                 "TraceSync could not safely back up the existing destination file. It was not overwritten."

@@ -10,6 +10,7 @@ from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
 from core.sync_service import SyncExecutionStartError
 from models.file_record import FileRecord
+from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
 from models.sync_history import (
     StorageEndpointSnapshot,
@@ -43,8 +44,9 @@ class TrackingProvider(StorageProvider):
     def get_record(self, relative_path):
         return self.records.get(relative_path)
 
-    def destination_path(self, relative_path):
-        return f"{self.name}/{relative_path}"
+    def location_for(self, relative_path):
+        value = f"{self.name}/{relative_path}"
+        return StorageLocation("fake", value, value)
 
     def copy_from(self, source, relative_path):
         self.copied_paths.append(relative_path)
@@ -52,8 +54,9 @@ class TrackingProvider(StorageProvider):
 
 
 def file_record(provider_name: str, relative_path: str) -> FileRecord:
-    return FileRecord(
-        absolute_path=f"{provider_name}/{relative_path}",
+    value = f"{provider_name}/{relative_path}"
+    return FileRecord.from_location(
+        location=StorageLocation("fake", value, value),
         relative_path=relative_path,
         modified_time=100,
         size=10,

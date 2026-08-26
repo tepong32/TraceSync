@@ -2,10 +2,19 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 from models.file_record import FileRecord
+from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
 
 
 class ProviderCapability(str, Enum):
+    """Provider declarations, not generic implementations.
+
+    TIMESTAMPS currently feed comparison and pre-copy validation. HASHING is a
+    future comparison signal. VERSION_HISTORY may later influence recovery.
+    PERMISSIONS, SYMBOLIC_LINKS, and METADATA remain informational until a
+    workflow explicitly consumes them.
+    """
+
     HASHING = "hashing"
     TIMESTAMPS = "timestamps"
     VERSION_HISTORY = "version_history"
@@ -44,8 +53,12 @@ class StorageProvider(ABC):
         """Return one current item, or None when it no longer exists."""
 
     @abstractmethod
+    def location_for(self, relative_path: str) -> StorageLocation:
+        """Return this provider's native identity for one relative path."""
+
     def destination_path(self, relative_path: str) -> str:
-        """Return a safe destination identifier for a relative path."""
+        """Return legacy display text for callers that still expect a path string."""
+        return self.location_for(relative_path).display_location
 
     @abstractmethod
     def copy_from(self, source: "StorageProvider", relative_path: str) -> None:
