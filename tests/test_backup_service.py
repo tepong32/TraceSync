@@ -3,13 +3,14 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Event, Thread
 from unittest.mock import patch
 from uuid import uuid4
 
 from core.backup_service import BackupService
 from core.backup_store import JsonBackupStore
 from core.local_storage_provider import LocalStorageProvider
-from core.sync_history_lock import SyncHistoryLock
+from core.sync_history_lock import SyncAlreadyActiveError, SyncHistoryLock
 from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
@@ -165,6 +166,93 @@ class BackupIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(outcome.backup_id)
         self.assertIsNotNone(self.backup_store.get(outcome.backup_id))
         self.assertFalse(tuple(self.server_root.glob(".report.txt.*.tmp")))
+
+    def test_restore_is_blocked_while_synchronization_holds_the_shared_lock(self):
+        local_file = self.local_root / "report.txt"
+        server_file = self.server_root / "report.txt"
+        self.write_version(local_file, "new version", 200)
+        self.write_version(server_file, "old version", 100)
+        service = self.make_service()
+        completed_job = self.run_local_to_server(service)
+        backup_id = completed_job.file_outcomes[0].backup_id
+        self.write_version(local_file, "newest version", 300)
+        preview = service.create_preview(service.compare(), SyncDirection.LOCAL_TO_SERVER)
+        context = self.history_service.begin_run(
+            preview,
+            service.local_provider,
+            service.server_provider,
+        )
+
+        try:
+            with self.assertRaises(SyncAlreadyActiveError):
+                self.backup_service.restore(backup_id)
+        finally:
+            context.run_lock.release()
+
+        self.assertEqual(server_file.read_text(encoding="utf-8"), "new version")
+        self.backup_service.restore(backup_id)
+        self.assertEqual(server_file.read_text(encoding="utf-8"), "old version")
+
+    def test_active_restore_blocks_synchronization_and_another_restore(self):
+        local_file = self.local_root / "report.txt"
+        server_file = self.server_root / "report.txt"
+        self.write_version(local_file, "new version", 200)
+        self.write_version(server_file, "old version", 100)
+        service = self.make_service()
+        completed_job = self.run_local_to_server(service)
+        backup_id = completed_job.file_outcomes[0].backup_id
+        self.write_version(local_file, "newest version", 300)
+        preview = service.create_preview(service.compare(), SyncDirection.LOCAL_TO_SERVER)
+        job = service.create_job(preview)
+        restore_entered = Event()
+        allow_restore = Event()
+        restore_errors: list[Exception] = []
+        real_restore = self.backup_service._restore
+
+        def blocking_restore(selected_backup_id):
+            restore_entered.set()
+            if not allow_restore.wait(timeout=5):
+                raise TimeoutError("The restore test did not resume.")
+            return real_restore(selected_backup_id)
+
+        def run_restore():
+            try:
+                self.backup_service.restore(backup_id)
+            except Exception as exc:
+                restore_errors.append(exc)
+
+        with patch.object(self.backup_service, "_restore", side_effect=blocking_restore):
+            restore_thread = Thread(target=run_restore)
+            restore_thread.start()
+            self.assertTrue(restore_entered.wait(timeout=5))
+            try:
+                with self.assertRaises(SyncAlreadyActiveError):
+                    service.start_job(job, preview)
+                with self.assertRaises(SyncAlreadyActiveError):
+                    self.backup_service.restore(backup_id)
+            finally:
+                allow_restore.set()
+                restore_thread.join(timeout=5)
+
+        self.assertFalse(restore_thread.is_alive())
+        self.assertEqual(restore_errors, [])
+        self.assertEqual(server_file.read_text(encoding="utf-8"), "old version")
+
+    def test_restore_exception_releases_the_shared_lock(self):
+        local_file = self.local_root / "report.txt"
+        server_file = self.server_root / "report.txt"
+        self.write_version(local_file, "new version", 200)
+        self.write_version(server_file, "old version", 100)
+        service = self.make_service()
+        completed_job = self.run_local_to_server(service)
+        backup_id = completed_job.file_outcomes[0].backup_id
+
+        with patch.object(self.backup_service, "_restore", side_effect=OSError("restore failed")):
+            with self.assertRaises(OSError):
+                self.backup_service.restore(backup_id)
+
+        self.backup_service.restore(backup_id)
+        self.assertEqual(server_file.read_text(encoding="utf-8"), "old version")
 
 
 class BackupStoreTests(unittest.TestCase):

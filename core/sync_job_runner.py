@@ -40,19 +40,21 @@ class SyncJobRunner:
         on_finished: Callable[[SyncJob], None] | None = None,
     ) -> Thread:
         def run_and_finalize() -> None:
-            self.run(job, preview)
             try:
-                if on_finished is not None:
-                    on_finished(job)
-            except Exception as exc:
-                with job.lock:
-                    job.history_finalization_error = (
-                        "Synchronization finished, but TraceSync could not finalize its history record."
-                    )
-                    job.history_finalization_exception = exc
+                self.run(job, preview)
             finally:
-                with job.lock:
-                    job.completion_ready = True
+                try:
+                    if on_finished is not None:
+                        on_finished(job)
+                except Exception as exc:
+                    with job.lock:
+                        job.history_finalization_error = (
+                            "Synchronization finished, but TraceSync could not finalize its history record."
+                        )
+                        job.history_finalization_exception = exc
+                finally:
+                    with job.lock:
+                        job.completion_ready = True
 
         thread = Thread(target=run_and_finalize, daemon=True)
         thread.start()

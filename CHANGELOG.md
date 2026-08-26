@@ -10,6 +10,7 @@
 - Block an overwrite when its required backup cannot be created and verified.
 - Copy through a temporary sibling file and atomically replace the destination so an interrupted copy does not leave a partial replacement.
 - Revalidate the confirmed source and destination after backup creation.
+- Serialize backup restoration with synchronization so restore, backup creation, and destination replacement cannot overlap.
 - Retain at most two versions per destination file, 5 GB of valid backup content globally, and 500 valid entries overall; delete the oldest eligible backups first while protecting the backup required by the active operation.
 
 ## [0.10.0] - 2026-08-25

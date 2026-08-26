@@ -9,6 +9,7 @@ from uuid import uuid4
 from core.backup_store import JsonBackupStore
 from core.local_storage_provider import LocalStorageProvider
 from core.storage_provider import StorageProvider
+from core.sync_history_lock import SyncHistoryLock, SyncLockFactory
 from models.backup_record import BackupRecord
 
 
@@ -31,10 +32,12 @@ class BackupService:
         *,
         now_provider: Callable[[], datetime] | None = None,
         id_provider: Callable[[], str] | None = None,
+        lock_factory: SyncLockFactory | None = None,
     ) -> None:
         self.store = store or JsonBackupStore()
         self.now_provider = now_provider or (lambda: datetime.now(timezone.utc))
         self.id_provider = id_provider or (lambda: str(uuid4()))
+        self.lock_factory = lock_factory or self._default_lock_factory()
 
     def create_backup(
         self,
@@ -93,6 +96,14 @@ class BackupService:
         return record
 
     def restore(self, backup_id: str) -> RestoreResult:
+        restore_lock = self.lock_factory()
+        restore_lock.acquire()
+        try:
+            return self._restore(backup_id)
+        finally:
+            restore_lock.release()
+
+    def _restore(self, backup_id: str) -> RestoreResult:
         direct = self.store.get(backup_id)
         recovery_group_id = (
             direct.record.recovery_group_id if direct is not None else backup_id
@@ -131,6 +142,10 @@ class BackupService:
         except (OSError, ValueError):
             # Backup discovery must not prevent otherwise valid history from opening.
             return {}
+
+    def _default_lock_factory(self) -> SyncLockFactory:
+        lock_path = Path(self.store.backup_directory).parent / "history" / "sync.lock"
+        return lambda: SyncHistoryLock(lock_path)
 
 
 def _backup_timestamp(value: datetime) -> str:

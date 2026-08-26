@@ -3,11 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import Callable
 from uuid import uuid4
 
 from core.storage_provider import StorageProvider
-from core.sync_history_lock import SyncAlreadyActiveError, SyncHistoryLock
+from core.sync_history_lock import (
+    SyncAlreadyActiveError,
+    SyncHistoryLock,
+    SyncLock,
+    SyncLockFactory,
+)
 from core.sync_history_export import export_sync_run_csv
 from core.sync_history_store import (
     HistoryLoadResult,
@@ -32,16 +37,10 @@ class HistoryPersistenceError(RuntimeError):
     """Raised when the durable initial history precondition cannot be met."""
 
 
-class RunLock(Protocol):
-    def acquire(self) -> None: ...
-
-    def release(self) -> None: ...
-
-
 @dataclass(slots=True)
 class SyncRunContext:
     initial_record: SyncRunRecord
-    run_lock: RunLock
+    run_lock: SyncLock
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +60,7 @@ class SyncHistoryService:
         version_provider: Callable[[], str] = get_application_version,
         now_provider: Callable[[], datetime] | None = None,
         run_id_provider: Callable[[], str] | None = None,
-        lock_factory: Callable[[], RunLock] | None = None,
+        lock_factory: SyncLockFactory | None = None,
     ) -> None:
         self.store = store or JsonSyncHistoryStore()
         self.version_provider = version_provider
@@ -266,7 +265,7 @@ class SyncHistoryService:
             files=interrupted_files,
         )
 
-    def _default_lock_factory(self) -> Callable[[], RunLock]:
+    def _default_lock_factory(self) -> SyncLockFactory:
         history_directory = getattr(self.store, "history_directory", None)
         if history_directory is None:
             raise ValueError("A lock factory is required for a history store without a filesystem path.")

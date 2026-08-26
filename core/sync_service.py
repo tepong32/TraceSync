@@ -38,7 +38,12 @@ class SyncService:
         self.local_provider = source_provider or local_provider
         self.server_provider = destination_provider or server_provider
         self.history_service = history_service or SyncHistoryService()
-        self.backup_service = backup_service or BackupService()
+        self.backup_service = backup_service or BackupService(
+            lock_factory=self.history_service.lock_factory,
+        )
+        # Restore, synchronization, backup creation, and destination replacement
+        # must all use the exact same serialization mechanism.
+        self.backup_service.lock_factory = self.history_service.lock_factory
         # Created when compare() knows the project root.
         self._ignore_engine: IgnoreRuleEngine | None = None
         self.last_ignored_count = 0

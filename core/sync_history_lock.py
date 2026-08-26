@@ -2,15 +2,24 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Callable, Protocol
+
+
+class SyncLock(Protocol):
+    def acquire(self) -> None: ...
+
+    def release(self) -> None: ...
+
+
+SyncLockFactory = Callable[[], SyncLock]
 
 
 class SyncAlreadyActiveError(RuntimeError):
-    """Raised when another TraceSync process owns the synchronization lock."""
+    """Raised when another TraceSync data-changing operation owns the lock."""
 
 
 class SyncHistoryLock:
-    """OS-managed exclusive lock for one active synchronization per user."""
+    """OS-managed lock for one active synchronization or restore per user."""
 
     def __init__(self, lock_path: Path) -> None:
         self.lock_path = lock_path
@@ -31,7 +40,7 @@ class SyncHistoryLock:
         except OSError as exc:
             lock_file.close()
             raise SyncAlreadyActiveError(
-                "Another TraceSync synchronization is already active."
+                "Another TraceSync synchronization or restore is already active."
             ) from exc
         self._file = lock_file
 

@@ -189,6 +189,25 @@ class SyncHistoryLifecycleTests(unittest.TestCase):
         self.assertEqual(record.outcome, SyncRunOutcome.FAILED)
         self.assertEqual(record.files[0].outcome, SyncFileOutcome.NOT_ATTEMPTED)
 
+    def test_unexpected_worker_exception_still_releases_the_shared_lock(self):
+        service, preview, job = self.make_operation()
+
+        with (
+            patch(
+                "core.sync_job_runner.SyncJobRunner.run",
+                side_effect=RuntimeError("unexpected worker failure"),
+            ),
+            patch("threading.excepthook"),
+        ):
+            worker = service.start_job(job, preview)
+            worker.join(timeout=5)
+
+        replacement_lock = SyncHistoryLock(self.history_root / "sync.lock")
+        replacement_lock.acquire()
+        replacement_lock.release()
+        self.assertTrue(job.completion_ready)
+        self.assertIsNotNone(job.history_finalization_error)
+
     def test_interrupted_recovery_marks_pending_files_unknown(self):
         service, preview, _job = self.make_operation()
         context = self.history_service.begin_run(preview, self.local, self.server)
