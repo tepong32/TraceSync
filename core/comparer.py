@@ -6,7 +6,7 @@ from core.comparison_confidence import build_decision
 from models.file_record import FileRecord
 
 
-_LEGACY_CAPABILITIES = frozenset({ProviderCapability.TIMESTAMPS})
+_NO_CAPABILITIES: frozenset[ProviderCapability] = frozenset()
 
 
 def compare_folders(
@@ -20,9 +20,9 @@ def compare_folders(
     """
 
     if local_capabilities is None:
-        local_capabilities = _LEGACY_CAPABILITIES
+        local_capabilities = _NO_CAPABILITIES
     if server_capabilities is None:
-        server_capabilities = _LEGACY_CAPABILITIES
+        server_capabilities = _NO_CAPABILITIES
     results = []
 
     all_paths = set(local_files.keys()) | set(server_files.keys())

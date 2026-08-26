@@ -1,4 +1,4 @@
-from core.comparison_evidence import have_comparable_hashes
+from core.comparison_evidence import have_comparable_hashes, has_reliable_timestamp
 from core.storage_provider import ProviderCapability
 from models.compare_status import CompareStatus
 from models.comparison_decision import ComparisonDecision, ConfidenceLevel
@@ -8,7 +8,7 @@ from models.comparison_result import ComparisonResult
 TIMESTAMP_UNCERTAINTY_SECONDS = 2.0
 
 
-_LEGACY_CAPABILITIES = frozenset({ProviderCapability.TIMESTAMPS})
+_NO_CAPABILITIES: frozenset[ProviderCapability] = frozenset()
 
 
 def build_decision(
@@ -17,9 +17,9 @@ def build_decision(
     server_capabilities: frozenset[ProviderCapability] | None = None,
 ) -> ComparisonDecision:
     if local_capabilities is None:
-        local_capabilities = _LEGACY_CAPABILITIES
+        local_capabilities = _NO_CAPABILITIES
     if server_capabilities is None:
-        server_capabilities = _LEGACY_CAPABILITIES
+        server_capabilities = _NO_CAPABILITIES
     if result.local_record is None and result.server_record is not None:
         return ComparisonDecision(
             recommendation="Copy Server → Local is likely correct.",
@@ -54,22 +54,38 @@ def build_decision(
                     reason="The provider-reported content hashes match.",
                     status=result.status,
                 )
-            if result.local_record.size != result.server_record.size:
+            if (
+                has_reliable_timestamp(
+                    result.local_record.metadata,
+                    local_capabilities,
+                )
+                and has_reliable_timestamp(
+                    result.server_record.metadata,
+                    server_capabilities,
+                )
+            ):
+                if result.local_record.size != result.server_record.size:
+                    return ComparisonDecision(
+                        recommendation="Review before synchronizing.",
+                        confidence=ConfidenceLevel.LOW,
+                        reason=(
+                            "The timestamps match but file sizes differ. "
+                            "Content may have changed without time precision changes."
+                        ),
+                        status=result.status,
+                    )
+
                 return ComparisonDecision(
-                    recommendation="Review before synchronizing.",
-                    confidence=ConfidenceLevel.LOW,
-                    reason=(
-                        "The timestamps match but file sizes differ. "
-                        "Content may have changed without time precision changes."
-                    ),
+                    recommendation="No action is likely required.",
+                    confidence=ConfidenceLevel.HIGH,
+                    reason="Timestamps and file sizes appear aligned.",
                     status=result.status,
                 )
 
-            return ComparisonDecision(
-                recommendation="No action is likely required.",
-                confidence=ConfidenceLevel.HIGH,
-                reason="Timestamps and file sizes appear aligned.",
-                status=result.status,
+            return _build_insufficient_evidence_decision(
+                result,
+                local_capabilities,
+                server_capabilities,
             )
 
     if result.status == CompareStatus.NEEDS_REVIEW:
@@ -80,7 +96,11 @@ def build_decision(
         )
 
     if result.status in {CompareStatus.LOCAL_NEWER, CompareStatus.SERVER_NEWER}:
-        decision = _build_directional_decision(result)
+        decision = _build_directional_decision(
+            result,
+            local_capabilities,
+            server_capabilities,
+        )
         if decision:
             return decision
 
@@ -92,13 +112,20 @@ def build_decision(
     )
 
 
-def _build_directional_decision(result: ComparisonResult) -> ComparisonDecision | None:
+def _build_directional_decision(
+    result: ComparisonResult,
+    local_capabilities: frozenset[ProviderCapability],
+    server_capabilities: frozenset[ProviderCapability],
+) -> ComparisonDecision | None:
     if result.local_record is None or result.server_record is None:
         return None
 
     if (
-        result.local_record.modified_time is None
-        or result.server_record.modified_time is None
+        not has_reliable_timestamp(result.local_record.metadata, local_capabilities)
+        or not has_reliable_timestamp(
+            result.server_record.metadata,
+            server_capabilities,
+        )
     ):
         return None
     time_delta = abs(result.local_record.modified_time - result.server_record.modified_time)

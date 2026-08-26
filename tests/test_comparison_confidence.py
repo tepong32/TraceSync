@@ -1,10 +1,14 @@
 import unittest
 
 from core.comparison_confidence import build_decision, TIMESTAMP_UNCERTAINTY_SECONDS
+from core.storage_provider import ProviderCapability
 from models.comparison_decision import ConfidenceLevel
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
 from models.file_record import FileRecord
+
+
+TIMESTAMP_CAPABILITIES = frozenset({ProviderCapability.TIMESTAMPS})
 
 
 def _record(path, modified_time, size):
@@ -25,7 +29,11 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=None,
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.HIGH)
         self.assertIn("Local", decision.recommendation)
 
@@ -37,7 +45,11 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=_record("notes/todo.txt", 1000, 10),
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.HIGH)
         self.assertIn("Server", decision.recommendation)
 
@@ -49,7 +61,11 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=_record("notes/todo.txt", 1000, 10),
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.HIGH)
         self.assertIn("No action", decision.recommendation)
 
@@ -61,7 +77,11 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=_record("notes/todo.txt", 1000, 11),
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.LOW)
         self.assertIn("Review", decision.recommendation)
 
@@ -73,7 +93,11 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=_record("notes/todo.txt", 1000.0, 12),
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.LOW)
         self.assertIn("within a few seconds", decision.reason)
         self.assertIn("within", decision.reason)
@@ -86,6 +110,10 @@ class ComparisonConfidenceTests(unittest.TestCase):
             server_record=_record("notes/todo.txt", 2000 + 2 * TIMESTAMP_UNCERTAINTY_SECONDS + 1, 20),
         )
 
-        decision = build_decision(result)
+        decision = build_decision(
+            result,
+            TIMESTAMP_CAPABILITIES,
+            TIMESTAMP_CAPABILITIES,
+        )
         self.assertEqual(decision.confidence, ConfidenceLevel.HIGH)
         self.assertIn("likely correct", decision.recommendation)

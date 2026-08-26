@@ -2,6 +2,7 @@ import unittest
 import tkinter as tk
 
 from core.comparison_confidence import build_decision
+from core.storage_provider import ProviderCapability
 from models.comparison_result import ComparisonResult
 from models.compare_status import CompareStatus
 from models.file_record import FileRecord
@@ -36,7 +37,12 @@ class FileDetailsDialogTests(unittest.TestCase):
             local_record=local_record,
             server_record=server_record,
         )
-        result.decision = build_decision(result)
+        timestamp_capabilities = frozenset({ProviderCapability.TIMESTAMPS})
+        result.decision = build_decision(
+            result,
+            timestamp_capabilities,
+            timestamp_capabilities,
+        )
         return result
 
     def test_file_details_dialog_shows_decision_context_for_normal_confidence(self):

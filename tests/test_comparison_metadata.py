@@ -40,6 +40,28 @@ def make_record(
 
 
 class ComparisonMetadataTests(unittest.TestCase):
+    def test_omitted_capabilities_do_not_default_to_trusting_timestamps(self):
+        local = make_record(
+            "test-a",
+            "local",
+            modified_time=200,
+            timestamp_reliable=True,
+        )
+        server = make_record(
+            "test-b",
+            "server",
+            modified_time=100,
+            timestamp_reliable=True,
+        )
+
+        result = compare_folders(
+            {"report.dat": local},
+            {"report.dat": server},
+        )[0]
+
+        self.assertEqual(result.status, CompareStatus.NEEDS_REVIEW)
+        self.assertEqual(result.decision.confidence, ConfidenceLevel.LOW)
+
     def test_metadata_holds_provider_evidence_without_provider_specific_fields(self):
         metadata = ComparisonMetadata(
             size=25,
