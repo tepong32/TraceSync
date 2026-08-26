@@ -7,6 +7,7 @@ from core.storage_provider import ProviderCapability
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
+from models.transfer_precondition import TransferPrecondition
 
 
 class StorageLocationTests(unittest.TestCase):
@@ -98,7 +99,17 @@ class LocalStorageProviderEndpointTests(unittest.TestCase):
             source = LocalStorageProvider(str(source_root), "Source")
             destination = LocalStorageProvider(str(destination_root), "Destination")
 
-            destination.copy_from(source, "nested/report.txt")
+            source_record = source.get_record("nested/report.txt")
+            destination.transfer_from(
+                source,
+                "nested/report.txt",
+                TransferPrecondition(
+                    source_location=source_record.storage_location,
+                    source_metadata=source_record.metadata,
+                    destination_location=destination.location_for("nested/report.txt"),
+                    destination_metadata=None,
+                ),
+            )
 
             copied = destination_root / "nested" / "report.txt"
             self.assertEqual(copied.read_text(encoding="utf-8"), "local content")

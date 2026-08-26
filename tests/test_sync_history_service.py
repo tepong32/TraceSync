@@ -33,7 +33,12 @@ class TrackingProvider(StorageProvider):
 
     @property
     def capabilities(self):
-        return frozenset({ProviderCapability.TIMESTAMPS})
+        return frozenset(
+            {
+                ProviderCapability.TIMESTAMPS,
+                ProviderCapability.CONDITIONAL_TRANSFER,
+            }
+        )
 
     def describe_endpoint(self):
         return StorageEndpointSnapshot("fake", self.name, self.name)
@@ -48,7 +53,7 @@ class TrackingProvider(StorageProvider):
         value = f"{self.name}/{relative_path}"
         return StorageLocation("fake", value, value)
 
-    def copy_from(self, source, relative_path):
+    def transfer_from(self, source, relative_path, precondition):
         self.copied_paths.append(relative_path)
         self.records[relative_path] = source.get_record(relative_path)
 

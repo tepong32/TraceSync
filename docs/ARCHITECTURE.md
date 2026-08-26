@@ -7,7 +7,7 @@ MainWindow -> SyncService.compare() -> StorageScanner -> StorageProvider
            -> SyncService.create_preview() -> SyncPreview
            -> SyncService.start_job() -> SyncHistoryService.begin_run()
                                       -> SyncJobRunner -> BackupService
-                                                       -> StorageProvider.copy_from()
+                                                       -> StorageProvider.transfer_from()
                                       -> SyncHistoryService.finalize_run()
            -> SyncJob -> progress and summary dialogs
 MainWindow -> FolderPairManagerDialog -> SettingsService
@@ -17,17 +17,19 @@ MainWindow -> SyncHistoryDialog -> SyncHistoryService -> JsonSyncHistoryStore
 
 ## Storage providers
 
-`StorageProvider` is the boundary between synchronization logic and a storage backend. Providers advertise capabilities and implement scanning, safe path resolution, and copying. `LocalStorageProvider` supports ordinary local folders and mapped/network filesystem paths today. Future cloud providers should implement this interface rather than adding provider-specific conditions to `SyncService`.
+`StorageProvider` is the boundary between synchronization logic and a storage backend. Providers advertise capabilities and implement scanning, safe location resolution, and conditional transfer. `LocalStorageProvider` supports ordinary local folders and mapped/network filesystem paths today. Future providers should implement this interface rather than adding provider-specific conditions to `SyncService`.
+
+Every approved operation carries an immutable `TransferPrecondition` containing the reviewed source and destination `StorageLocation` and `ComparisonMetadata` values. Missing destination metadata means the destination was absent during review. Source providers expose reviewed content through `open_transfer_content`, which may yield a direct local path or a verified temporary materialization. A destination advertising `CONDITIONAL_TRANSFER` must enforce the preconditions as part of its create or replacement operation. A state mismatch is reported separately from an operational transfer failure and is never automatically retried.
 
 ## Synchronization safety
 
 `SyncPreview` contains every proposed action, including source, destination, direction, comparison status, overwrite flag, and explanation. The confirmation dialog reads this preview before a job is created. `SyncJobRunner` catches file-level failures and continues with remaining files. Cancellation is applied between files, never by terminating an in-progress copy.
 
-Immediately before each copy, the runner verifies that the source and destination still match the metadata captured in the preview. A source or destination that changed after confirmation is skipped and reported, requiring the user to compare again before proceeding.
+Immediately before each transfer, the runner verifies that the source and destination still match the metadata captured in the preview. The same reviewed snapshots are then passed to the provider as the transfer precondition, so the provider can reject a later change at its create or replacement boundary. A changed source or destination is skipped and reported, requiring the user to compare again before proceeding.
 
-For an overwrite, `SyncJobRunner` requires `BackupService` to create and verify a durable copy of the existing destination before replacement. The source and destination are checked again after the backup closes the time window in which another process could edit the file. Backup failure is a per-file hard stop: that destination is not overwritten. New-file copies bypass backup creation.
+For an overwrite, `SyncJobRunner` requires `BackupService` to create and verify a durable copy of the existing destination before replacement. The source and destination are checked again after the backup, then the conditional transfer enforces the reviewed state at replacement. Backup failure is a per-file hard stop: that destination is not overwritten. New-file copies bypass backup creation.
 
-`LocalStorageProvider` stages copy content in a temporary sibling file, verifies that the source remained stable during the copy, and commits with `os.replace`. A copy failure therefore leaves the prior destination intact rather than exposing a partial file.
+`LocalStorageProvider` validates the transfer precondition before staging, copies content to a temporary sibling file, flushes it, and validates the reviewed source and destination again immediately before committing with `os.replace`. A failed precondition or copy therefore leaves the prior destination intact rather than exposing a partial file.
 
 ## Backup and restore
 

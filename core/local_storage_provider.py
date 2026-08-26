@@ -4,12 +4,20 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from core.storage_provider import ProviderCapability, StorageProvider
+from core.comparison_evidence import EvidenceMatch, compare_snapshot
+from core.storage_provider import (
+    ConditionalTransferUnsupported,
+    ProviderCapability,
+    StorageProvider,
+    TransferPreconditionFailed,
+    TransferPreconditionTarget,
+)
 from models.backup_content import BackupContent
 from models.comparison_metadata import ComparisonMetadata
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
+from models.transfer_precondition import TransferPrecondition
 
 
 class LocalStorageProvider(StorageProvider):
@@ -25,7 +33,13 @@ class LocalStorageProvider(StorageProvider):
 
     @property
     def capabilities(self) -> frozenset[ProviderCapability]:
-        return frozenset({ProviderCapability.TIMESTAMPS, ProviderCapability.METADATA})
+        return frozenset(
+            {
+                ProviderCapability.TIMESTAMPS,
+                ProviderCapability.METADATA,
+                ProviderCapability.CONDITIONAL_TRANSFER,
+            }
+        )
 
     def describe_endpoint(self) -> StorageEndpointSnapshot:
         return StorageEndpointSnapshot(
@@ -103,17 +117,49 @@ class LocalStorageProvider(StorageProvider):
             modified_time=stat.st_mtime,
         )
 
-    def copy_from(self, source: StorageProvider, relative_path: str) -> None:
-        if not isinstance(source, LocalStorageProvider):
-            raise NotImplementedError("Copying from this storage provider is not supported yet.")
+    @contextmanager
+    def open_transfer_content(
+        self,
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ):
+        self._verify_source_precondition(self, relative_path, precondition)
+        local_path = precondition.source_location.as_local_path()
+        if not local_path.is_file():
+            raise TransferPreconditionFailed(
+                TransferPreconditionTarget.SOURCE,
+                "The source file is no longer available.",
+            )
+        stat = local_path.stat()
+        yield BackupContent(
+            local_path=local_path,
+            size=stat.st_size,
+            modified_time=stat.st_mtime,
+        )
 
-        source_path = source.location_for(relative_path).as_local_path()
-        if not source_path.is_file():
-            raise FileNotFoundError("The source file is no longer available.")
+    def transfer_from(
+        self,
+        source: StorageProvider,
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ) -> None:
+        self._verify_transfer_precondition(source, relative_path, precondition)
+        with source.open_transfer_content(relative_path, precondition) as content:
+            self.replace_from_file(
+                content.local_path,
+                relative_path,
+                source_provider=source,
+                precondition=precondition,
+            )
 
-        self.replace_from_file(source_path, relative_path)
-
-    def replace_from_file(self, source_path: Path, relative_path: str) -> None:
+    def replace_from_file(
+        self,
+        source_path: Path,
+        relative_path: str,
+        *,
+        source_provider: StorageProvider | None = None,
+        precondition: TransferPrecondition | None = None,
+    ) -> None:
         """Copy to a sibling temporary file before atomically replacing the target."""
         destination_path = self.location_for(relative_path).as_local_path()
         if not source_path.is_file():
@@ -140,9 +186,86 @@ class LocalStorageProvider(StorageProvider):
                 or temporary_stat.st_size != final_source_stat.st_size
                 or temporary_stat.st_mtime != final_source_stat.st_mtime
             ):
+                if precondition is not None:
+                    raise TransferPreconditionFailed(
+                        TransferPreconditionTarget.SOURCE,
+                        "The source file changed while it was being copied.",
+                    )
                 raise ValueError("The source file changed while it was being copied.")
+            if precondition is not None and source_provider is not None:
+                self._verify_transfer_precondition(
+                    source_provider,
+                    relative_path,
+                    precondition,
+                )
             os.replace(temporary_path, destination_path)
         except Exception:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
             raise
+
+    def _verify_transfer_precondition(
+        self,
+        source: StorageProvider,
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ) -> None:
+        if not self.location_for(relative_path).same_identity_as(
+            precondition.destination_location
+        ):
+            raise TransferPreconditionFailed(
+                TransferPreconditionTarget.DESTINATION,
+                "The transfer destination does not match the reviewed location.",
+            )
+
+        self._verify_source_precondition(source, relative_path, precondition)
+
+        destination_record = self.get_record(relative_path)
+        if precondition.expects_destination_absent:
+            if destination_record is not None:
+                raise TransferPreconditionFailed(
+                    TransferPreconditionTarget.DESTINATION,
+                    "A destination file appeared after the transfer was reviewed.",
+                )
+            return
+
+        if (
+            destination_record is None
+            or not destination_record.storage_location.same_identity_as(
+                precondition.destination_location
+            )
+            or compare_snapshot(
+                destination_record.metadata,
+                precondition.destination_metadata,
+                self.capabilities,
+            )
+            is not EvidenceMatch.MATCH
+        ):
+            raise TransferPreconditionFailed(
+                TransferPreconditionTarget.DESTINATION,
+                "The destination file changed after it was reviewed.",
+            )
+
+    @staticmethod
+    def _verify_source_precondition(
+        source: StorageProvider,
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ) -> None:
+        source_record = source.get_record(relative_path)
+        if (
+            source_record is None
+            or not source_record.storage_location.same_identity_as(
+                precondition.source_location
+            )
+            or compare_snapshot(
+                source_record.metadata,
+                precondition.source_metadata,
+                source.capabilities,
+            )
+            is not EvidenceMatch.MATCH
+        ):
+            raise TransferPreconditionFailed(
+                TransferPreconditionTarget.SOURCE,
+                "The source file changed after it was reviewed.",
+            )

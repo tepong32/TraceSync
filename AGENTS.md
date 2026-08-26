@@ -191,6 +191,15 @@ Comparison and pre-copy validation must use evidence only when the provider
 declares the matching capability. Provider-native identity remains in
 `StorageLocation`; do not duplicate it in comparison metadata.
 
+Synchronization transfers carry one immutable `TransferPrecondition` built
+from the reviewed `StorageLocation` and `ComparisonMetadata` values. A provider
+may advertise `CONDITIONAL_TRANSFER` only when its transfer operation enforces
+the supplied source and destination preconditions, including expected absence,
+as part of create or replacement. Precondition failure must remain distinct
+from an operational transfer failure and must never be retried automatically.
+Source providers expose reviewed content through `open_transfer_content` so a
+destination implementation must not depend on a concrete source-provider type.
+
 The backup repository remains local. A non-local provider may participate in
 overwrite protection only by safely materializing and verifying its current
 content through `StorageProvider.open_backup_content`; failure must block the

@@ -4,7 +4,7 @@ from pathlib import Path
 
 @dataclass(frozen=True, slots=True)
 class BackupContent:
-    """Locally materialized provider content ready for durable backup storage."""
+    """Locally materialized provider content ready for safe copying."""
 
     local_path: Path
     size: int

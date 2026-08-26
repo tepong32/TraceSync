@@ -4,7 +4,15 @@ from time import monotonic
 
 from core.backup_service import BackupCreationError, BackupService
 from core.comparison_evidence import EvidenceMatch, compare_snapshot
-from core.storage_provider import StorageProvider
+from core.storage_provider import (
+    ConditionalTransferUnsupported,
+    ProviderCapability,
+    StorageProvider,
+    TransferError,
+    TransferFailed,
+    TransferPreconditionFailed,
+    TransferPreconditionTarget,
+)
 from models.sync_history import (
     SyncFileOutcome,
     SyncFileOutcomeRecord,
@@ -12,6 +20,7 @@ from models.sync_history import (
 )
 from models.sync_job import SyncError, SyncJob, SyncJobStatus
 from models.sync_preview import SyncPreview
+from models.transfer_precondition import TransferPrecondition
 
 
 class _SafetySkip(Exception):
@@ -114,6 +123,19 @@ class SyncJobRunner:
         return job
 
     def _run_item(self, job: SyncJob, item) -> None:
+        if (
+            ProviderCapability.CONDITIONAL_TRANSFER
+            not in self.destination_provider.capabilities
+        ):
+            self._record_issue(
+                job,
+                item,
+                SyncFileOutcome.FAILED,
+                SyncReasonCode.PROVIDER_UNSUPPORTED,
+                "The destination provider cannot guarantee a conditional transfer.",
+            )
+            return
+
         try:
             self._validate_preview_item(item)
         except _SafetySkip as exc:
@@ -160,8 +182,37 @@ class SyncJobRunner:
                 )
                 return
 
+        precondition = TransferPrecondition(
+            source_location=item.source_location,
+            source_metadata=item.source_metadata,
+            destination_location=item.destination_location,
+            destination_metadata=item.destination_metadata,
+        )
         try:
-            self.destination_provider.copy_from(self.source_provider, item.relative_path)
+            self.destination_provider.transfer_from(
+                self.source_provider,
+                item.relative_path,
+                precondition,
+            )
+        except TransferPreconditionFailed as exc:
+            reason_code = (
+                SyncReasonCode.SOURCE_CHANGED
+                if exc.target is TransferPreconditionTarget.SOURCE
+                else (
+                    SyncReasonCode.DESTINATION_APPEARED
+                    if precondition.expects_destination_absent
+                    else SyncReasonCode.DESTINATION_CHANGED
+                )
+            )
+            self._record_issue(
+                job,
+                item,
+                SyncFileOutcome.SKIPPED,
+                reason_code,
+                "Changed since review — synchronization skipped.",
+                backup_id,
+            )
+            return
         except Exception as exc:
             reason_code, message = self._copy_failure_details(exc)
             self._record_issue(
@@ -296,6 +347,8 @@ class SyncJobRunner:
 
     @classmethod
     def _copy_failure_details(cls, error: Exception) -> tuple[SyncReasonCode, str]:
+        if isinstance(error, ConditionalTransferUnsupported):
+            return SyncReasonCode.PROVIDER_UNSUPPORTED, cls._friendly_error(error)
         if isinstance(error, PermissionError):
             return SyncReasonCode.PERMISSION_DENIED, cls._friendly_error(error)
         if isinstance(error, NotImplementedError):
@@ -304,6 +357,10 @@ class SyncJobRunner:
             return SyncReasonCode.SOURCE_CHANGED, cls._friendly_error(error)
         if isinstance(error, OSError):
             return SyncReasonCode.COPY_ERROR, cls._friendly_error(error)
+        if isinstance(error, TransferFailed):
+            return SyncReasonCode.COPY_ERROR, cls._friendly_error(error)
+        if isinstance(error, TransferError):
+            return SyncReasonCode.UNEXPECTED_ERROR, cls._friendly_error(error)
         return (
             SyncReasonCode.UNEXPECTED_ERROR,
             "An unexpected error prevented this file from being copied.",

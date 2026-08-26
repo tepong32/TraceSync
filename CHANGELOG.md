@@ -8,6 +8,7 @@
 - Add provider-neutral item locations that preserve local paths while allowing future providers to use native object identities and separate display text.
 - Add capability-aware comparison metadata for trustworthy timestamps, comparable hashes, and provider version IDs without hashing local files by default.
 - Add a provider content-materialization boundary so future remote destinations can be protected in the existing local backup repository.
+- Add provider-neutral conditional transfer preconditions so create and replacement operations remain tied to the exact state reviewed by the user.
 
 ### Safety
 - Block an overwrite when its required backup cannot be created and verified.
@@ -15,6 +16,7 @@
 - Revalidate the confirmed source and destination after backup creation.
 - Serialize backup restoration with synchronization so restore, backup creation, and destination replacement cannot overlap.
 - Require insufficient comparison evidence to remain review-only, and continue blocking overwrites whenever destination content cannot be safely materialized and verified for backup.
+- Fail closed when a provider cannot enforce conditional transfers, and report state-precondition failures separately from operational transfer errors.
 - Retain at most two versions per destination file, 5 GB of valid backup content globally, and 500 valid entries overall; delete the oldest eligible backups first while protecting the backup required by the active operation.
 
 ## [0.10.0] - 2026-08-25

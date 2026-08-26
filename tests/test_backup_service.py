@@ -49,7 +49,12 @@ class MaterializedBackupProvider(StorageProvider):
 
     @property
     def capabilities(self):
-        return frozenset({ProviderCapability.TIMESTAMPS})
+        return frozenset(
+            {
+                ProviderCapability.TIMESTAMPS,
+                ProviderCapability.CONDITIONAL_TRANSFER,
+            }
+        )
 
     def describe_endpoint(self):
         return StorageEndpointSnapshot(
@@ -79,7 +84,7 @@ class MaterializedBackupProvider(StorageProvider):
             )
         )
 
-    def copy_from(self, source, relative_path):
+    def transfer_from(self, source, relative_path, precondition):
         self.copied_paths.append(relative_path)
 
 
@@ -178,13 +183,50 @@ class BackupIntegrationTests(unittest.TestCase):
         self.write_version(server_file, "old version", 100)
         service = self.make_service()
 
-        with patch.object(self.backup_store, "create", side_effect=OSError("disk full")):
+        with (
+            patch.object(
+                self.backup_store,
+                "create",
+                side_effect=OSError("disk full"),
+            ),
+            patch.object(
+                service.server_provider,
+                "transfer_from",
+                wraps=service.server_provider.transfer_from,
+            ) as transfer,
+        ):
             job = self.run_local_to_server(service)
 
         self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
         self.assertEqual(server_file.read_text(encoding="utf-8"), "old version")
         self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.FAILED)
         self.assertEqual(job.file_outcomes[0].reason_code, SyncReasonCode.BACKUP_FAILED)
+        transfer.assert_not_called()
+
+    def test_backup_is_durable_before_conditional_transfer_starts(self):
+        local_file = self.local_root / "report.txt"
+        server_file = self.server_root / "report.txt"
+        self.write_version(local_file, "new version", 200)
+        self.write_version(server_file, "old version", 100)
+        service = self.make_service()
+        transfer_observations: list[bool] = []
+        real_transfer = service.server_provider.transfer_from
+
+        def observe_backup_before_transfer(source, relative_path, precondition):
+            transfer_observations.append(
+                bool(tuple(self.backup_store.records_directory.glob("*.json")))
+            )
+            return real_transfer(source, relative_path, precondition)
+
+        with patch.object(
+            service.server_provider,
+            "transfer_from",
+            side_effect=observe_backup_before_transfer,
+        ):
+            job = self.run_local_to_server(service)
+
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED)
+        self.assertEqual(transfer_observations, [True])
 
     def test_destination_change_after_backup_is_not_overwritten(self):
         local_file = self.local_root / "report.txt"
@@ -206,6 +248,32 @@ class BackupIntegrationTests(unittest.TestCase):
         self.assertEqual(outcome.outcome, SyncFileOutcome.SKIPPED)
         self.assertEqual(outcome.reason_code, SyncReasonCode.DESTINATION_CHANGED)
         self.assertIsNotNone(outcome.backup_id)
+
+    def test_conditional_transfer_rejects_change_after_final_runner_validation(self):
+        local_file = self.local_root / "report.txt"
+        server_file = self.server_root / "report.txt"
+        self.write_version(local_file, "new version", 200)
+        self.write_version(server_file, "old version", 100)
+        service = self.make_service()
+        real_transfer = service.server_provider.transfer_from
+
+        def change_at_transfer_boundary(source, relative_path, precondition):
+            self.write_version(server_file, "last-moment edit", 300)
+            return real_transfer(source, relative_path, precondition)
+
+        with patch.object(
+            service.server_provider,
+            "transfer_from",
+            side_effect=change_at_transfer_boundary,
+        ):
+            job = self.run_local_to_server(service)
+
+        outcome = job.file_outcomes[0]
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
+        self.assertEqual(outcome.outcome, SyncFileOutcome.SKIPPED)
+        self.assertEqual(outcome.reason_code, SyncReasonCode.DESTINATION_CHANGED)
+        self.assertIsNotNone(outcome.backup_id)
+        self.assertEqual(server_file.read_text(encoding="utf-8"), "last-moment edit")
 
     def test_atomic_replace_failure_preserves_destination_and_backup(self):
         local_file = self.local_root / "report.txt"

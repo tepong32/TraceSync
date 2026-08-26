@@ -6,6 +6,36 @@ from models.file_record import FileRecord
 from models.backup_content import BackupContent
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
+from models.transfer_precondition import TransferPrecondition
+
+
+class TransferPreconditionTarget(str, Enum):
+    SOURCE = "source"
+    DESTINATION = "destination"
+
+
+class TransferError(RuntimeError):
+    """Base class for provider-neutral transfer failures."""
+
+
+class TransferFailed(TransferError):
+    """The provider could not complete a transfer for an operational reason."""
+
+
+class TransferPreconditionFailed(TransferError):
+    """The reviewed source or destination state no longer matches."""
+
+    def __init__(
+        self,
+        target: TransferPreconditionTarget,
+        message: str = "The item changed after it was reviewed.",
+    ) -> None:
+        super().__init__(message)
+        self.target = target
+
+
+class ConditionalTransferUnsupported(TransferError):
+    """The provider cannot guarantee transfer preconditions."""
 
 
 class ProviderCapability(str, Enum):
@@ -14,6 +44,8 @@ class ProviderCapability(str, Enum):
     TIMESTAMPS declares timestamps reliable enough for ordering and validation.
     HASHING enables content-hash equality and change checks. VERSION_HISTORY
     enables provider version IDs for same-item validation and may later support recovery.
+    CONDITIONAL_TRANSFER declares that create/replace operations enforce reviewed
+    source and destination preconditions as part of the transfer operation.
     PERMISSIONS, SYMBOLIC_LINKS, and METADATA remain informational until a
     workflow explicitly consumes them.
     """
@@ -21,6 +53,7 @@ class ProviderCapability(str, Enum):
     HASHING = "hashing"
     TIMESTAMPS = "timestamps"
     VERSION_HISTORY = "version_history"
+    CONDITIONAL_TRANSFER = "conditional_transfer"
     PERMISSIONS = "permissions"
     SYMBOLIC_LINKS = "symbolic_links"
     METADATA = "metadata"
@@ -76,6 +109,31 @@ class StorageProvider(ABC):
             "This provider cannot safely supply existing content for backup."
         )
 
-    @abstractmethod
-    def copy_from(self, source: "StorageProvider", relative_path: str) -> None:
-        """Copy one relative path from another provider into this provider."""
+    def open_transfer_content(
+        self,
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ) -> AbstractContextManager[BackupContent]:
+        """Materialize source content that satisfies the reviewed precondition.
+
+        The context may expose a direct local path or a verified temporary file.
+        Providers that cannot supply reviewed content must fail closed.
+        """
+        raise ConditionalTransferUnsupported(
+            "This provider cannot supply reviewed content for transfer."
+        )
+
+    def transfer_from(
+        self,
+        source: "StorageProvider",
+        relative_path: str,
+        precondition: TransferPrecondition,
+    ) -> None:
+        """Transfer only when the reviewed source and destination state still holds.
+
+        Returning successfully guarantees that the provider enforced the supplied
+        precondition during its create or replacement operation.
+        """
+        raise ConditionalTransferUnsupported(
+            "This provider cannot guarantee a conditional transfer."
+        )
