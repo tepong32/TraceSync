@@ -62,6 +62,7 @@ class MaterializedTransferSource(StorageProvider):
                 local_path=self.content_path,
                 size=stat.st_size,
                 modified_time=stat.st_mtime,
+                comparison_metadata=self.record.metadata,
             )
         )
 
@@ -113,6 +114,10 @@ class ConditionalLocalTransferTests(unittest.TestCase):
         self.assertEqual(
             (self.destination_root / relative_path).read_text(encoding="utf-8"),
             "reviewed",
+        )
+        self.assertIn(
+            ProviderCapability.CONDITIONAL_CREATE,
+            self.destination.capabilities,
         )
         self.assertIn(
             ProviderCapability.CONDITIONAL_TRANSFER,

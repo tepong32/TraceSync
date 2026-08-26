@@ -37,6 +37,7 @@ class LocalStorageProvider(StorageProvider):
             {
                 ProviderCapability.TIMESTAMPS,
                 ProviderCapability.METADATA,
+                ProviderCapability.CONDITIONAL_CREATE,
                 ProviderCapability.CONDITIONAL_TRANSFER,
             }
         )
@@ -115,6 +116,11 @@ class LocalStorageProvider(StorageProvider):
             local_path=local_path,
             size=stat.st_size,
             modified_time=stat.st_mtime,
+            comparison_metadata=ComparisonMetadata(
+                size=stat.st_size,
+                modified_time=stat.st_mtime,
+                timestamp_reliable=True,
+            ),
         )
 
     @contextmanager
@@ -135,6 +141,7 @@ class LocalStorageProvider(StorageProvider):
             local_path=local_path,
             size=stat.st_size,
             modified_time=stat.st_mtime,
+            comparison_metadata=precondition.source_metadata,
         )
 
     def transfer_from(

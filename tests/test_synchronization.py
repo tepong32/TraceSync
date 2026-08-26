@@ -7,6 +7,7 @@ from core.storage_provider import (
     ProviderCapability,
     StorageProvider,
     TransferFailed,
+    TransferOutcomeUnknown,
     TransferPreconditionFailed,
     TransferPreconditionTarget,
 )
@@ -181,6 +182,59 @@ class SynchronizationTests(unittest.TestCase):
             SyncReasonCode.PROVIDER_UNSUPPORTED,
         )
 
+    def test_provider_with_conditional_create_can_create_absent_destination(self):
+        local = FakeStorageProvider(
+            "local",
+            {"report.txt": record("local/report.txt", 20)},
+        )
+        server = FakeStorageProvider(
+            "server",
+            capabilities={
+                ProviderCapability.TIMESTAMPS,
+                ProviderCapability.CONDITIONAL_CREATE,
+            },
+        )
+        service = self.make_service(local, server)
+        preview = service.create_preview(
+            service.compare(),
+            SyncDirection.LOCAL_TO_SERVER,
+        )
+        job = service.create_job(preview)
+
+        service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED)
+        self.assertEqual(server.copied_paths, ["report.txt"])
+
+    def test_conditional_create_does_not_authorize_replacement(self):
+        local = FakeStorageProvider(
+            "local",
+            {"report.txt": record("local/report.txt", 20)},
+        )
+        server = FakeStorageProvider(
+            "server",
+            {"report.txt": record("server/report.txt", 10)},
+            capabilities={
+                ProviderCapability.TIMESTAMPS,
+                ProviderCapability.CONDITIONAL_CREATE,
+            },
+        )
+        service = self.make_service(local, server)
+        preview = service.create_preview(
+            service.compare(),
+            SyncDirection.LOCAL_TO_SERVER,
+        )
+        job = service.create_job(preview)
+
+        service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
+        self.assertEqual(server.copied_paths, [])
+        self.assertEqual(
+            job.file_outcomes[0].reason_code,
+            SyncReasonCode.PROVIDER_UNSUPPORTED,
+        )
+
     def test_transfer_precondition_failure_is_a_safe_skip(self):
         local = FakeStorageProvider(
             "local",
@@ -237,6 +291,39 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(
             job.file_outcomes[0].reason_code,
             SyncReasonCode.COPY_ERROR,
+        )
+
+    def test_unknown_transfer_outcome_is_reported_without_suggesting_retry(self):
+        local = FakeStorageProvider(
+            "local",
+            {"report.txt": record("local/report.txt", 20)},
+        )
+        server = FakeStorageProvider("server")
+        service = self.make_service(local, server)
+        preview = service.create_preview(
+            service.compare(),
+            SyncDirection.LOCAL_TO_SERVER,
+        )
+        job = service.create_job(preview)
+
+        with patch.object(
+            server,
+            "transfer_from",
+            side_effect=TransferOutcomeUnknown("connection lost during commit"),
+        ):
+            service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
+        self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.FAILED)
+        self.assertEqual(
+            job.file_outcomes[0].reason_code,
+            SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN,
+        )
+        self.assertIn("Compare again before retrying", job.file_outcomes[0].message)
+        history = self.history_service.get_record(job.history_run_id)
+        self.assertEqual(
+            history.files[0].reason_code,
+            SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN,
         )
 
     def test_file_failure_does_not_stop_other_files(self):

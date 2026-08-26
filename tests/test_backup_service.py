@@ -17,6 +17,8 @@ from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
 from models.backup_content import BackupContent
+from models.backup_record import BackupRecord
+from models.comparison_metadata import ComparisonMetadata
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
@@ -31,16 +33,28 @@ from models.sync_job import SyncJobStatus
 class MaterializedBackupProvider(StorageProvider):
     """Test-only seam for provider content materialized on local storage."""
 
-    def __init__(self, content_path: Path, *, backup_available: bool = True) -> None:
+    def __init__(
+        self,
+        content_path: Path,
+        *,
+        backup_available: bool = True,
+        comparison_metadata: ComparisonMetadata | None = None,
+    ) -> None:
         self.content_path = content_path
         self.backup_available = backup_available
         self.copied_paths: list[str] = []
         stat = content_path.stat()
+        metadata = comparison_metadata or ComparisonMetadata(
+            size=stat.st_size,
+            modified_time=stat.st_mtime,
+            timestamp_reliable=True,
+        )
         self.record = FileRecord.from_location(
             StorageLocation("test-provider", "item-1", "Remote/report.txt"),
             "report.txt",
-            stat.st_mtime,
+            metadata.modified_time,
             stat.st_size,
+            comparison_metadata=metadata,
         )
 
     @property
@@ -81,6 +95,7 @@ class MaterializedBackupProvider(StorageProvider):
                 local_path=self.content_path,
                 size=stat.st_size,
                 modified_time=stat.st_mtime,
+                comparison_metadata=self.record.metadata,
             )
         )
 
@@ -414,6 +429,31 @@ class BackupProviderBoundaryTests(unittest.TestCase):
             "existing remote content",
         )
         self.assertEqual(record.destination.provider_type, "test-provider")
+
+    def test_remote_comparison_metadata_is_separate_from_local_materialization(self):
+        local_stat = self.materialized_content.stat()
+        provider_metadata = ComparisonMetadata(
+            size=local_stat.st_size,
+            version_id="remote-version-1",
+        )
+        provider = MaterializedBackupProvider(
+            self.materialized_content,
+            comparison_metadata=provider_metadata,
+        )
+
+        record = self.backup_service.create_backup(
+            provider,
+            "report.txt",
+            str(uuid4()),
+        )
+
+        self.assertIsNone(record.original_modified_time)
+        self.assertEqual(
+            record.materialized_modified_time,
+            local_stat.st_mtime,
+        )
+        self.assertEqual(BackupRecord.from_dict(record.to_dict()), record)
+        self.assertIsNotNone(self.backup_store.get(record.backup_id))
 
     def test_provider_materialization_failure_is_a_backup_failure(self):
         provider = MaterializedBackupProvider(

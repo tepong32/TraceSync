@@ -57,7 +57,7 @@ class JsonBackupStore:
         source_stat = source_path.stat()
         if (
             source_stat.st_size != record.original_size
-            or source_stat.st_mtime != record.original_modified_time
+            or source_stat.st_mtime != record.content_modified_time
         ):
             raise OSError("The destination file changed before it could be backed up.")
 
@@ -78,9 +78,9 @@ class JsonBackupStore:
             copied_stat = temporary_content.stat()
             if (
                 final_source_stat.st_size != record.original_size
-                or final_source_stat.st_mtime != record.original_modified_time
+                or final_source_stat.st_mtime != record.content_modified_time
                 or copied_stat.st_size != record.original_size
-                or copied_stat.st_mtime != record.original_modified_time
+                or copied_stat.st_mtime != record.content_modified_time
             ):
                 raise OSError("The backup copy could not be verified.")
             os.replace(temporary_content, content_path)
@@ -104,7 +104,7 @@ class JsonBackupStore:
         content_stat = content_path.stat()
         if (
             content_stat.st_size != record.original_size
-            or content_stat.st_mtime != record.original_modified_time
+            or content_stat.st_mtime != record.content_modified_time
         ):
             raise OSError("The backup file is incomplete or has changed.")
         return StoredBackup(record=record, content_path=content_path)
@@ -208,7 +208,7 @@ class JsonBackupStore:
                 if (
                     not content_path.is_file()
                     or content_stat.st_size != record.original_size
-                    or content_stat.st_mtime != record.original_modified_time
+                    or content_stat.st_mtime != record.content_modified_time
                 ):
                     continue
             except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):

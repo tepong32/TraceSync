@@ -42,6 +42,7 @@ class SyncReasonCode(str, Enum):
     PROVIDER_UNSUPPORTED = "provider_unsupported"
     BACKUP_FAILED = "backup_failed"
     COPY_ERROR = "copy_error"
+    TRANSFER_OUTCOME_UNKNOWN = "transfer_outcome_unknown"
     UNEXPECTED_ERROR = "unexpected_error"
     CANCELLED = "cancelled"
     RUN_FAILED = "run_failed"

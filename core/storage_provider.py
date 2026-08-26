@@ -22,6 +22,10 @@ class TransferFailed(TransferError):
     """The provider could not complete a transfer for an operational reason."""
 
 
+class TransferOutcomeUnknown(TransferError):
+    """The provider cannot determine whether the transfer committed."""
+
+
 class TransferPreconditionFailed(TransferError):
     """The reviewed source or destination state no longer matches."""
 
@@ -44,8 +48,9 @@ class ProviderCapability(str, Enum):
     TIMESTAMPS declares timestamps reliable enough for ordering and validation.
     HASHING enables content-hash equality and change checks. VERSION_HISTORY
     enables provider version IDs for same-item validation and may later support recovery.
-    CONDITIONAL_TRANSFER declares that create/replace operations enforce reviewed
-    source and destination preconditions as part of the transfer operation.
+    CONDITIONAL_CREATE declares that create operations enforce reviewed absence.
+    CONDITIONAL_TRANSFER declares that both create and replacement operations
+    enforce reviewed source and destination preconditions as part of the transfer.
     PERMISSIONS, SYMBOLIC_LINKS, and METADATA remain informational until a
     workflow explicitly consumes them.
     """
@@ -53,6 +58,7 @@ class ProviderCapability(str, Enum):
     HASHING = "hashing"
     TIMESTAMPS = "timestamps"
     VERSION_HISTORY = "version_history"
+    CONDITIONAL_CREATE = "conditional_create"
     CONDITIONAL_TRANSFER = "conditional_transfer"
     PERMISSIONS = "permissions"
     SYMBOLIC_LINKS = "symbolic_links"

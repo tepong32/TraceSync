@@ -10,6 +10,7 @@ from core.storage_provider import (
     StorageProvider,
     TransferError,
     TransferFailed,
+    TransferOutcomeUnknown,
     TransferPreconditionFailed,
     TransferPreconditionTarget,
 )
@@ -123,16 +124,23 @@ class SyncJobRunner:
         return job
 
     def _run_item(self, job: SyncJob, item) -> None:
-        if (
-            ProviderCapability.CONDITIONAL_TRANSFER
-            not in self.destination_provider.capabilities
-        ):
+        destination_capabilities = self.destination_provider.capabilities
+        supports_transfer = (
+            ProviderCapability.CONDITIONAL_TRANSFER in destination_capabilities
+            or (
+                not item.overwrite
+                and ProviderCapability.CONDITIONAL_CREATE
+                in destination_capabilities
+            )
+        )
+        if not supports_transfer:
+            required_operation = "replacement" if item.overwrite else "creation"
             self._record_issue(
                 job,
                 item,
                 SyncFileOutcome.FAILED,
                 SyncReasonCode.PROVIDER_UNSUPPORTED,
-                "The destination provider cannot guarantee a conditional transfer.",
+                f"The destination provider cannot guarantee conditional {required_operation}.",
             )
             return
 
@@ -349,6 +357,11 @@ class SyncJobRunner:
     def _copy_failure_details(cls, error: Exception) -> tuple[SyncReasonCode, str]:
         if isinstance(error, ConditionalTransferUnsupported):
             return SyncReasonCode.PROVIDER_UNSUPPORTED, cls._friendly_error(error)
+        if isinstance(error, TransferOutcomeUnknown):
+            return (
+                SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN,
+                "TraceSync could not confirm whether the destination was updated. Compare again before retrying.",
+            )
         if isinstance(error, PermissionError):
             return SyncReasonCode.PERMISSION_DENIED, cls._friendly_error(error)
         if isinstance(error, NotImplementedError):

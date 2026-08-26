@@ -75,8 +75,11 @@ class BackupService:
                     created_at_utc=_backup_timestamp(self.now_provider()),
                     relative_path=relative_path,
                     destination=destination_provider.describe_endpoint(),
-                    original_size=content.size,
-                    original_modified_time=content.modified_time,
+                    original_size=content.materialized_size,
+                    original_modified_time=content.comparison_metadata.modified_time,
+                    materialized_modified_time=(
+                        content.materialized_modified_time
+                    ),
                     recovery_group_id=recovery_group_id or backup_id,
                 )
                 self.store.create(record, content.local_path)

@@ -20,8 +20,9 @@ class BackupRecord:
     relative_path: str
     destination: StorageEndpointSnapshot
     original_size: int
-    original_modified_time: float
+    original_modified_time: float | None
     recovery_group_id: str | None = None
+    materialized_modified_time: float | None = None
     schema_version: int = BACKUP_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -33,8 +34,21 @@ class BackupRecord:
             raise ValueError("Backup relative path is required.")
         if self.original_size < 0:
             raise ValueError("Backup size cannot be negative.")
+        if (
+            self.original_modified_time is None
+            and self.materialized_modified_time is None
+        ):
+            raise ValueError("Backup materialization timestamp is required.")
         if self.recovery_group_id is not None:
             UUID(self.recovery_group_id)
+
+    @property
+    def content_modified_time(self) -> float:
+        if self.materialized_modified_time is not None:
+            return self.materialized_modified_time
+        if self.original_modified_time is None:
+            raise RuntimeError("Backup record has no materialization timestamp.")
+        return self.original_modified_time
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -46,6 +60,7 @@ class BackupRecord:
             "destination": self.destination.to_dict(),
             "original_size": self.original_size,
             "original_modified_time": self.original_modified_time,
+            "materialized_modified_time": self.materialized_modified_time,
             "recovery_group_id": self.recovery_group_id,
         }
 
@@ -59,7 +74,16 @@ class BackupRecord:
             relative_path=str(data["relative_path"]),
             destination=StorageEndpointSnapshot.from_dict(data["destination"]),
             original_size=int(data["original_size"]),
-            original_modified_time=float(data["original_modified_time"]),
+            original_modified_time=(
+                float(data["original_modified_time"])
+                if data.get("original_modified_time") is not None
+                else None
+            ),
+            materialized_modified_time=(
+                float(data["materialized_modified_time"])
+                if data.get("materialized_modified_time") is not None
+                else None
+            ),
             recovery_group_id=(
                 str(data["recovery_group_id"])
                 if data.get("recovery_group_id") is not None
