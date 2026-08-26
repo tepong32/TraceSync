@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from models.compare_status import CompareStatus
+from models.comparison_metadata import ComparisonMetadata
 from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
 
@@ -31,6 +32,8 @@ class SyncPreviewItem:
     destination_size: int | None = None
     source_location: StorageLocation | None = None
     destination_location: StorageLocation | None = None
+    source_metadata: ComparisonMetadata | None = None
+    destination_metadata: ComparisonMetadata | None = None
 
     def __post_init__(self) -> None:
         if self.source_location is None:
@@ -44,6 +47,26 @@ class SyncPreviewItem:
                 self,
                 "destination_location",
                 StorageLocation.local(self.destination, resolve=False),
+            )
+        if self.source_metadata is None:
+            object.__setattr__(
+                self,
+                "source_metadata",
+                ComparisonMetadata(
+                    size=self.source_size,
+                    modified_time=self.source_modified_time,
+                    timestamp_reliable=self.source_modified_time is not None,
+                ),
+            )
+        if self.destination_metadata is None and self.overwrite:
+            object.__setattr__(
+                self,
+                "destination_metadata",
+                ComparisonMetadata(
+                    size=self.destination_size,
+                    modified_time=self.destination_modified_time,
+                    timestamp_reliable=self.destination_modified_time is not None,
+                ),
             )
 
 

@@ -3,6 +3,7 @@ from threading import Thread
 from time import monotonic
 
 from core.backup_service import BackupCreationError, BackupService
+from core.comparison_evidence import EvidenceMatch, compare_snapshot
 from core.storage_provider import StorageProvider
 from models.sync_history import (
     SyncFileOutcome,
@@ -229,13 +230,20 @@ class SyncJobRunner:
                 SyncReasonCode.SOURCE_MISSING,
                 "The source file is no longer available.",
             )
-        if (
-            source_record.modified_time != item.source_modified_time
-            or source_record.size != item.source_size
-        ):
+        if not source_record.storage_location.same_identity_as(item.source_location):
             raise _SafetySkip(
                 SyncReasonCode.SOURCE_CHANGED,
-                "The source file changed after the preview was created. Compare again before copying.",
+                "The source item identity changed after the preview. Compare again before copying.",
+            )
+        source_match = compare_snapshot(
+            source_record.metadata,
+            item.source_metadata,
+            self.source_provider.capabilities,
+        )
+        if source_match is not EvidenceMatch.MATCH:
+            raise _SafetySkip(
+                SyncReasonCode.SOURCE_CHANGED,
+                "The source file changed or could not be safely verified after the preview. Compare again before copying.",
             )
 
         destination_record = self.destination_provider.get_record(item.relative_path)
@@ -249,14 +257,24 @@ class SyncJobRunner:
                 SyncReasonCode.DESTINATION_MISSING,
                 "The destination file disappeared after the preview was created. Compare again before copying.",
             )
-        if item.overwrite and destination_record is not None and (
-            destination_record.modified_time != item.destination_modified_time
-            or destination_record.size != item.destination_size
-        ):
-            raise _SafetySkip(
-                SyncReasonCode.DESTINATION_CHANGED,
-                "The destination file changed after the preview was created. Compare again before copying.",
+        if item.overwrite and destination_record is not None:
+            if not destination_record.storage_location.same_identity_as(
+                item.destination_location
+            ):
+                raise _SafetySkip(
+                    SyncReasonCode.DESTINATION_CHANGED,
+                    "The destination item identity changed after the preview. Compare again before copying.",
+                )
+            destination_match = compare_snapshot(
+                destination_record.metadata,
+                item.destination_metadata,
+                self.destination_provider.capabilities,
             )
+            if destination_match is not EvidenceMatch.MATCH:
+                raise _SafetySkip(
+                    SyncReasonCode.DESTINATION_CHANGED,
+                    "The destination file changed or could not be safely verified after the preview. Compare again before copying.",
+                )
 
     @staticmethod
     def _file_outcome(

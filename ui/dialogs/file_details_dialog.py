@@ -144,6 +144,9 @@ class FileDetailsDialog(tk.Toplevel):
 
             CompareStatus.SAME:
                 "Files are identical.",
+
+            CompareStatus.NEEDS_REVIEW:
+                "The available provider metadata cannot determine a safe copy direction.",
         }
 
         return messages.get(

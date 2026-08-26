@@ -1,22 +1,86 @@
 import os
 import tempfile
 import unittest
+from contextlib import nullcontext
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Event, Thread
 from unittest.mock import patch
 from uuid import uuid4
 
-from core.backup_service import BackupService
+from core.backup_service import BackupCreationError, BackupService
 from core.backup_store import JsonBackupStore
 from core.local_storage_provider import LocalStorageProvider
+from core.storage_provider import ProviderCapability, StorageProvider
 from core.sync_history_lock import SyncAlreadyActiveError, SyncHistoryLock
 from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
+from models.backup_content import BackupContent
+from models.file_record import FileRecord
+from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
-from models.sync_history import SyncFileOutcome, SyncReasonCode
+from models.sync_history import (
+    StorageEndpointSnapshot,
+    SyncFileOutcome,
+    SyncReasonCode,
+)
 from models.sync_job import SyncJobStatus
+
+
+class MaterializedBackupProvider(StorageProvider):
+    """Test-only seam for provider content materialized on local storage."""
+
+    def __init__(self, content_path: Path, *, backup_available: bool = True) -> None:
+        self.content_path = content_path
+        self.backup_available = backup_available
+        self.copied_paths: list[str] = []
+        stat = content_path.stat()
+        self.record = FileRecord.from_location(
+            StorageLocation("test-provider", "item-1", "Remote/report.txt"),
+            "report.txt",
+            stat.st_mtime,
+            stat.st_size,
+        )
+
+    @property
+    def display_name(self):
+        return "Test Destination"
+
+    @property
+    def capabilities(self):
+        return frozenset({ProviderCapability.TIMESTAMPS})
+
+    def describe_endpoint(self):
+        return StorageEndpointSnapshot(
+            "test-provider",
+            self.display_name,
+            "account/root",
+        )
+
+    def scan(self):
+        return {"report.txt": self.record}
+
+    def get_record(self, relative_path):
+        return self.record if relative_path == "report.txt" else None
+
+    def location_for(self, relative_path):
+        return self.record.storage_location
+
+    def open_backup_content(self, relative_path):
+        if not self.backup_available:
+            raise OSError("materialization failed")
+        stat = self.content_path.stat()
+        return nullcontext(
+            BackupContent(
+                local_path=self.content_path,
+                size=stat.st_size,
+                modified_time=stat.st_mtime,
+            )
+        )
+
+    def copy_from(self, source, relative_path):
+        self.copied_paths.append(relative_path)
 
 
 class BackupIntegrationTests(unittest.TestCase):
@@ -253,6 +317,84 @@ class BackupIntegrationTests(unittest.TestCase):
 
         self.backup_service.restore(backup_id)
         self.assertEqual(server_file.read_text(encoding="utf-8"), "old version")
+
+
+class BackupProviderBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.TemporaryDirectory()
+        self.addCleanup(self.workspace.cleanup)
+        self.root = Path(self.workspace.name)
+        self.materialized_content = self.root / "materialized-report.txt"
+        self.materialized_content.write_text("existing remote content", encoding="utf-8")
+        os.utime(self.materialized_content, (100, 100))
+        self.backup_store = JsonBackupStore(self.root / "backups")
+        self.backup_service = BackupService(self.backup_store)
+
+    def test_provider_materialized_content_is_saved_in_local_backup_store(self):
+        provider = MaterializedBackupProvider(self.materialized_content)
+
+        record = self.backup_service.create_backup(
+            provider,
+            "report.txt",
+            str(uuid4()),
+        )
+
+        stored = self.backup_store.get(record.backup_id)
+        self.assertIsNotNone(stored)
+        self.assertEqual(
+            stored.content_path.read_text(encoding="utf-8"),
+            "existing remote content",
+        )
+        self.assertEqual(record.destination.provider_type, "test-provider")
+
+    def test_provider_materialization_failure_is_a_backup_failure(self):
+        provider = MaterializedBackupProvider(
+            self.materialized_content,
+            backup_available=False,
+        )
+
+        with self.assertRaises(BackupCreationError):
+            self.backup_service.create_backup(
+                provider,
+                "report.txt",
+                str(uuid4()),
+            )
+
+        self.assertFalse(tuple(self.backup_store.records_directory.glob("*.json")))
+
+    def test_failed_destination_protection_prevents_overwrite(self):
+        source_root = self.root / "source"
+        source_root.mkdir()
+        source_file = source_root / "report.txt"
+        source_file.write_text("new local content", encoding="utf-8")
+        os.utime(source_file, (200, 200))
+        destination = MaterializedBackupProvider(
+            self.materialized_content,
+            backup_available=False,
+        )
+        history_root = self.root / "history"
+        history_service = SyncHistoryService(
+            JsonSyncHistoryStore(history_root / "runs"),
+            lock_factory=lambda: SyncHistoryLock(history_root / "sync.lock"),
+        )
+        service = SyncService(
+            LocalStorageProvider(str(source_root), "Source"),
+            destination,
+            history_service=history_service,
+            backup_service=self.backup_service,
+        )
+        preview = service.create_preview(
+            service.compare(),
+            SyncDirection.LOCAL_TO_SERVER,
+        )
+        job = service.create_job(preview)
+
+        service.start_job(job, preview).join(timeout=5)
+
+        self.assertEqual(job.status, SyncJobStatus.COMPLETED_WITH_ERRORS)
+        self.assertEqual(job.file_outcomes[0].reason_code, SyncReasonCode.BACKUP_FAILED)
+        self.assertEqual(destination.copied_paths, [])
+        self.assertFalse(tuple(self.backup_store.records_directory.glob("*.json")))
 
 
 class BackupStoreTests(unittest.TestCase):

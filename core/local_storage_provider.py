@@ -1,9 +1,12 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 import shutil
 import tempfile
 
 from core.storage_provider import ProviderCapability, StorageProvider
+from models.backup_content import BackupContent
+from models.comparison_metadata import ComparisonMetadata
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
@@ -50,6 +53,11 @@ class LocalStorageProvider(StorageProvider):
                     relative_path=relative_path,
                     modified_time=stat.st_mtime,
                     size=stat.st_size,
+                    comparison_metadata=ComparisonMetadata(
+                        size=stat.st_size,
+                        modified_time=stat.st_mtime,
+                        timestamp_reliable=True,
+                    ),
                 )
             except (OSError, PermissionError):
                 continue
@@ -74,9 +82,26 @@ class LocalStorageProvider(StorageProvider):
                 relative_path=relative_path,
                 modified_time=stat.st_mtime,
                 size=stat.st_size,
+                comparison_metadata=ComparisonMetadata(
+                    size=stat.st_size,
+                    modified_time=stat.st_mtime,
+                    timestamp_reliable=True,
+                ),
             )
         except (OSError, PermissionError):
             return None
+
+    @contextmanager
+    def open_backup_content(self, relative_path: str):
+        local_path = self.location_for(relative_path).as_local_path()
+        if not local_path.is_file():
+            raise FileNotFoundError("The destination file is no longer available for backup.")
+        stat = local_path.stat()
+        yield BackupContent(
+            local_path=local_path,
+            size=stat.st_size,
+            modified_time=stat.st_mtime,
+        )
 
     def copy_from(self, source: StorageProvider, relative_path: str) -> None:
         if not isinstance(source, LocalStorageProvider):

@@ -7,6 +7,7 @@ from core.sync_history_lock import SyncHistoryLock
 from core.sync_history_service import SyncHistoryService
 from core.sync_history_store import JsonSyncHistoryStore
 from core.sync_service import SyncService
+from models.compare_status import CompareStatus
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_direction import SyncDirection
@@ -20,13 +21,18 @@ from models.sync_history import (
 
 
 class FakeStorageProvider(StorageProvider):
-    def __init__(self, name, records=None, failing_paths=None):
+    def __init__(self, name, records=None, failing_paths=None, capabilities=None):
         self.name = name
         self.records = records or {}
         self.failing_paths = failing_paths or set()
         self.copied_paths = []
         self.record_failure_paths = set()
         self.after_copy = None
+        self._capabilities = (
+            frozenset({ProviderCapability.TIMESTAMPS})
+            if capabilities is None
+            else frozenset(capabilities)
+        )
 
     @property
     def display_name(self):
@@ -34,7 +40,7 @@ class FakeStorageProvider(StorageProvider):
 
     @property
     def capabilities(self):
-        return frozenset({ProviderCapability.TIMESTAMPS})
+        return self._capabilities
 
     def describe_endpoint(self):
         return StorageEndpointSnapshot("fake", self.name, self.name)
@@ -118,6 +124,25 @@ class SynchronizationTests(unittest.TestCase):
         self.assertEqual(job.status, SyncJobStatus.COMPLETED)
         self.assertEqual(job.copied_files, 1)
         self.assertEqual(job.file_outcomes[0].outcome, SyncFileOutcome.COPIED)
+
+    def test_insufficient_provider_evidence_is_not_added_to_sync_preview(self):
+        local = FakeStorageProvider(
+            "local",
+            {"report.txt": record("local/report.txt", 20)},
+            capabilities=frozenset(),
+        )
+        server = FakeStorageProvider(
+            "server",
+            {"report.txt": record("server/report.txt", 10)},
+            capabilities=frozenset(),
+        )
+        service = self.make_service(local, server)
+
+        results = service.compare()
+        preview = service.create_preview(results, SyncDirection.LOCAL_TO_SERVER)
+
+        self.assertEqual(results[0].status, CompareStatus.NEEDS_REVIEW)
+        self.assertEqual(preview.items, ())
 
     def test_file_failure_does_not_stop_other_files(self):
         local = FakeStorageProvider("local", {

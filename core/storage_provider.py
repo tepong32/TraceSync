@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager
 from enum import Enum
 
 from models.file_record import FileRecord
+from models.backup_content import BackupContent
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
 
@@ -9,8 +11,9 @@ from models.sync_history import StorageEndpointSnapshot
 class ProviderCapability(str, Enum):
     """Provider declarations, not generic implementations.
 
-    TIMESTAMPS currently feed comparison and pre-copy validation. HASHING is a
-    future comparison signal. VERSION_HISTORY may later influence recovery.
+    TIMESTAMPS declares timestamps reliable enough for ordering and validation.
+    HASHING enables content-hash equality and change checks. VERSION_HISTORY
+    enables provider version IDs for same-item validation and may later support recovery.
     PERMISSIONS, SYMBOLIC_LINKS, and METADATA remain informational until a
     workflow explicitly consumes them.
     """
@@ -59,6 +62,19 @@ class StorageProvider(ABC):
     def destination_path(self, relative_path: str) -> str:
         """Return legacy display text for callers that still expect a path string."""
         return self.location_for(relative_path).display_location
+
+    def open_backup_content(
+        self,
+        relative_path: str,
+    ) -> AbstractContextManager[BackupContent]:
+        """Materialize and verify existing content for durable local backup.
+
+        Providers that cannot safely supply the current content must leave this
+        unsupported so overwrite protection fails closed.
+        """
+        raise NotImplementedError(
+            "This provider cannot safely supply existing content for backup."
+        )
 
     @abstractmethod
     def copy_from(self, source: "StorageProvider", relative_path: str) -> None:

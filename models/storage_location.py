@@ -45,6 +45,12 @@ class StorageLocation:
             "display_location": self.display_location,
         }
 
+    def same_identity_as(self, other: "StorageLocation") -> bool:
+        return (
+            self.provider_type.casefold() == other.provider_type.casefold()
+            and self.native_id == other.native_id
+        )
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "StorageLocation":
         return cls(

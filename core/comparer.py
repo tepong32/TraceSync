@@ -1,16 +1,28 @@
+from core.comparison_evidence import have_comparable_hashes, has_reliable_timestamp
+from core.storage_provider import ProviderCapability
 from models.compare_status import CompareStatus
 from models.comparison_result import ComparisonResult
 from core.comparison_confidence import build_decision
+from models.file_record import FileRecord
+
+
+_LEGACY_CAPABILITIES = frozenset({ProviderCapability.TIMESTAMPS})
 
 
 def compare_folders(
-    local_files: dict,
-    server_files: dict,
+    local_files: dict[str, FileRecord],
+    server_files: dict[str, FileRecord],
+    local_capabilities: frozenset[ProviderCapability] | None = None,
+    server_capabilities: frozenset[ProviderCapability] | None = None,
 ) -> list[ComparisonResult]:
     """
     Compare two scanned folders and return comparison results.
     """
 
+    if local_capabilities is None:
+        local_capabilities = _LEGACY_CAPABILITIES
+    if server_capabilities is None:
+        server_capabilities = _LEGACY_CAPABILITIES
     results = []
 
     all_paths = set(local_files.keys()) | set(server_files.keys())
@@ -27,7 +39,11 @@ def compare_folders(
                 local_record=local_record,
                 server_record=None,
             )
-            result.decision = build_decision(result)
+            result.decision = build_decision(
+                result,
+                local_capabilities,
+                server_capabilities,
+            )
             results.append(result)
             continue
 
@@ -38,18 +54,38 @@ def compare_folders(
                 local_record=None,
                 server_record=server_record,
             )
-            result.decision = build_decision(result)
+            result.decision = build_decision(
+                result,
+                local_capabilities,
+                server_capabilities,
+            )
             results.append(result)
             continue
 
-        if local_record.modified_time > server_record.modified_time:
-            status = CompareStatus.LOCAL_NEWER
-
-        elif server_record.modified_time > local_record.modified_time:
-            status = CompareStatus.SERVER_NEWER
-
-        else:
+        local_metadata = local_record.metadata
+        server_metadata = server_record.metadata
+        hashes_available = have_comparable_hashes(
+            local_metadata,
+            server_metadata,
+            local_capabilities,
+            server_capabilities,
+        )
+        if hashes_available and local_metadata.content_hash == server_metadata.content_hash:
             status = CompareStatus.SAME
+        elif (
+            has_reliable_timestamp(local_metadata, local_capabilities)
+            and has_reliable_timestamp(server_metadata, server_capabilities)
+        ):
+            if local_metadata.modified_time > server_metadata.modified_time:
+                status = CompareStatus.LOCAL_NEWER
+            elif server_metadata.modified_time > local_metadata.modified_time:
+                status = CompareStatus.SERVER_NEWER
+            elif hashes_available:
+                status = CompareStatus.NEEDS_REVIEW
+            else:
+                status = CompareStatus.SAME
+        else:
+            status = CompareStatus.NEEDS_REVIEW
 
         result = ComparisonResult(
             relative_path=relative_path,
@@ -57,7 +93,11 @@ def compare_folders(
             local_record=local_record,
             server_record=server_record,
         )
-        result.decision = build_decision(result)
+        result.decision = build_decision(
+            result,
+            local_capabilities,
+            server_capabilities,
+        )
         results.append(result)
 
     return results

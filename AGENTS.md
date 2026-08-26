@@ -186,6 +186,16 @@ value object. Generic models may retain legacy path strings for local backward
 compatibility, but new provider behavior should use `StorageLocation` rather
 than coercing provider-native identities into `pathlib.Path`.
 
+Provider comparison evidence is represented separately by `ComparisonMetadata`.
+Comparison and pre-copy validation must use evidence only when the provider
+declares the matching capability. Provider-native identity remains in
+`StorageLocation`; do not duplicate it in comparison metadata.
+
+The backup repository remains local. A non-local provider may participate in
+overwrite protection only by safely materializing and verifying its current
+content through `StorageProvider.open_backup_content`; failure must block the
+overwrite.
+
 Target structure:
 
 ui/

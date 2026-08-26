@@ -14,6 +14,7 @@ class CompareStatus(str, Enum):
     SERVER_NEWER = "Server Newer"
     LOCAL_ONLY = "Local Only"
     SERVER_ONLY = "Server Only"
+    NEEDS_REVIEW = "Needs Review"
 
     @classmethod
     def all(cls):

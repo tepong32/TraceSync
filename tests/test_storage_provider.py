@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from core.local_storage_provider import LocalStorageProvider
+from core.storage_provider import ProviderCapability
 from models.file_record import FileRecord
 from models.storage_location import StorageLocation
 from models.sync_history import StorageEndpointSnapshot
@@ -31,6 +32,12 @@ class StorageLocationTests(unittest.TestCase):
         self.assertEqual(record.display_location, "C:/Work/report.xlsx")
         self.assertEqual(record.storage_location.provider_type, "local")
         self.assertEqual(record.storage_location.native_id, "C:/Work/report.xlsx")
+
+    def test_display_changes_do_not_change_provider_native_identity(self):
+        first = StorageLocation("test-provider", "item-1", "Old/report.xlsx")
+        renamed = StorageLocation("test-provider", "item-1", "New/report.xlsx")
+
+        self.assertTrue(first.same_identity_as(renamed))
 
 
 class LocalStorageProviderEndpointTests(unittest.TestCase):
@@ -73,6 +80,10 @@ class LocalStorageProviderEndpointTests(unittest.TestCase):
             self.assertEqual(location.as_local_path(), item_path.resolve())
             self.assertEqual(provider.destination_path("Reports/report.xlsx"), str(item_path.resolve()))
             self.assertEqual(record.storage_location, location)
+            self.assertTrue(record.metadata.timestamp_reliable)
+            self.assertEqual(record.metadata.modified_time, item_path.stat().st_mtime)
+            self.assertIsNone(record.metadata.content_hash)
+            self.assertNotIn(ProviderCapability.HASHING, provider.capabilities)
 
     def test_local_provider_copy_remains_filesystem_compatible(self):
         with tempfile.TemporaryDirectory() as workspace:

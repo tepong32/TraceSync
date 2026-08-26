@@ -88,7 +88,12 @@ class SyncService:
         )
         self.last_ignored_count = local_ignored + server_ignored
 
-        return compare_folders(local_files, server_files)
+        return compare_folders(
+            local_files,
+            server_files,
+            local_provider.capabilities,
+            server_provider.capabilities,
+        )
 
     def create_preview(
         self,
@@ -135,6 +140,10 @@ class SyncService:
                     destination_size=(destination_record.size if destination_record else None),
                     source_location=source_record.storage_location,
                     destination_location=destination_location,
+                    source_metadata=source_record.metadata,
+                    destination_metadata=(
+                        destination_record.metadata if destination_record else None
+                    ),
                 )
             )
 

@@ -61,28 +61,25 @@ class BackupService:
         maintain_retention: bool,
         recovery_group_id: str | None = None,
     ) -> BackupRecord:
-        if not isinstance(destination_provider, LocalStorageProvider):
-            raise BackupCreationError(
-                "This destination provider cannot create a required overwrite backup."
-            )
         destination_record = destination_provider.get_record(relative_path)
         if destination_record is None:
             raise BackupCreationError(
                 "The destination file is no longer available for backup. Compare again before copying."
             )
         backup_id = self.id_provider()
-        record = BackupRecord(
-            backup_id=backup_id,
-            run_id=run_id,
-            created_at_utc=_backup_timestamp(self.now_provider()),
-            relative_path=relative_path,
-            destination=destination_provider.describe_endpoint(),
-            original_size=destination_record.size,
-            original_modified_time=destination_record.modified_time,
-            recovery_group_id=recovery_group_id or backup_id,
-        )
         try:
-            self.store.create(record, destination_record.storage_location.as_local_path())
+            with destination_provider.open_backup_content(relative_path) as content:
+                record = BackupRecord(
+                    backup_id=backup_id,
+                    run_id=run_id,
+                    created_at_utc=_backup_timestamp(self.now_provider()),
+                    relative_path=relative_path,
+                    destination=destination_provider.describe_endpoint(),
+                    original_size=content.size,
+                    original_modified_time=content.modified_time,
+                    recovery_group_id=recovery_group_id or backup_id,
+                )
+                self.store.create(record, content.local_path)
         except Exception as exc:
             raise BackupCreationError(
                 "TraceSync could not safely back up the existing destination file. It was not overwritten."

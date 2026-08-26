@@ -363,7 +363,8 @@ class MainWindow(tk.Tk):
         self.tree.column("relative_path", width=600, stretch=True)
         for status, color in {
             CompareStatus.LOCAL_NEWER: "#d4edda", CompareStatus.SERVER_NEWER: "#d1ecf1",
-            CompareStatus.LOCAL_ONLY: "#fff3cd", CompareStatus.SERVER_ONLY: "#ffe5b4", CompareStatus.SAME: "#ffffff",
+            CompareStatus.LOCAL_ONLY: "#fff3cd", CompareStatus.SERVER_ONLY: "#ffe5b4",
+            CompareStatus.NEEDS_REVIEW: "#fff3cd", CompareStatus.SAME: "#ffffff",
         }.items():
             self.tree.tag_configure(status.name, background=color)
         self.tree.tag_configure("NEEDS_ATTENTION", background="#fff3cd")
