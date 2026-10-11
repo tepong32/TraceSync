@@ -27,9 +27,9 @@ Every approved operation carries an immutable `TransferPrecondition` containing 
 
 Immediately before each transfer, the runner verifies that the source and destination still match the metadata captured in the preview. The same reviewed snapshots are then passed to the provider as the transfer precondition, so the provider can reject a later change at its create or replacement boundary. A changed source or destination is skipped and reported, requiring the user to compare again before proceeding.
 
-For an overwrite, `SyncJobRunner` requires `BackupService` to create and verify a durable copy of the existing destination before replacement. The source and destination are checked again after the backup, then the conditional transfer enforces the reviewed state at replacement. Backup failure is a per-file hard stop: that destination is not overwritten. New-file copies bypass backup creation.
+For an overwrite, `SyncJobRunner` requires `BackupService` to create and verify a durable copy of the existing destination before replacement. The source and destination are checked again after the backup, then the provider performs its final validation. Local replacement has the concurrency limitation below. Backup failure is a per-file hard stop: that destination is not overwritten. New-file copies bypass backup creation.
 
-`LocalStorageProvider` validates the transfer precondition before staging, copies content to a temporary sibling file, flushes it, and validates the reviewed source and destination again immediately before committing with `os.replace`. A failed precondition or copy therefore leaves the prior destination intact rather than exposing a partial file.
+`LocalStorageProvider` validates the transfer precondition before staging, copies content to a temporary sibling file, flushes it, and validates the reviewed source and destination again immediately before publication. New files use non-overwriting Windows rename (POSIX exclusive hard-link creation); an occupied target is a safe skip. Existing files use `os.replace` with the limitation below. A failed precondition or copy therefore leaves the prior destination intact rather than exposing a partial file.
 
 ## Backup and restore
 
@@ -64,3 +64,16 @@ An operating-system file lock in the TraceSync local-data directory is acquired 
 ### History presentation and export
 
 The history UI initially requests the newest 100 records from the service. It provides run details, backup availability and restore, issues-only filtering, a non-blocking corrupt-record warning, and confirmed clearing. CSV export is limited to the selected run and writes one row per approved file, including any backup ID. Export uses the standard `csv` module, includes the relevant run metadata on every row, and prefixes formula-like string values before spreadsheet software can interpret them.
+
+## Local overwrite limitation
+
+On 2026-10-11 the user explicitly chose to preserve backup-protected local overwrites and existing-file restore rather than disable them. Existing-file transfers still validate metadata and commit staged content using `os.replace`. Replacement is atomic publication of complete content, **not atomic compare-and-swap against the reviewed destination**. Another application or user can change the destination after the last check and before replacement; that latest edit may be overwritten and may not be present in the earlier backup. Restore has the same external-writer limitation. The per-user TraceSync lock does not lock out external writers, and metadata evidence does not establish byte-for-byte identity.
+
+The local provider retains its legacy `CONDITIONAL_TRANSFER` flag for this accepted workflow; this is an explicit exception to the strict provider contract, not proof of race-free conditional replacement. New providers must not inherit the exception. Prefer quiescent source/destination files for local overwrites and restore. The new-file synchronization fix does not claim to resolve concurrent editing of existing files, restore publication, mutable parent paths, or untrusted filesystem/server behavior.
+
+SFTP is excluded from this release and remains unfinished development.
+
+
+## Presentation
+
+`ui/theme.py` centralizes styles; `WorkflowGuide` presents safe next actions in green and copy review in amber. `ScrollablePanel` keeps optional provider controls bounded and keyboard reachable. Styling never authorizes synchronization.

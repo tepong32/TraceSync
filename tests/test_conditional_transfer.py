@@ -3,7 +3,9 @@ import tempfile
 import unittest
 from contextlib import nullcontext
 from pathlib import Path
+from unittest.mock import patch
 
+from core.local_file_commit import publish_new_file
 from core.local_storage_provider import LocalStorageProvider
 from core.storage_provider import (
     ProviderCapability,
@@ -208,6 +210,113 @@ class ConditionalLocalTransferTests(unittest.TestCase):
             destination_path.read_text(encoding="utf-8"),
             "new destination",
         )
+
+    def test_file_created_after_final_validation_is_preserved(self):
+        self._assert_late_destination_preserved(is_directory=False)
+
+    def test_directory_created_after_final_validation_is_preserved(self):
+        self._assert_late_destination_preserved(is_directory=True)
+
+    def _assert_late_destination_preserved(self, *, is_directory):
+        relative_path = "report.txt"
+        self.write_version(self.source_root / relative_path, "reviewed source", 200)
+        condition = self.reviewed_precondition(relative_path)
+        destination_path = self.destination_root / relative_path
+        validate = self.destination._verify_transfer_precondition
+        validations = 0
+
+        def validate_then_create(*args):
+            nonlocal validations
+            validate(*args)
+            validations += 1
+            if validations == 2:
+                if is_directory:
+                    destination_path.mkdir()
+                else:
+                    self.write_version(destination_path, "external edit", 300)
+
+        with patch.object(
+            self.destination, "_verify_transfer_precondition",
+            side_effect=validate_then_create,
+        ), patch("core.local_storage_provider.os.replace", wraps=os.replace) as replace:
+            with self.assertRaises(TransferPreconditionFailed) as raised:
+                self.destination.transfer_from(self.source, relative_path, condition)
+
+        self.assertEqual(validations, 2)
+        self.assertIs(raised.exception.target, TransferPreconditionTarget.DESTINATION)
+        replace.assert_not_called()
+        if is_directory:
+            self.assertTrue(destination_path.is_dir())
+        else:
+            self.assertEqual(destination_path.read_text(encoding="utf-8"), "external edit")
+        self.assertEqual(list(self.destination_root.iterdir()), [destination_path])
+
+    def test_publication_failure_does_not_fall_back_to_overwrite(self):
+        self.write_version(self.source_root / "report.txt", "reviewed", 200)
+        condition = self.reviewed_precondition("report.txt")
+        with patch(
+            "core.local_storage_provider.publish_new_file",
+            side_effect=PermissionError("publication denied"),
+        ), patch("core.local_storage_provider.os.replace") as replace:
+            with self.assertRaises(PermissionError):
+                self.destination.transfer_from(self.source, "report.txt", condition)
+        replace.assert_not_called()
+        self.assertEqual(list(self.destination_root.iterdir()), [])
+
+    def test_cleanup_error_does_not_hide_destination_collision(self):
+        self.write_version(self.source_root / "report.txt", "reviewed", 200)
+        condition = self.reviewed_precondition("report.txt")
+        with patch(
+            "core.local_storage_provider.publish_new_file",
+            side_effect=FileExistsError("destination appeared"),
+        ), patch.object(Path, "unlink", side_effect=PermissionError("cleanup denied")):
+            with self.assertRaises(TransferPreconditionFailed):
+                self.destination.transfer_from(self.source, "report.txt", condition)
+
+    def test_reviewed_existing_destination_still_replaced(self):
+        self.write_version(self.source_root / "report.txt", "reviewed source", 200)
+        self.write_version(self.destination_root / "report.txt", "reviewed target", 100)
+        condition = self.reviewed_precondition("report.txt")
+        self.destination.transfer_from(self.source, "report.txt", condition)
+        self.assertEqual(
+            (self.destination_root / "report.txt").read_text(encoding="utf-8"),
+            "reviewed source",
+        )
+
+
+class NewFilePublicationTests(unittest.TestCase):
+    def test_link_publication_preserves_existing_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            staged = Path(directory) / "staged"
+            destination = Path(directory) / "destination"
+            staged.write_bytes(b"staged content")
+            destination.write_bytes(b"external content")
+            with patch("core.local_file_commit.OS_NAME", "posix"):
+                with self.assertRaises(FileExistsError):
+                    publish_new_file(staged, destination)
+            self.assertEqual(destination.read_bytes(), b"external content")
+            self.assertEqual(staged.read_bytes(), b"staged content")
+
+    def test_link_publication_exposes_complete_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            staged = Path(directory) / "staged"
+            destination = Path(directory) / "destination"
+            staged.write_bytes(b"complete content")
+            with patch("core.local_file_commit.OS_NAME", "posix"):
+                publish_new_file(staged, destination)
+            staged.unlink()
+            self.assertEqual(destination.read_bytes(), b"complete content")
+
+    def test_unsupported_link_operation_never_uses_rename_or_replace(self):
+        with patch("core.local_file_commit.OS_NAME", "posix"), patch(
+            "core.local_file_commit.os.link", side_effect=OSError("unsupported")
+        ), patch("core.local_file_commit.os.rename") as rename, patch(
+            "core.local_file_commit.os.replace"
+        ) as replace:
+            with self.assertRaises(OSError):
+                publish_new_file(Path("staged"), Path("destination"))
+        rename.assert_not_called()
+        replace.assert_not_called()
 
 
 if __name__ == "__main__":

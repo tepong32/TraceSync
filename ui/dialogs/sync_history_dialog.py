@@ -90,7 +90,7 @@ class SyncHistoryDialog(tk.Toplevel):
         self.history_tree.bind("<Double-1>", self._view_details)
 
         buttons = ttk.Frame(main)
-        buttons.pack(fill="x", pady=(12, 0))
+        buttons.pack(side="bottom", before=tree_frame, fill="x", pady=(12, 0))
         ttk.Button(buttons, text="Clear History", command=self._clear_history).pack(side="left")
         self.details_button = ttk.Button(buttons, text="View Details", command=self._view_details, state="disabled")
         self.details_button.pack(side="right", padx=(8, 0))

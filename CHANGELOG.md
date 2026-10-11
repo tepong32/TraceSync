@@ -1,5 +1,10 @@
 # Changelog
-## [Unreleased]
+
+## [0.11.0] - 2026-10-11
+### Added
+- Add guided workflow, backup recovery and safe local creation
+
+## Included in v0.11.0 (post-v0.10 development)
 ### Added
 - Back up every existing destination file before TraceSync replaces it, using application-managed storage outside the synchronized folders.
 - Link successful pre-overwrite backups to per-file synchronization history and CSV exports.

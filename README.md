@@ -2,11 +2,16 @@
 
 TraceSync is a Windows desktop utility for safely comparing and synchronizing two folders. It is designed for office and shared-file environments where users must understand a copy operation before it changes a file.
 
-Current release: **v0.10.0**
+Current release: **v0.11.0**
 
-This release builds on the merged v0.9.1 baseline and adds Saved Folder Pairs for recurring Local ↔ Server relationships. The existing one-comparison-at-a-time workflow is unchanged, and planning-only provider controls remain hidden by default. The application version is read from the canonical `VERSION` resource in both source and packaged runtimes.
+This release adds material-inspired green next-step guidance, amber review warnings,
+backup-before-overwrite recovery and safer local new-file publication. Existing-file
+overwrite and restore retain a documented concurrent-writer limitation: an edit made
+after the last validation can be lost and absent from the backup. See
+[architecture](docs/ARCHITECTURE.md#local-overwrite-limitation).
 
-Development status: the current post-v0.10 branch implements Backup Before Overwrite. The tagged v0.10.0 release remains the latest release; no unreleased version number has been assigned.
+Only local and mapped filesystem folders are active. Unfinished SFTP work is retained
+separately on the development branch and is excluded from this release.
 
 ## Workflow
 
@@ -54,6 +59,12 @@ The following captures come from the tagged v0.10.0 release and use representati
 
 > **Scope boundary:** v0.10.0 does not provide automatic synchronization, active cloud providers, bidirectional conflict resolution, backup, or rollback.
 
+## v0.11.0 interface
+
+![Green next-step guidance](docs/images/v0.11.0/next-step.png)
+
+![Amber review and warnings](docs/images/v0.11.0/review-warnings.png)
+
 ## Features
 
 - Recursive folder scanning and relative-path comparison.
@@ -85,7 +96,7 @@ History details identify files with backups and provide a confirmed Restore acti
 
 If the final history update fails after copying, TraceSync preserves the real synchronization result and warns the user. The durable record remains `in_progress`; on a later launch it is honestly classified as `interrupted` because completion cannot be proven from the history store.
 
-The tagged v0.10.0 release did not include backup or restore; those capabilities are under development on this branch. Automatic synchronization, active cloud providers, and bidirectional conflict resolution remain out of scope.
+The tagged v0.10.0 release did not include backup or restore; v0.11.0 adds those capabilities. Automatic synchronization, active cloud providers, and bidirectional conflict resolution remain out of scope.
 
 ## Architecture
 

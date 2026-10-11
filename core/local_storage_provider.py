@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 from core.comparison_evidence import EvidenceMatch, compare_snapshot
+from core.local_file_commit import publish_new_file
 from core.storage_provider import (
     ConditionalTransferUnsupported,
     ProviderCapability,
@@ -38,6 +39,9 @@ class LocalStorageProvider(StorageProvider):
                 ProviderCapability.TIMESTAMPS,
                 ProviderCapability.METADATA,
                 ProviderCapability.CONDITIONAL_CREATE,
+                # Legacy overwrite workflow retained by explicit product
+                # decision: check + os.replace is not atomic compare-and-swap.
+                # See docs/ARCHITECTURE.md, Local overwrite limitation.
                 ProviderCapability.CONDITIONAL_TRANSFER,
             }
         )
@@ -167,7 +171,12 @@ class LocalStorageProvider(StorageProvider):
         source_provider: StorageProvider | None = None,
         precondition: TransferPrecondition | None = None,
     ) -> None:
-        """Copy to a sibling temporary file before atomically replacing the target."""
+        """Stage content, then publish exclusively or replace an existing file.
+
+        Reviewed absence is enforced by the publication operation itself.
+        Existing-file replacement retains a check-to-replace race; callers
+        must preserve the backup protection and documented concurrency limit.
+        """
         destination_path = self.location_for(relative_path).as_local_path()
         if not source_path.is_file():
             raise FileNotFoundError("The source file is no longer available.")
@@ -205,11 +214,24 @@ class LocalStorageProvider(StorageProvider):
                     relative_path,
                     precondition,
                 )
-            os.replace(temporary_path, destination_path)
-        except Exception:
+            if precondition is not None and precondition.expects_destination_absent:
+                try:
+                    publish_new_file(temporary_path, destination_path)
+                except FileExistsError as exc:
+                    raise TransferPreconditionFailed(
+                        TransferPreconditionTarget.DESTINATION,
+                        "A destination file appeared after the transfer was reviewed.",
+                    ) from exc
+            else:
+                os.replace(temporary_path, destination_path)
+        finally:
             if temporary_path is not None:
-                temporary_path.unlink(missing_ok=True)
-            raise
+                try:
+                    temporary_path.unlink(missing_ok=True)
+                except OSError:
+                    # Cleanup must not hide a precondition failure or turn an
+                    # already committed copy into a reported transfer failure.
+                    pass
 
     def _verify_transfer_precondition(
         self,

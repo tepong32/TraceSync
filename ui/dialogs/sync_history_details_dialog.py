@@ -40,6 +40,7 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
         self.source_var = tk.StringVar(value=format_history_endpoint(record.source))
         self.destination_var = tk.StringVar(value=format_history_endpoint(record.destination))
         self.duration_var = tk.StringVar(value=format_history_duration(record.duration_ms))
+        self.counts_var = tk.StringVar(value=self._counts_text())
 
         self.title("Synchronization History Details")
         self.geometry("920x590")
@@ -62,7 +63,7 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
             ("Outcome", self.outcome_var, "Direction", self.direction_var),
             ("Started", self.started_var, "Finished", self.finished_var),
             ("Source", self.source_var, "Destination", self.destination_var),
-            ("Duration", self.duration_var, "Counts", tk.StringVar(value=self._counts_text())),
+            ("Duration", self.duration_var, "Counts", self.counts_var),
         )
         for row, (left_label, left_var, right_label, right_var) in enumerate(fields):
             ttk.Label(summary, text=f"{left_label}:").grid(row=row, column=0, sticky="nw", padx=(0, 8), pady=2)
@@ -114,7 +115,7 @@ class SyncHistoryDetailsDialog(tk.Toplevel):
         self.files_tree.bind("<<TreeviewSelect>>", self._on_file_selection)
 
         buttons = ttk.Frame(main)
-        buttons.pack(fill="x", pady=(12, 0))
+        buttons.pack(side="bottom", before=tree_frame, fill="x", pady=(12, 0))
         ttk.Button(
             buttons,
             text="Export Run to CSV...",

@@ -326,3 +326,46 @@ If a feature feels unfinished, it probably is.
 ---
 
 Build software that future-you will enjoy maintaining.
+
+## Project context and documentation map
+
+Python Windows desktop folder comparison and synchronization utility. UI orchestrates services; provider-neutral storage models separate planning, approved execution, history, backup and remote transport.
+
+### Durable boundaries
+
+Preserve compare-review-confirm-sync, truthful history, service/UI separation and the safety contracts implemented on this branch. Application owners generate valid backup artifacts; synchronization does not establish restore acceptance. Provider/backup/SFTP developments must be integrated and validated separately before being described as released capabilities.
+
+### Development state
+
+v0.11.0 includes the material-inspired UI, backup recovery, provider-neutral transfer foundation and local new-file race fix. SFTP remains separate unfinished development and is excluded from this release.
+
+### Read next
+
+- [README.md](README.md)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/ROADMAP.md](docs/ROADMAP.md)
+- [CHANGELOG.md](CHANGELOG.md)
+- [Continuation entry point](CONTINUE.md)
+
+### Project validation
+
+Start with affected unittest modules under tests/. Broaden across synchronization, history, settings and UI when shared behavior changes. For future backup/provider/SFTP integration, add corresponding safety and explicit test-endpoint checks; missing environment or credentials is not a pass.
+
+## Repository continuity and proportional testing
+
+- Maintain this root AGENTS.md in version control as portable operational context. Preserve applicable nested instructions. Update it in the same phase as durable architecture, security, integration, major completion/deferral or testing-policy changes.
+- Keep this file concise: identity, boundaries, decisions and a documentation map. Replace stale summaries; never append transcripts, line-by-line diaries or duplicate full specifications.
+- Before substantial work read AGENTS.md, CONTINUE.md (and its canonical handoff target), the relevant roadmap/architecture/feature documents, recent Git history/status and affected tests. Reconcile stale snapshots against source; do not ask the user to repeat documented context.
+- At task completion update the canonical handoff for immediate state, actual validation, blockers and next steps; update the roadmap for agreed direction changes and specialized architecture/feature/audit/testing documents where applicable. Cross-link instead of duplicating them. Do not invent completed phases or new priorities.
+- Test the changed area first: direct unit/feature tests, related integration tests and dependent regressions. Expand for shared models/services/utilities, auth/permissions, middleware, schema/migrations, settings/environments, shared UI, cross-app APIs, reporting, jobs or build/deployment changes. Uncertain impact requires broader validation.
+- Full suites are appropriate for broad refactors, cross-module/security/infrastructure changes, major milestones and release/production gates, not automatically every isolated edit. Preserve stricter project-specific safety, reachability, hardware and release checks.
+- Record relevant commands, scope rationale and outcomes in the handoff or appropriate validation report: PASS; FAIL - CAUSED BY CURRENT WORK; FAIL - PRE-EXISTING (with evidence); NOT RUN - OUT OF SCOPE (with rationale); NOT RUN - ENVIRONMENTAL (with limitation).
+- Investigate failures before calling them unrelated. Fix regressions caused by the change and document evidence for pre-existing failures. A skipped test or unperformed human/operational acceptance is never a pass.
+- Keep documentation, code and validation evidence sufficient for a fresh session to resume without a conversation transcript.
+- Install additional standalone software/tooling under C:/xxx/_INSTALLS/_HERE/_xxx unless the user specifies otherwise.
+
+## Release and UI boundaries
+
+Green indicates a safe setup/compare step; amber remains review or warning. Styling must not choose a copy direction or bypass confirmation. Existing local overwrite and restore are backup-protected but not atomic compare-and-swap; preserve the documented concurrent-writer limitation. New-file publication must never replace an occupied destination.
+
+Use `scripts/vm_release.py` with the shared external version manager for releases. The adapter restricts automatic changes to VERSION and CHANGELOG so historical product-tour versions remain accurate; update current release prose deliberately. See docs/RELEASE.md.

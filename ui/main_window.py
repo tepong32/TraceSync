@@ -19,6 +19,8 @@ from ui.dialogs.sync_progress_dialog import SyncProgressDialog
 from ui.dialogs.sync_summary_dialog import SyncSummaryDialog
 from ui.widgets.tooltip import HoverTooltip
 from ui.widgets.workflow_guide import WorkflowGuide
+from ui.widgets.scrollable_panel import ScrollablePanel
+from ui.theme import configure_theme
 from utils.application_version import get_application_version
 from utils.settings import PROVIDER_OPTIONS, SettingsService
 
@@ -29,8 +31,8 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"TraceSync v{get_application_version()}")
-        self.geometry("1000x650")
-        self.minsize(800, 500)
+        self.geometry("1050x840")
+        self.minsize(850, 600)
         self.results = []
         self.visible_results = []
         self.current_filter = None
@@ -68,81 +70,9 @@ class MainWindow(tk.Tk):
         return "Ready"
 
     def _build_ui(self):
-        style = ttk.Style()
-        style.configure("PrimaryNeutral.TButton", font=("Segoe UI", 10, "bold"), padding=(12, 8), background="#d9dde5", foreground="#111827")
-        style.map(
-            "PrimaryNeutral.TButton",
-            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
-            background=[
-                ("disabled", "#eef1f6"),
-                ("pressed", "#c9d0dd"),
-                ("active", "#d4dae4"),
-                ("!disabled", "#d9dde5"),
-            ],
-        )
-        WorkflowGuide.configure_styles(style)
-        style.configure(
-            "MediumNeutral.TButton",
-            font=("Segoe UI", 10),
-            padding=(10, 7),
-            background="#eceff4",
-            foreground="#111827",
-        )
-        style.map(
-            "MediumNeutral.TButton",
-            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
-            background=[
-                ("disabled", "#f5f6f8"),
-                ("pressed", "#e0e4ec"),
-                ("active", "#e6eaf0"),
-                ("!disabled", "#eceff4"),
-            ],
-        )
-        style.configure(
-            "UtilityNeutral.TButton",
-            font=("Segoe UI", 9),
-            padding=(8, 6),
-            background="#f6f7f9",
-            foreground="#1f2937",
-        )
-        style.map(
-            "UtilityNeutral.TButton",
-            foreground=[("disabled", "#9aa3ad"), ("pressed", "#111827"), ("active", "#111827")],
-            background=[
-                ("disabled", "#f9fafb"),
-                ("pressed", "#e7eaf0"),
-                ("active", "#eef1f5"),
-                ("!disabled", "#f6f7f9"),
-            ],
-        )
-        style.configure("FilterNeutral.TButton", font=("Segoe UI", 9), padding=(8, 6), background="#eceff4", foreground="#1f2937")
-        style.configure(
-            "ActiveFilter.TButton",
-            font=("Segoe UI", 9, "bold"),
-            padding=(8, 6),
-            background="#d9dde5",
-            foreground="#111827",
-        )
-        style.map(
-            "FilterNeutral.TButton",
-            foreground=[("disabled", "#9aa3ad"), ("pressed", "#111827"), ("active", "#111827")],
-            background=[
-                ("pressed", "#e0e4ec"),
-                ("active", "#e6eaf0"),
-                ("!disabled", "#eceff4"),
-            ],
-        )
-        style.map(
-            "ActiveFilter.TButton",
-            foreground=[("disabled", "#6b7280"), ("pressed", "#111827"), ("active", "#111827")],
-            background=[
-                ("pressed", "#c9d0dd"),
-                ("active", "#d4dae4"),
-                ("!disabled", "#d9dde5"),
-            ],
-        )
+        configure_theme(self)
 
-        pair_toolbar = ttk.Frame(self, padding=(10, 10, 10, 0))
+        pair_toolbar = ttk.Frame(self, padding=(16, 16, 16, 0))
         pair_toolbar.pack(fill="x")
         pair_toolbar.columnconfigure(1, weight=1)
         ttk.Label(pair_toolbar, text="Folder Pair:").grid(row=0, column=0, sticky="w")
@@ -172,7 +102,7 @@ class MainWindow(tk.Tk):
         )
         self.folder_pair_save_button.grid(row=0, column=3)
 
-        folder_frame = ttk.Frame(self, padding=10)
+        folder_frame = ttk.Frame(self, padding=(16, 12))
         folder_frame.pack(fill="x")
         folder_frame.columnconfigure((0, 1), weight=1)
         self.local_var = tk.StringVar()
@@ -194,9 +124,9 @@ class MainWindow(tk.Tk):
             (5, 0),
         )
 
-        self.provider_section = ttk.Frame(self)
+        self.provider_section = ScrollablePanel(self)
         provider_panel = ttk.LabelFrame(
-            self.provider_section,
+            self.provider_section.content,
             text="Provider Onboarding (Planned)",
             padding=10,
         )
@@ -260,7 +190,7 @@ class MainWindow(tk.Tk):
 
 
         planning_panel = ttk.LabelFrame(
-            self.provider_section,
+            self.provider_section.content,
             text="Remote and Cloud Sync Planning",
             padding=10,
         )
@@ -285,17 +215,16 @@ class MainWindow(tk.Tk):
         ).pack(anchor="w", pady=(6, 0))
 
         self.workflow_guide = WorkflowGuide(self)
-        self.workflow_guide.pack(fill="x")
+        self.workflow_guide.pack(fill="x", padx=16, pady=(0, 12))
         self.workflow_hint_var = self.workflow_guide.hint_var
 
         self.toolbar = ttk.Frame(self)
-        self.toolbar.pack(fill="x", padx=10, pady=(0, 10))
+        self.toolbar.pack(fill="x", padx=16, pady=(0, 12))
         self.ignore_settings_button = ttk.Button(
             self.toolbar,
             text="Ignore Settings",
             command=self.edit_ignore_settings,
             style="MediumNeutral.TButton",
-            width=16,
         )
         self.ignore_settings_button.pack(side="left")
         self.provider_toggle_button = ttk.Button(
@@ -303,7 +232,6 @@ class MainWindow(tk.Tk):
             text="Show Provider Options",
             command=self.toggle_provider_section,
             style="MediumNeutral.TButton",
-            width=22,
         )
         self.provider_toggle_button.pack(side="left", padx=(8, 0))
         self.history_button = ttk.Button(
@@ -311,7 +239,6 @@ class MainWindow(tk.Tk):
             text="History...",
             command=self.open_sync_history,
             style="MediumNeutral.TButton",
-            width=14,
         )
         self.history_button.pack(side="left", padx=(8, 0))
         self.decision_details_button = ttk.Button(
@@ -319,7 +246,6 @@ class MainWindow(tk.Tk):
             text="View Decision Details",
             command=self.open_selected_decision_details,
             style="MediumNeutral.TButton",
-            width=24,
         )
         self.decision_details_button.pack(side="left", padx=(8, 0))
         self.compare_button = ttk.Button(
@@ -327,14 +253,14 @@ class MainWindow(tk.Tk):
             text="Compare Folders",
             command=self.compare_folders,
             style="MediumNeutral.TButton",
-            width=25,
         )
         self.compare_button.pack(side="left", padx=(8, 0))
-        ttk.Label(self, textvariable=self.summary_var, anchor="w", padding=(10, 5)).pack(fill="x")
+        ttk.Label(self, textvariable=self.summary_var, anchor="w", style="Muted.TLabel", padding=(16, 4)).pack(fill="x")
 
         filter_frame = ttk.Frame(self)
-        filter_frame.pack(fill="x", padx=10, pady=(0, 5))
-        for status, label in (
+        filter_frame.pack(fill="x", padx=16, pady=(4, 8))
+        filter_frame.columnconfigure(tuple(range(4)), weight=1, uniform="filters")
+        for index, (status, label) in enumerate(
                 [(None, "All")]
                 + [(status, status.value) for status in CompareStatus]
                 + [(self._needs_attention_filter_key, "Needs Attention")]
@@ -342,15 +268,19 @@ class MainWindow(tk.Tk):
             button = ttk.Button(
                 filter_frame,
                 text=label,
-                style="FilterNeutral.TButton",
+                style=(
+                    "WarningFilter.TButton"
+                    if status in {CompareStatus.NEEDS_REVIEW, self._needs_attention_filter_key}
+                    else "ActiveFilter.TButton" if status is None else "FilterNeutral.TButton"
+                ),
                 command=lambda value=status: self.apply_filter(value),
             )
-            button.pack(side="left", padx=(0, 5))
+            button.grid(row=index // 4, column=index % 4, sticky="ew", padx=(0, 6), pady=(0, 6))
             self.filter_buttons[status] = button
 
-        ttk.Label(self, text="Results").pack(anchor="w", padx=10, pady=(5, 5))
+        ttk.Label(self, text="Comparison results", style="Section.TLabel").pack(anchor="w", padx=16, pady=(0, 8))
         tree_frame = ttk.Frame(self)
-        tree_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        tree_frame.pack(fill="both", expand=True, padx=16, pady=(0, 12))
         self.tree = ttk.Treeview(
             tree_frame,
             columns=("status", "relative_path"),
@@ -361,13 +291,14 @@ class MainWindow(tk.Tk):
         self.tree.heading("relative_path", text="File")
         self.tree.column("status", width=130, anchor="center", stretch=False)
         self.tree.column("relative_path", width=600, stretch=True)
+        # Treeview resolves tag colors by tag creation order.
+        self.tree.tag_configure("NEEDS_ATTENTION", background="#fff3cd")
         for status, color in {
             CompareStatus.LOCAL_NEWER: "#d4edda", CompareStatus.SERVER_NEWER: "#d1ecf1",
             CompareStatus.LOCAL_ONLY: "#fff3cd", CompareStatus.SERVER_ONLY: "#ffe5b4",
             CompareStatus.NEEDS_REVIEW: "#fff3cd", CompareStatus.SAME: "#ffffff",
         }.items():
             self.tree.tag_configure(status.name, background=color)
-        self.tree.tag_configure("NEEDS_ATTENTION", background="#fff3cd")
         scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
@@ -394,9 +325,9 @@ class MainWindow(tk.Tk):
             self.action_dock,
             textvariable=self.status_var,
             anchor="w",
-            padding=(10, 5),
+            padding=(16, 6),
         ).pack(fill="x")
-        action_frame = ttk.Frame(self.action_dock, padding=10)
+        action_frame = ttk.Frame(self.action_dock, padding=(16, 8, 16, 16))
         action_frame.pack(fill="x")
         action_frame.columnconfigure((0, 1), weight=1)
         self.local_to_server_button = ttk.Button(
@@ -430,7 +361,7 @@ class MainWindow(tk.Tk):
 
     @staticmethod
     def _build_folder_panel(parent, column, title, variable, command, padding):
-        frame = ttk.LabelFrame(parent, text=title, padding=10)
+        frame = ttk.LabelFrame(parent, text=title, padding=12)
         frame.grid(row=0, column=column, sticky="nsew", padx=padding)
         frame.columnconfigure(0, weight=1)
         entry = ttk.Entry(frame, textvariable=variable)
@@ -668,7 +599,7 @@ class MainWindow(tk.Tk):
             self.provider_toggle_button.configure(text="Show Provider Options")
             return
 
-        self.provider_section.pack(fill="x", before=self.workflow_guide)
+        self.provider_section.pack(fill="x", after=self.toolbar, padx=16, pady=(0, 8))
         self.provider_toggle_button.configure(text="Hide Provider Options")
 
     def _persist_provider_selection(self):
@@ -756,7 +687,14 @@ class MainWindow(tk.Tk):
         else:
             self.visible_results = self.results if status is None else [result for result in self.results if result.status is status]
         for button_status, button in self.filter_buttons.items():
-            button.configure(style="ActiveFilter.TButton" if button_status is status else "FilterNeutral.TButton")
+            warning_filter = button_status in {
+                CompareStatus.NEEDS_REVIEW, self._needs_attention_filter_key,
+            }
+            if warning_filter:
+                style = "ActiveWarningFilter.TButton" if button_status == status else "WarningFilter.TButton"
+            else:
+                style = "ActiveFilter.TButton" if button_status == status else "FilterNeutral.TButton"
+            button.configure(style=style)
         self.populate_tree(self.visible_results)
         if status is None:
             label = "all files"
@@ -802,7 +740,7 @@ class MainWindow(tk.Tk):
         for result in results:
             tags = [result.status.name]
             if self._needs_attention(result):
-                tags.append("NEEDS_ATTENTION")
+                tags.insert(0, "NEEDS_ATTENTION")
             self.tree.insert("", "end", values=(result.status.value, result.relative_path), tags=tuple(tags))
 
     def _open_selected_details(self, _event=None):

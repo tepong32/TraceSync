@@ -6,35 +6,19 @@ TraceSync is developed in focused milestones. A milestone is complete only when 
 
 The repository is the authoritative source of truth for the current implementation and release state.
 
-> **Current status: v0.10 Folder Pair Workflow released; Backup Before Overwrite is in development.**
->
-> The v0.10.0 release remains the baseline. Backup Before Overwrite has been explicitly promoted as the active post-v0.10 milestone; its release version is not assigned yet.
+Current release: **v0.11.0 — Guided workflow and recovery** (2026-10-11).
 
----
+Includes green next-step guidance, a pale-green workflow guide, amber warnings,
+cleaner spacing, backup-before-overwrite/restore, and the local new-file race fix.
+Existing-file replacement retains the accepted concurrent-writer limitation.
 
-## Current Release
+## Development status
 
-| Item      | Value                       |
-| --------- | --------------------------- |
-| Version   | **v0.10.0**                 |
-| Milestone | **Folder Pair Workflow**    |
-| Status    | **Released on 2026-08-25**  |
-
----
-
-## Development Status
-
-| Item      | Value                                |
-| --------- | ------------------------------------ |
-| Milestone | **Backup Before Overwrite**          |
-| Baseline  | **v0.10.0**                          |
-| Status    | **In development; version TBD**      |
-
-`VERSION` and the application title report v0.10.0. Folder Pairs add saved endpoint selection without changing the compare → review → confirm → synchronize workflow. The v0.9.1 provider-planning section remains hidden by default.
-
-The active milestone adds a narrow recovery layer without changing eligibility or direction rules: only approved replacements create backups; new-file copies remain direct. It does not add automatic synchronization, whole-run rollback, remote/cloud transport, or bidirectional conflict resolution.
-
-The detailed historical reconciliation, including release-numbering irregularities and superseded early plans, is in [RETROSPECTIVE_V0.1_V0.9.1.md](RETROSPECTIVE_V0.1_V0.9.1.md).
+SFTP Provider Workflow remains unfinished on the separate development branch.
+Do not release it until disposable-server integration and packaged credentials,
+trust and create-only behavior have been validated. Remote replacement remains
+outside the accepted safety contract. The release build contains local/mapped
+folder support only; provider choices remain planning controls.
 
 ## Documentation Hierarchy
 
@@ -50,9 +34,9 @@ Only ROADMAP items are development commitments. A backlog item is not an implied
 
 ---
 
-# Active Milestone
+# Recovery milestone
 
-## Active — Backup Before Overwrite (Version TBD)
+## Completed — Backup Before Overwrite (v0.11.0)
 
 Core promise: an existing destination file must remain recoverable when TraceSync replaces it.
 
@@ -383,7 +367,7 @@ Potential future storage providers may include:
 * WebDAV
 * cloud storage services
 
-These are future capabilities and are not part of v0.10.0.
+These are future capabilities and are not part of v0.11.0.
 
 ---
 
