@@ -48,15 +48,46 @@ Portfolio destination: https://tepong32.github.io/assets/downloads/TraceSync-v0.
 Keep historical downloads. Verify master/tag push and portfolio Pages deployment
 against this checksum; publication outcomes are recorded in the portfolio handoff.
 
-## Next work
+## Current development branches
 
-SFTP provider work is on `codex/sftp-provider-workflow`; its uncommitted provider
-foundation is preserved in the stash `WIP SFTP provider foundation`. Restore it
-on that branch before continuing. Explicit disposable endpoint and packaged
-credential/host-trust gates remain outstanding. Do not claim atomic existing-file
-replacement.
+- `codex/google-drive-provider`: initial Google API adapter and OS credential
+  store are scaffolding only; this is not a usable Google Drive release. Before
+  integration can be considered complete:
+  - Replace the broad `drive` permission with the narrowest suitable scope and
+    complete Google Picker-based folder selection. Verify whether a picked
+    folder grants access to the intended subtree.
+  - Add UI for browser sign-in, account/folder selection, connection state,
+    disconnect/revoke, and settings-backed non-secret endpoint references.
+  - Wire provider selection through comparison, preview, sync, history, and
+    packaged startup without bypassing compare-review-confirm-sync.
+  - Handle pagination, duplicate names across both files and folders, shortcuts,
+    shared drives, unsupported Google Workspace documents, and stale/deleted
+    items. Keep ambiguous trees blocked.
+  - Implement downloads with source revalidation and temporary-file cleanup;
+    implement create-only uploads with explicit conflict/unknown-outcome handling
+    and no overwrite claim. Keep overwrites blocked without cloud backup support.
+  - Add provider and settings tests, verify credential storage and PyInstaller
+    packaging, and perform sign-in, consent, folder-access, download/upload, and
+    conflict checks against a disposable Google account. App OAuth values remain
+    configuration placeholders until supplied.
+  No Google sign-in or Drive validation has been performed. Dependencies were
+  added but not installed.
+- `codex/onedrive-provider`: sibling branch from the shared cloud foundation;
+  integration has not started. Add MSAL delegated sign-in and secure token
+  storage, OneDrive folder selection, settings/provider/UI wiring, Graph scan and
+  download behavior with IDs/eTags, and create-only upload sessions using fail
+  conflict behavior. Keep overwrite unsupported. Validate account/tenant support,
+  pagination, upload interruption/unknown outcomes, packaged credentials, and
+  live sign-in/transfers with a disposable Microsoft account. Client/app
+  registration values remain configuration placeholders until supplied.
+- `codex/sftp-provider-workflow`: provider work remains preserved in the stash
+  `WIP SFTP provider foundation`. Restore only on that branch. Disposable endpoint
+  and packaged credential/host-trust gates remain outstanding; do not claim
+  atomic existing-file replacement.
 
-Cloud provider design is in `docs/CLOUD_STORAGE.md` on
-`codex/cloud-storage-foundation`. Google Drive is the preferred first adapter;
-create `codex/google-drive-provider` and `codex/onedrive-provider` from the
-foundation after its shared contract is established.
+For the Google scaffolding commit, the VM adapter needed repair: the shared
+version manager checkout is a single `version_manager.py` module, not the
+`version_manager.documentation` package the adapter previously imported. The
+adapter now loads that module directly and suppresses automatic edits to
+versioned documentation, preserving the release workflow's VERSION/CHANGELOG
+only boundary. No tests were run for this scaffolding or adapter repair.

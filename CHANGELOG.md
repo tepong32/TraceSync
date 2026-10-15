@@ -1,4 +1,7 @@
 # Changelog
+## [0.11.1] - 2026-10-15
+### ✨ Added
+- Google Drive provider scaffolding
 
 ## [0.11.0] - 2026-10-11
 ### Added
