@@ -50,6 +50,13 @@ against this checksum; publication outcomes are recorded in the portfolio handof
 
 ## Next work
 
-Continue SFTP in its preserved development workspace, reconciling the release UI
-fixes before integration. Its explicit disposable endpoint and packaged credential/
-host-trust gates remain outstanding. Do not claim atomic existing-file replacement.
+SFTP provider work is on `codex/sftp-provider-workflow`; its uncommitted provider
+foundation is preserved in the stash `WIP SFTP provider foundation`. Restore it
+on that branch before continuing. Explicit disposable endpoint and packaged
+credential/host-trust gates remain outstanding. Do not claim atomic existing-file
+replacement.
+
+Cloud provider design is in `docs/CLOUD_STORAGE.md` on
+`codex/cloud-storage-foundation`. Google Drive is the preferred first adapter;
+create `codex/google-drive-provider` and `codex/onedrive-provider` from the
+foundation after its shared contract is established.

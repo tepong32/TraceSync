@@ -73,6 +73,12 @@ The local provider retains its legacy `CONDITIONAL_TRANSFER` flag for this accep
 
 SFTP is excluded from this release and remains unfinished development.
 
+Cloud Drive provider development is planned separately from SFTP. The intended
+sign-in, folder-selection, provider, token-storage, and staged delivery design is
+recorded in [Cloud storage provider plan](CLOUD_STORAGE.md). Keep the existing
+compare-review-confirm-sync workflow and require each provider to declare only
+the capabilities its own API operations enforce.
+
 
 ## Presentation
 
