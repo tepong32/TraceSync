@@ -48,15 +48,24 @@ Portfolio destination: https://tepong32.github.io/assets/downloads/TraceSync-v0.
 Keep historical downloads. Verify master/tag push and portfolio Pages deployment
 against this checksum; publication outcomes are recorded in the portfolio handoff.
 
-## Next work
+## Cloud provider branch state
 
-SFTP provider work is on `codex/sftp-provider-workflow`; its uncommitted provider
-foundation is preserved in the stash `WIP SFTP provider foundation`. Restore it
-on that branch before continuing. Explicit disposable endpoint and packaged
-credential/host-trust gates remain outstanding. Do not claim atomic existing-file
-replacement.
+- `codex/google-drive-provider` is pushed at v0.11.1 / commit `5f01d88`. It is
+  scaffolding only: no UI or provider-factory integration, no upload, and no
+  Google account validation. The branch handoff in that release records the
+  remaining Google scope, Picker, integration, packaging, and validation work.
+- `codex/onedrive-provider` contains the current development work. MSAL auth and
+  Graph scan/download/create-only adapter code are not yet integrated into the
+  UI or settings. MSAL cache persistence uses DPAPI-encrypted storage and a file
+  lock. A caller must supply the selected folder ID. Existing matching
+  destination subfolders are required; zero-byte uploads and overwrites are
+  unsupported. App registration, permissions, test coverage, packaging, and live
+  account validation remain outstanding. See `docs/CLOUD_STORAGE.md`.
+- Neither cloud branch is a user-ready release. OAuth client IDs remain
+  configuration placeholders; no live account was connected. No tests were run
+  for OneDrive work in this phase.
 
-Cloud provider design is in `docs/CLOUD_STORAGE.md` on
-`codex/cloud-storage-foundation`. Google Drive is the preferred first adapter;
-create `codex/google-drive-provider` and `codex/onedrive-provider` from the
-foundation after its shared contract is established.
+SFTP provider work remains on `codex/sftp-provider-workflow`; its uncommitted
+provider foundation is preserved in the stash `WIP SFTP provider foundation`.
+Restore it only on that branch. Disposable endpoint and packaged credential/host
+trust gates remain outstanding. Do not claim atomic existing-file replacement.

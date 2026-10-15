@@ -2,7 +2,10 @@
 
 ## Status
 
-Planned on `codex/cloud-storage-foundation`; not implemented or user-accessible.
+Provider work is split into `codex/google-drive-provider` and
+`codex/onedrive-provider`, based on `codex/cloud-storage-foundation`. Neither
+branch is integrated into the UI or ready for normal users. The intended user
+experience is account sign-in in a system browser, selecting a cloud folder, then using TraceSync's existing compare, review, confirm, sync, summary, and history workflow.
 The intended user experience is account sign-in in a system browser, selecting a
 cloud folder, then using TraceSync's existing compare, review, confirm, sync,
 summary, and history workflow. Google Drive and OneDrive use separate native API
@@ -81,6 +84,34 @@ Branch: `codex/onedrive-provider`, based on the shared cloud foundation.
 - Treat asynchronous upload completion and lost responses as potentially
   uncertain; refresh provider state before offering another attempt.
 
+### Current OneDrive branch state
+
+`core/onedrive_auth.py` contains a Microsoft public-client sign-in adapter and
+DPAPI-encrypted, file-locked MSAL cache. `core/onedrive_provider.py` contains a Graph
+provider scaffold for recursive listing, metadata, downloads, and create-only
+upload sessions. It is not connected to settings, provider selection, or the
+main-window workflow. The selected folder ID must currently be supplied by a
+caller; no user-facing folder picker exists. Matching destination subfolders
+must already exist, zero-byte uploads are explicitly unsupported, and overwrite
+is blocked.
+
+The current delegated scopes are `User.Read` and `Files.ReadWrite`. Microsoft's
+permission reference describes `Files.ReadWrite` as full read/create/update/delete
+access to the signed-in user's files. The selected-folder UX therefore still
+needs a clear consent explanation and an investigation of narrower options;
+Microsoft's selected-file permissions are currently preview/Office-handler
+scenarios, not a general Graph folder-picker substitute. See the [Microsoft
+Graph permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference).
+
+The branch still needs app-registration and consent validation for personal and
+work/school accounts; secure sign-in lifecycle and account/folder selection UI;
+settings/provider factory and compare/preview/sync/history integration; tests
+for paging, duplicate paths, stale eTags, transfer conflicts, interrupted or
+unknown uploads, and token-cache behavior; PyInstaller credential-backend
+validation; and live sign-in/transfer checks using a disposable OneDrive account.
+Until those are complete, this is development scaffolding rather than a usable
+OneDrive release.
+
 ## Delivery sequence
 
 1. **Foundation branch:** document the contract, then define minimal account and
@@ -89,8 +120,9 @@ Branch: `codex/onedrive-provider`, based on the shared cloud foundation.
 2. **Google Drive branch:** implement account sign-in, Picker/folder selection,
    read-only scan and downloads first; resolve duplicate-name and scope behavior;
    then add create-only upload if its guarantees meet the safety contract.
-3. **OneDrive branch:** implement the same user flow with MSAL and Graph; scan,
-   download, then create-only upload sessions with explicit conflict failure.
+3. **OneDrive branch:** complete the user flow with MSAL and Graph; connect auth,
+   folder selection, scan, download, and create-only upload sessions to TraceSync.
+   Keep explicit conflict failure and the existing confirmation workflow.
 4. **Integration:** merge providers separately, expose only validated choices,
    update settings/history/build packaging and help text, and retain the same
    review and confirmation steps.
