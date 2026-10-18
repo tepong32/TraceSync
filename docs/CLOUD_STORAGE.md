@@ -1,5 +1,17 @@
 # Cloud storage provider plan
 
+## Current create-only safety audit
+
+The clean `codex/onedrive-create-safety-audit` branch starts from published source
+v0.15.0 (4ddfd55), which already implemented empty uploads and folder creation.
+This local audit adds immutable folder evidence, fresh root/parent-link checks,
+selected-file folder warnings, definite-failure classification and partial-folder
+history notes. 233 offline tests pass after corrective review. No new commit, integration or binary release.
+See [validation and provider evidence](ONEDRIVE_CREATE_VALIDATION.md) for exact
+commands, the mission test matrix and unverified live/cache/packaged gates.
+Both directions remain create-only. Earlier branch snapshots below are historical.
+
+
 ## Active reviewed-copy branch
 
 `codex/onedrive-reviewed-copy` starts from published source checkpoint v0.13.0
@@ -272,3 +284,11 @@ this file-copy workflow. Both copy directions still prohibit replacements.
 
 This slice is checkpointed as source v0.15.0 and tested with fakes only. Live personal-account
 and packaged acceptance remain outstanding; the public binary remains v0.11.0.
+
+
+Post-implementation review reproduced a forged cloud-to-local replacement bypass,
+malformed-success misclassification, swallowed upload rejection, and run-owned
+folder state/retry gaps. All were corrected with regression tests; final 51 focused
+and 233 full tests pass. See ONEDRIVE_CREATE_VALIDATION.md (under docs/ for the root
+handoff) for the complete gate report. Explicit authorization is still required
+before any commit or integration; HEAD remains v0.15.0 with local changes only.

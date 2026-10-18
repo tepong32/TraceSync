@@ -44,7 +44,7 @@ class CloudMainWindowTests(unittest.TestCase):
         with patch("ui.main_window.SyncConfirmationDialog") as confirmation, patch.object(self.window, "wait_window"):
             confirmation.return_value.confirmed = False
             self.window.prepare_sync(SyncDirection.LOCAL_TO_SERVER)
-        self.assertFalse(any(call[0] == "POST" for call in self.graph.calls))
+        self.assertFalse(any(call[0] != "GET" for call in self.graph.calls))
 
     def test_endpoint_changes_and_reopening_setup_clear_cloud_context(self):
         self.activate()

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased - create-only safety audit
+
+- Reject forged create-only previews carrying replacement metadata and block direct cloud-to-local replacements.
+- Preserve unknown classification for malformed completion metadata and definite upload rejections.
+- Reset run-owned folder IDs and block implicit retries of uncertain shared folders.
+
+- Bind reviewed folder identities/absence to immutable transfer preconditions.
+- Recheck selected root and ancestor links; rebuild folder warnings after selection.
+- Distinguish definite creation rejection from unknown outcomes.
+- Retain observed partial-folder details in per-file history.
+- Expand offline conflict, cancellation, stale-plan and failure coverage.
+
+
 ## [0.15.0] - 2026-10-18
 ### Added
 - Add create-only empty uploads and reviewed cloud folders

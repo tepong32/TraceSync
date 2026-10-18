@@ -48,8 +48,12 @@ class Graph:
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
         suffix = unquote(url.split("/drives/drive/", 1)[1])
+        if method == "GET" and suffix == "items/root":
+            return Response(dict(id="root", name="Test", folder={}))
         if method == "GET" and suffix.endswith("/children"):
-            return Response({"value": list(self.files.values()) + list(self.folders.values())})
+            parent = suffix.split("/")[1]
+            return Response({"value": [record for record in [*self.files.values(), *self.folders.values()]
+                                       if record.get("parentReference", {}).get("id") == parent]})
         if method == "GET":
             name = suffix.split(":/", 1)[1]
             record = self.files.get(name) or self.folders.get(name)
@@ -267,6 +271,260 @@ class OneDriveTransferTests(unittest.TestCase):
         self.assertEqual(job.copied_files, 0)
         self.assertEqual(history.files[0].reason_code, SyncReasonCode.DESTINATION_APPEARED)
         self.assertFalse(any(call[0] == "POST" for call in self.graph.calls))
+
+    def test_existing_parent_is_verified_and_never_created(self):
+        self.graph.folders["sub"] = dict(id="sub-id", name="sub", folder={}, parentReference={"id": "root"})
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.copied_files, 1)
+        self.assertFalse(any(call[0] == "POST" for call in self.graph.calls))
+        self.assertIsNone(history.files[0].message)
+
+    def test_missing_changed_or_moved_parent_blocks_before_mutation(self):
+        for change in ("missing", "identity", "parent"):
+            with self.subTest(change=change):
+                self.graph.folders["sub"] = dict(id="sub-id", name="sub", folder={}, parentReference={"id": "root"})
+                (self.local_root / "sub").mkdir(exist_ok=True)
+                (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+                preview = self.preview()
+                if change == "missing":
+                    self.graph.folders.clear()
+                elif change == "identity":
+                    self.graph.folders["sub"]["id"] = "replacement"
+                else:
+                    self.graph.folders["sub"]["parentReference"]["id"] = "elsewhere"
+                self.graph.calls.clear()
+                job, history = self.run_job(preview)
+                self.assertEqual(job.copied_files, 0)
+                self.assertEqual(job.skipped_files, 1)
+                self.assertFalse(any(call[0] != "GET" for call in self.graph.calls))
+
+    def test_permission_denied_is_definite_failure_not_unknown(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+        preview = self.preview()
+        original = self.graph.request
+        def request(method, url, **kwargs):
+            if method == "POST":
+                self.graph.calls.append((method, url, kwargs))
+                return Response({"error": {"message": "private server details"}}, 403)
+            return original(method, url, **kwargs)
+        self.graph.request = request
+        job, history = self.run_job(preview)
+        self.assertEqual(job.failed_files, 1)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.COPY_ERROR)
+        self.assertNotIn("private server details", str(history))
+        self.assertFalse(self.graph.folders)
+
+    def test_partial_folder_creation_then_failure_is_in_history(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "new.txt").write_bytes(b"new")
+        self.graph.upload_mode = "timeout"
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.failed_files, 1)
+        self.assertIn("sub", self.graph.folders)
+        self.assertIn("Created cloud folder: sub", history.files[0].message)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)
+
+    def test_selection_cancellation_and_partial_run_do_not_create_unapproved_trees(self):
+        for directory in ("chosen", "excluded"):
+            (self.local_root / directory).mkdir()
+            (self.local_root / directory / "empty.txt").write_bytes(b"")
+        preview = self.preview().with_selected_items({"chosen/empty.txt"})
+        self.assertIn("chosen", preview.warnings[0])
+        self.assertNotIn("excluded", preview.warnings[0])
+        job = self.service.create_job(preview)
+        job.request_cancel()
+        worker = self.service.start_job(job, preview)
+        worker.join(5)
+        self.assertFalse(self.graph.folders)
+        self.assertEqual(job.not_attempted_files, 1)
+        job, history = self.run_job(preview)
+        self.assertEqual(set(self.graph.folders), {"chosen"})
+        self.assertEqual(history.counts.copied, 1)
+
+    def test_cancel_after_first_file_preserves_completed_history(self):
+        for name in ("a.txt", "b.txt"):
+            (self.local_root / name).write_bytes(b"")
+        preview = self.preview()
+        job = self.service.create_job(preview)
+        original = self.graph.request
+        def request(method, url, **kwargs):
+            response = original(method, url, **kwargs)
+            if method == "PUT":
+                job.request_cancel()
+            return response
+        self.graph.request = request
+        worker = self.service.start_job(job, preview)
+        worker.join(5)
+        history = self.history.get_record(job.history_run_id)
+        self.assertEqual(history.counts.copied, 1)
+        self.assertEqual(job.not_attempted_files, 1)
+        self.assertTrue(job.summary().cancelled)
+
+    def test_forged_folder_plan_and_rescanned_parent_state_block_mutation(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+        preview = self.preview()
+        forged = replace(preview, items=(replace(preview.items[0], destination_folders=()),))
+        job, history = self.run_job(forged)
+        self.assertEqual(job.skipped_files, 1)
+        self.assertFalse(self.graph.folders)
+        self.graph.folders["sub"] = dict(id="external", name="sub", folder={}, parentReference={"id": "root"})
+        self.cloud.scan()
+        job, history = self.run_job(preview)
+        self.assertEqual(job.skipped_files, 1)
+        self.assertFalse(any(call[0] != "GET" for call in self.graph.calls))
+
+    def test_unknown_folder_response_is_audited_without_retry(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+        self.graph.create_mode = "timeout"
+        job, history = self.run_job(self.preview())
+        self.assertIn("Folder creation uncertain: sub", history.files[0].message)
+        self.assertEqual(sum(call[0] == "POST" for call in self.graph.calls), 1)
+
+    def test_new_parent_disappearing_before_file_publish_stops_upload(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "new.txt").write_bytes(b"new")
+        original = self.graph.request
+        def request(method, url, **kwargs):
+            result = original(method, url, **kwargs)
+            if method == "POST" and url.endswith("/children"):
+                self.graph.folders.clear()
+            return result
+        self.graph.request = request
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.skipped_files, 1)
+        self.assertIn("Created cloud folder: sub", history.files[0].message)
+        self.assertFalse(any("createUploadSession" in call[1] for call in self.graph.calls))
+
+    def test_invalid_empty_success_metadata_is_unknown_not_copied(self):
+        (self.local_root / "empty.txt").write_bytes(b"")
+        original = self.graph.request
+        def request(method, url, **kwargs):
+            result = original(method, url, **kwargs)
+            if method == "PUT":
+                result.data["parentReference"]["id"] = "unreviewed"
+            return result
+        self.graph.request = request
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.failed_files, 1)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)
+        self.assertEqual(sum(call[0] == "PUT" for call in self.graph.calls), 1)
+
+    def test_forged_absence_flag_with_replacement_metadata_never_reaches_local_transfer(self):
+        import os
+        self.graph.files["remote.txt"] = item("remote.txt")
+        preview = self.preview(SyncDirection.SERVER_TO_LOCAL)
+        target = self.local_root / "remote.txt"
+        target.write_bytes(b"external-edit")
+        stat = target.stat()
+        evidence = self.local.get_record("remote.txt").metadata
+        target.unlink()
+        forged = replace(preview, items=(replace(preview.items[0], overwrite=False,
+                                                 destination_metadata=evidence),))
+        original = self.local.transfer_from
+        called = []
+        def transfer(source, relative, precondition):
+            called.append(True)
+            target.write_bytes(b"external-edit")
+            os.utime(target, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+            return original(source, relative, precondition)
+        self.local.transfer_from = transfer
+        job, history = self.run_job(forged)
+        self.assertEqual(job.skipped_files, 1)
+        self.assertFalse(called)
+        self.assertFalse(target.exists())
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.PROVIDER_UNSUPPORTED)
+
+    def test_direct_cloud_to_local_replacement_is_blocked(self):
+        from core.storage_provider import ConditionalTransferUnsupported
+        from models.transfer_precondition import TransferPrecondition
+        self.graph.files["remote.txt"] = item("remote.txt")
+        source = self.cloud.scan()["remote.txt"]
+        target = self.local_root / "remote.txt"
+        target.write_bytes(b"external")
+        destination = self.local.get_record("remote.txt")
+        precondition = TransferPrecondition(source.storage_location, source.metadata,
+            destination.storage_location, destination.metadata)
+        with self.assertRaises(ConditionalTransferUnsupported):
+            self.local.transfer_from(self.cloud, "remote.txt", precondition)
+        self.assertEqual(target.read_bytes(), b"external")
+
+    def test_malformed_create_metadata_remains_unknown_after_remote_success(self):
+        for folder in (False, True):
+            for parent in (None, [], "invalid"):
+                with self.subTest(folder=folder, parent=parent):
+                    self.graph.files.clear()
+                    self.graph.folders.clear()
+                    (self.local_root / "sub").mkdir(exist_ok=True)
+                    target = self.local_root / ("sub/empty.txt" if folder else "empty.txt")
+                    target.write_bytes(b"")
+                    preview = self.preview().with_selected_items({target.relative_to(self.local_root).as_posix()})
+                    original = Graph.request.__get__(self.graph)
+                    def request(method, url, **kwargs):
+                        response = original(method, url, **kwargs)
+                        if (folder and method == "POST") or (not folder and method == "PUT"):
+                            response.data["parentReference"] = parent
+                        return response
+                    self.graph.request = request
+                    job, history = self.run_job(preview)
+                    self.assertEqual(job.failed_files, 1)
+                    self.assertEqual(history.files[0].reason_code, SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)
+                    if folder:
+                        self.assertIn("Folder creation uncertain", history.files[0].message)
+
+    def test_nonempty_upload_permission_rejection_remains_definite(self):
+        (self.local_root / "new.txt").write_bytes(b"new")
+        self.graph.put = lambda *args, **kwargs: Response({}, 403)
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.failed_files, 1)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.COPY_ERROR)
+
+    def test_success_then_lost_response_is_unknown_without_retry(self):
+        for folder in (False, True):
+            with self.subTest(folder=folder):
+                self.graph.files.clear()
+                self.graph.folders.clear()
+                self.graph.calls.clear()
+                (self.local_root / "sub").mkdir(exist_ok=True)
+                target = self.local_root / ("sub/empty.txt" if folder else "empty.txt")
+                target.write_bytes(b"")
+                original = Graph.request.__get__(self.graph)
+                def request(method, url, **kwargs):
+                    response = original(method, url, **kwargs)
+                    if (folder and method == "POST") or (not folder and method == "PUT"):
+                        raise OSError("response lost after remote commit")
+                    return response
+                self.graph.request = request
+                preview = self.preview().with_selected_items({target.relative_to(self.local_root).as_posix()})
+                job, history = self.run_job(preview)
+                self.assertEqual(history.files[0].reason_code, SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)
+                self.assertEqual(sum(call[0] != "GET" for call in self.graph.calls), 1)
+                self.assertTrue(self.graph.folders if folder else self.graph.files)
+
+    def test_unknown_shared_folder_is_not_retried_by_later_files(self):
+        (self.local_root / "sub").mkdir()
+        for name in ("a.txt", "b.txt"):
+            (self.local_root / "sub" / name).write_bytes(b"")
+        self.graph.create_mode = "timeout"
+        job, history = self.run_job(self.preview())
+        self.assertEqual(job.failed_files, 2)
+        self.assertEqual(sum(call[0] == "POST" for call in self.graph.calls), 1)
+        self.assertTrue(all(file.reason_code == SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN for file in history.files))
+
+    def test_run_owned_folder_ids_are_not_reused_by_stale_preview_in_next_run(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "empty.txt").write_bytes(b"")
+        preview = self.preview()
+        job, _ = self.run_job(preview)
+        self.assertEqual(job.copied_files, 1)
+        self.graph.files.clear()
+        job, history = self.run_job(preview)
+        self.assertEqual(job.skipped_files, 1)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.DESTINATION_APPEARED)
 
     def test_fresh_metadata_lookup_detects_remote_change_after_scan(self):
         self.graph.files["remote.txt"] = item("remote.txt")

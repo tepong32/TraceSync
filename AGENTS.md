@@ -406,8 +406,8 @@ Disconnect is account-scoped and preserves other accounts/pairs. These setup
 checks do not authorize transfers or prove upload safety. Reviewed-copy development
 permits confirmed new-file transfers only. A provider create_only restriction applies
 to both directions in preview and execution. OneDrive advertises CONDITIONAL_CREATE,
-never conditional replacement. Exclude unsupported empty uploads and missing cloud
-parent folders; never use replacing PUT as a fallback. Unknown outcomes are not retried.
+never conditional replacement. Empty uploads use explicit conflict failure;
+never use replacing PUT as a fallback. Unknown outcomes are not retried.
 Live and packaged acceptance remain gates before releasing cloud functionality.
 
 
@@ -419,3 +419,22 @@ Create only parents required by selected files; fail on appeared parents, verify
 native IDs of existing/run-created parents, and never retry unknown outcomes or
 automatically delete partial directories. Keep replacements blocked. Read the
 active development section in docs/CLOUD_STORAGE.md before changing these contracts.
+
+
+### Reviewed folder evidence
+
+Per-file destination_folders evidence travels unchanged from SyncPreviewItem to
+TransferPrecondition. It records selected native root, existing ancestor IDs and
+expected absence. Selection warnings derive from that evidence. Verify root and
+parent links before mutation; never adopt externally appeared folders. Record
+observed created/uncertain directories in terminal per-file history, with no
+cleanup or retry. These checks do not lock an entire remote ancestor chain. Read
+docs/ONEDRIVE_CREATE_VALIDATION.md for audited guarantees and remaining gates.
+
+
+Runner must reject overwrite flags inconsistent with destination metadata. Local
+transfers from create-only sources must never accept replacement preconditions.
+Run-owned parent IDs reset at job start; uncertain parent creation blocks sibling
+attempts until recompare. Completion metadata validation must be type-safe and
+preserve uncertainty after a mutation. See the post-implementation gate report in
+docs/ONEDRIVE_CREATE_VALIDATION.md.

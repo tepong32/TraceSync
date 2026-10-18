@@ -78,6 +78,7 @@ class SyncJobRunner:
 
         next_item_index = 0
         try:
+            self.destination_provider.begin_transfer_run()
             for item_index, item in enumerate(preview.items):
                 next_item_index = item_index
                 with job.lock:
@@ -124,6 +125,11 @@ class SyncJobRunner:
         return job
 
     def _run_item(self, job: SyncJob, item) -> None:
+        if item.overwrite != (item.destination_metadata is not None):
+            self._record_issue(job, item, SyncFileOutcome.SKIPPED,
+                               SyncReasonCode.PROVIDER_UNSUPPORTED,
+                               "The reviewed operation and destination evidence disagree. Compare again.")
+            return
         if item.overwrite and (getattr(self.source_provider, "create_only", False)
                                or getattr(self.destination_provider, "create_only", False)):
             self._record_issue(job, item, SyncFileOutcome.SKIPPED,
@@ -201,6 +207,7 @@ class SyncJobRunner:
             source_metadata=item.source_metadata,
             destination_location=item.destination_location,
             destination_metadata=item.destination_metadata,
+            destination_folders=item.destination_folders,
         )
         try:
             self.destination_provider.transfer_from(
@@ -244,7 +251,8 @@ class SyncJobRunner:
             if item.overwrite:
                 job.overwritten_files += 1
             job.file_outcomes.append(
-                self._file_outcome(item, SyncFileOutcome.COPIED, backup_id=backup_id)
+                self._file_outcome(item, SyncFileOutcome.COPIED,
+                    message=self.destination_provider.transfer_notes(item.relative_path) or None, backup_id=backup_id)
             )
             job.completed_files += 1
 
@@ -257,6 +265,9 @@ class SyncJobRunner:
         message: str,
         backup_id: str | None = None,
     ) -> None:
+        notes = self.destination_provider.transfer_notes(item.relative_path)
+        if notes:
+            message += " " + notes
         with job.lock:
             if outcome is SyncFileOutcome.SKIPPED:
                 job.skipped_files += 1

@@ -12,6 +12,7 @@ class TransferPrecondition:
     source_metadata: ComparisonMetadata
     destination_location: StorageLocation
     destination_metadata: ComparisonMetadata | None
+    destination_folders: tuple[tuple[str, str | None], ...] = ()
 
     @property
     def expects_destination_absent(self) -> bool:

@@ -148,6 +148,7 @@ class SyncService:
                     destination_size=(destination_record.size if destination_record else None),
                     source_location=source_record.storage_location,
                     destination_location=destination_location,
+                    destination_folders=destination.folder_plan(result.relative_path),
                     source_metadata=source_record.metadata,
                     destination_metadata=(
                         destination_record.metadata if destination_record else None
@@ -159,7 +160,7 @@ class SyncService:
         if excluded:
             warnings.append(f"{excluded} file(s) excluded: existing-file replacements are disabled for cloud workflows.")
         directories = sorted({directory for item in items
-            for directory in getattr(destination, "required_directories", lambda path: ())(item.relative_path)})
+            for directory, identity in item.destination_folders if directory and identity is None})
         if directories:
             warnings.append("Create cloud folders needed by selected files: " + ", ".join(directories)
                             + ". Created folders may remain if copying fails or is cancelled.")

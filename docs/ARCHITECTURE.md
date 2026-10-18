@@ -135,3 +135,24 @@ externally appeared parents block copying. Empty uploads use new-item content PU
 with URL conflictBehavior=fail. Creation replies require exact name/parent/type;
 ambiguous outcomes remain unknown. Partial folders are retained, never deleted.
 See CLOUD_STORAGE.md for API evidence and remaining acceptance gates.
+
+
+### Audited folder preconditions
+
+SyncPreviewItem and TransferPrecondition carry immutable destination_folders
+(path, existing native ID or None) tuples. The selected root is included. Providers
+without folder planning return an empty plan. OneDrive validates the reviewed plan
+against scan evidence, then refreshes root, ancestor IDs and parent links; newly
+created ancestors are rechecked before file publication. Preview selection rebuilds
+folder warnings from selected items only. The provider supplies credential-free,
+consumed transfer notes to the runner for terminal per-file history. Unknown folder
+creation names and known created paths survive later file failures. See
+ONEDRIVE_CREATE_VALIDATION.md for nontransactional ancestry/crash limits.
+
+
+Post-review: the runner enforces operation/evidence consistency before execution;
+local destinations reject replacement from create-only sources even on direct
+provider calls. begin_transfer_run clears run-owned parent IDs/notes; uncertain
+folder creations stay blocked until recompare, including sibling transfers.
+Shared completion validation handles malformed structure without converting a
+possibly committed mutation into a definite failure. See gate report for evidence.

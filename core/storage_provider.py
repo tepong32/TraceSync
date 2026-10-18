@@ -75,6 +75,17 @@ class StorageProvider(ABC):
     # Workflow restriction in either direction, independent of transfer capabilities.
     create_only = False
 
+    def begin_transfer_run(self):
+        """Reset run-owned transient state without remote mutations."""
+
+    def folder_plan(self, relative_path):
+        """Immutable (relative path, existing native ID or expected absence) evidence."""
+        return ()
+
+    def transfer_notes(self, relative_path):
+        """Credential-free partial side effects for per-file history."""
+        return ""
+
     @property
     @abstractmethod
     def display_name(self) -> str:

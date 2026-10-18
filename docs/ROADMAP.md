@@ -1,5 +1,17 @@
 # TraceSync Roadmap
 
+## Current create-only safety audit
+
+The clean `codex/onedrive-create-safety-audit` branch starts from published source
+v0.15.0 (4ddfd55), which already implemented empty uploads and folder creation.
+This local audit adds immutable folder evidence, fresh root/parent-link checks,
+selected-file folder warnings, definite-failure classification and partial-folder
+history notes. 233 offline tests pass after corrective review. No new commit, integration or binary release.
+See [validation and provider evidence](ONEDRIVE_CREATE_VALIDATION.md) for exact
+commands, the mission test matrix and unverified live/cache/packaged gates.
+Both directions remain create-only. Earlier branch snapshots below are historical.
+
+
 > **Simple. Safe. Predictable.**
 
 TraceSync is developed in focused milestones. A milestone is complete only when its user-facing workflow, documentation, and validation are complete.
@@ -549,3 +561,11 @@ files are implemented locally with conflict/unknown-outcome tests. This supersed
 the earlier reviewed-copy exclusions on this branch. Standalone empty-directory
 mirroring is outside scope. Saved-pair editing, packaging and disposable-account
 acceptance remain open; the milestone is not live-accepted or binary-released.
+
+
+Post-implementation review reproduced a forged cloud-to-local replacement bypass,
+malformed-success misclassification, swallowed upload rejection, and run-owned
+folder state/retry gaps. All were corrected with regression tests; final 51 focused
+and 233 full tests pass. See ONEDRIVE_CREATE_VALIDATION.md (under docs/ for the root
+handoff) for the complete gate report. Explicit authorization is still required
+before any commit or integration; HEAD remains v0.15.0 with local changes only.

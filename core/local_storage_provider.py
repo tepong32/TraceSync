@@ -154,6 +154,8 @@ class LocalStorageProvider(StorageProvider):
         relative_path: str,
         precondition: TransferPrecondition,
     ) -> None:
+        if source.create_only and not precondition.expects_destination_absent:
+            raise ConditionalTransferUnsupported("This source permits new-file transfers only.")
         self._verify_transfer_precondition(source, relative_path, precondition)
         with source.open_transfer_content(relative_path, precondition) as content:
             self.replace_from_file(

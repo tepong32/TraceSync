@@ -34,6 +34,7 @@ class SyncPreviewItem:
     destination_location: StorageLocation | None = None
     source_metadata: ComparisonMetadata | None = None
     destination_metadata: ComparisonMetadata | None = None
+    destination_folders: tuple[tuple[str, str | None], ...] = ()
 
     def __post_init__(self) -> None:
         if self.source_location is None:
@@ -109,6 +110,11 @@ class SyncPreview:
     @staticmethod
     def _build_warnings(items: tuple[SyncPreviewItem, ...]) -> list[str]:
         warnings: list[str] = []
+        directories = sorted({path for item in items for path, identity in item.destination_folders
+                              if path and identity is None})
+        if directories:
+            warnings.append("Create cloud folders: " + ", ".join(directories)
+                            + ". Created folders may remain after failure or cancellation.")
         overwrites = sum(item.overwrite for item in items)
         if overwrites:
             warnings.append(f"{overwrites} existing file(s) will be replaced.")

@@ -36,6 +36,8 @@ class OneDriveProvider(StorageProvider):
         self._records = {}
         self._parents = {"": folder_id}
         self._created_parents = {}
+        self._notes = {}
+        self._uncertain_parents = set()
 
     @property
     def display_name(self):
@@ -107,6 +109,7 @@ class OneDriveProvider(StorageProvider):
     def scan(self):
         self._records, self._parents = {}, {"": self.folder_id}
         self._created_parents = {}
+        self._uncertain_parents.clear()
         seen_paths, seen_folders = set(), set()
         def walk(parent, prefix):
             if parent in seen_folders:
@@ -193,6 +196,10 @@ class OneDriveProvider(StorageProvider):
                                 precondition.source_metadata)
 
     def transfer_from(self, source, relative_path, precondition):
+        self._notes[relative_path] = []
+        if precondition.destination_folders != self.folder_plan(relative_path):
+            raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
+                                            "The reviewed folder plan changed. Compare again.")
         if not precondition.expects_destination_absent:
             raise ConditionalTransferUnsupported("OneDrive overwrites are disabled.")
         location = self.location_for(relative_path)
@@ -210,7 +217,9 @@ class OneDriveProvider(StorageProvider):
                     or snapshot.stat().st_size != precondition.source_metadata.size):
                 raise TransferPreconditionFailed(TransferPreconditionTarget.SOURCE, "The source changed while preparing upload.")
             size = snapshot.stat().st_size
-            parent_id = self._ensure_parent(parent)
+            parent_id = self._ensure_parent(parent, relative_path)
+            # Recheck the full chain after creation, before publishing file content.
+            self._ensure_parent(parent, relative_path)
             if size == 0:
                 self._create_empty(parent_id, name)
                 return
@@ -218,21 +227,36 @@ class OneDriveProvider(StorageProvider):
                                     json={"item": {"name": name, "@microsoft.graph.conflictBehavior": "fail"}})
             self._upload(self._signed_url(session.get("uploadUrl")), snapshot, size, name, parent_id)
 
-    def required_directories(self, relative_path):
-        parts = self._path(relative_path)[:-1]
-        return tuple("/".join(parts[:i]) for i in range(1, len(parts) + 1)
-                     if "/".join(parts[:i]) not in self._parents)
+    def begin_transfer_run(self):
+        self._created_parents = {}
+        self._notes = {}
 
-    def _ensure_parent(self, parent):
+    def folder_plan(self, relative_path):
+        parts = self._path(relative_path)[:-1]
+        return (("", self.folder_id),) + tuple(
+            ("/".join(parts[:i]), self._parents.get("/".join(parts[:i])))
+            for i in range(1, len(parts) + 1))
+
+    def transfer_notes(self, relative_path):
+        return " ".join(self._notes.pop(relative_path, ()))
+
+    def _ensure_parent(self, parent, relative_path):
+        root = self._request("GET", self._url(f"items/{quote(self.folder_id, safe='')}"))
+        if (root.get("id") != self.folder_id or "folder" not in root
+                or "remoteItem" in root or "deleted" in root):
+            raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The selected destination changed.")
         parent_id = self.folder_id
         parts = parent.split("/") if parent else []
         for index, name in enumerate(parts):
             path = "/".join(parts[:index + 1])
             expected = self._parents.get(path) or self._created_parents.get(path)
+            if path in self._uncertain_parents:
+                raise TransferOutcomeUnknown("A prior folder creation is uncertain. Compare again before retrying.")
             current = self._item(path)
             if expected:
                 if (not current or current.get("id") != expected or "folder" not in current
-                        or "remoteItem" in current or "deleted" in current):
+                        or "remoteItem" in current or "deleted" in current
+                        or current.get("parentReference", {}).get("id") != parent_id):
                     raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
                                                     "The destination folder changed.")
                 parent_id = expected
@@ -240,9 +264,15 @@ class OneDriveProvider(StorageProvider):
                 if current is not None:
                     raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
                                                     "A destination folder appeared after review.")
-                data = self._create_request("POST", self._url(f"items/{quote(parent_id, safe='')}/children"),
-                    json={"name": name, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"})
-                self._verify_created(data, name, parent_id, folder=True)
+                try:
+                    data = self._create_request("POST", self._url(f"items/{quote(parent_id, safe='')}/children"),
+                        json={"name": name, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"})
+                    self._verify_created(data, name, parent_id, folder=True)
+                except TransferOutcomeUnknown:
+                    self._uncertain_parents.add(path)
+                    self._notes[relative_path].append(f"Folder creation uncertain: {path}. Compare again; no cleanup attempted.")
+                    raise
+                self._notes[relative_path].append(f"Created cloud folder: {path}. No automatic cleanup is attempted.")
                 parent_id = data["id"]
                 self._created_parents[path] = parent_id
         return parent_id
@@ -256,21 +286,26 @@ class OneDriveProvider(StorageProvider):
             if response.status_code in (409, 412):
                 raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
                                                 "The destination appeared during creation.")
+            if response.status_code in (400, 401, 403, 404, 405, 413, 415, 429):
+                raise TransferFailed("OneDrive rejected creation. Check access and compare again.")
             if response.status_code != 201:
                 raise TransferOutcomeUnknown("Creation was not confirmed. Compare again before retrying.")
             return response.json()
-        except (TransferPreconditionFailed, TransferOutcomeUnknown):
+        except (TransferPreconditionFailed, TransferOutcomeUnknown, TransferFailed):
             raise
         except Exception:
             raise TransferOutcomeUnknown("Creation outcome is unknown. Compare again before retrying.") from None
 
-    @staticmethod
-    def _verify_created(data, name, parent_id, *, folder=False):
-        if (not isinstance(data, dict) or not data.get("id") or data.get("name") != name
-                or ("folder" if folder else "file") not in data
+    def _verify_created(self, data, name, parent_id, *, folder=False, size=0):
+        parent = data.get("parentReference") if isinstance(data, dict) else None
+        facet = "folder" if folder else "file"
+        if (not isinstance(data, dict) or not isinstance(data.get("id"), str) or not data["id"]
+                or data.get("name") != name or not isinstance(data.get(facet), dict)
+                or ("file" if folder else "folder") in data
                 or "remoteItem" in data or "deleted" in data
-                or data.get("parentReference", {}).get("id") != parent_id
-                or (not folder and data.get("size") != 0)):
+                or not isinstance(parent, dict) or parent.get("id") != parent_id
+                or parent.get("driveId", self.drive_id) != self.drive_id
+                or (not folder and (type(data.get("size")) is not int or data["size"] != size))):
             raise TransferOutcomeUnknown("Created item did not match the reviewed destination. Compare again.")
 
     def _create_empty(self, parent_id, name):
@@ -291,15 +326,16 @@ class OneDriveProvider(StorageProvider):
                         headers={"Content-Length": str(len(chunk)), "Content-Range": f"bytes {offset}-{offset+len(chunk)-1}/{size}"})
                     if response.status_code in (409, 412):
                         raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The destination appeared during upload.")
+                    if response.status_code in (400, 401, 403, 404, 405, 413, 415, 429):
+                        raise TransferFailed("OneDrive rejected the upload. Check access and compare again.")
                     data = response.json()
                     if final:
-                        if (response.status_code not in (200, 201) or not data.get("id") or data.get("name") != name
-                                or data.get("size") != size or "file" not in data
-                                or data.get("parentReference", {}).get("id") != parent_id):
+                        if response.status_code not in (200, 201):
                             raise TransferOutcomeUnknown("OneDrive did not confirm the reviewed file. Compare again before retrying.")
+                        self._verify_created(data, name, parent_id, size=size)
                     elif response.status_code != 202 or data.get("nextExpectedRanges") != [f"{offset+len(chunk)}-"]:
                         raise TransferOutcomeUnknown("OneDrive upload progress is uncertain. Compare again before retrying.")
-                except (TransferPreconditionFailed, TransferOutcomeUnknown):
+                except (TransferPreconditionFailed, TransferOutcomeUnknown, TransferFailed):
                     raise
                 except Exception:
                     raise TransferOutcomeUnknown("OneDrive upload outcome is unknown. Compare again before retrying.") from None
