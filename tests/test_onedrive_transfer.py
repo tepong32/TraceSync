@@ -41,16 +41,47 @@ class Graph:
     def __init__(self):
         self.files, self.calls = {}, []
         self.upload_mode = "success"
+        self.folders = {}
+        self.create_mode = "success"
         self.download = b"remote"
         self.on_download = lambda: None
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
         suffix = unquote(url.split("/drives/drive/", 1)[1])
         if method == "GET" and suffix.endswith("/children"):
-            return Response({"value": list(self.files.values())})
+            return Response({"value": list(self.files.values()) + list(self.folders.values())})
         if method == "GET":
             name = suffix.split(":/", 1)[1]
-            return Response(self.files.get(name), 200 if name in self.files else 404)
+            record = self.files.get(name) or self.folders.get(name)
+            return Response(record, 200 if record is not None else 404)
+        if method == "POST" and suffix.endswith("/children"):
+            body = kwargs["json"]
+            assert body["@microsoft.graph.conflictBehavior"] == "fail"
+            assert kwargs["headers"]["Content-Type"] == "application/json"
+            parent = suffix.split("/")[1]
+            prefix = next((path + "/" for path, folder in self.folders.items() if folder["id"] == parent), "")
+            path = prefix + body["name"]
+            if self.create_mode == "timeout":
+                raise OSError("secret")
+            if self.create_mode == "collision" or path in self.folders:
+                return Response({}, 409)
+            result = dict(id="folder-" + path.replace("/", "-"), name=body["name"], folder={}, parentReference={"id": parent})
+            self.folders[path] = result
+            return Response(result, 201)
+        if method == "PUT":
+            assert "?@microsoft.graph.conflictBehavior=fail" in url
+            assert kwargs["data"] == b""
+            if self.create_mode == "timeout":
+                raise OSError("secret")
+            if self.create_mode == "collision":
+                return Response({}, 409)
+            name = suffix.split(":/", 1)[1].split(":/content")[0]
+            parent = suffix.split("/")[1].split(":")[0]
+            result = item(name, b"")
+            result["parentReference"]["id"] = parent
+            self.files[name] = result
+            return Response(result, 201)
+        self.target_parent = suffix.split("/")[1].split(":")[0]
         self.target = kwargs["json"]["item"]["name"]
         assert kwargs["json"]["item"]["@microsoft.graph.conflictBehavior"] == "fail"
         return Response({"uploadUrl": "https://upload.example.invalid/private-session"})
@@ -64,6 +95,7 @@ class Graph:
         if self.upload_mode == "pending":
             return Response({}, 202)
         self.files[self.target] = item(self.target, kwargs["data"])
+        self.files[self.target]["parentReference"]["id"] = self.target_parent
         result = deepcopy(self.files[self.target])
         if self.upload_mode == "wrong-result":
             result["name"] = "different.txt"
@@ -176,13 +208,65 @@ class OneDriveTransferTests(unittest.TestCase):
         self.assertEqual(job.skipped_files, 1)
         self.assertEqual((self.local_root / "new.txt").read_bytes(), b"new")
 
-    def test_missing_parent_and_empty_upload_are_excluded_explicitly(self):
-        (self.local_root / "sub").mkdir()
-        (self.local_root / "sub" / "new.txt").write_bytes(b"new")
+    def test_empty_upload_uses_explicit_conflict_failure_and_history(self):
         (self.local_root / "empty.txt").write_bytes(b"")
         preview = self.preview()
-        self.assertEqual(preview.total_files, 0)
-        self.assertIn("2 file(s) excluded", preview.warnings[0])
+        self.assertEqual(preview.total_files, 1)
+        job, history = self.run_job(preview)
+        self.assertEqual(job.copied_files, 1)
+        self.assertEqual(history.counts.copied, 1)
+        self.assertEqual(self.graph.files["empty.txt"]["size"], 0)
+        self.assertFalse(any("createUploadSession" in call[1] for call in self.graph.calls))
+
+    def test_nested_parent_creation_is_reviewed_and_read_only_until_execution(self):
+        (self.local_root / "sub" / "deep").mkdir(parents=True)
+        (self.local_root / "sub" / "deep" / "empty.txt").write_bytes(b"")
+        (self.local_root / "sub" / "deep" / "data.txt").write_bytes(b"data")
+        preview = self.preview()
+        self.assertEqual(preview.total_files, 2)
+        self.assertIn("sub/deep", preview.warnings[0])
+        self.assertFalse(self.graph.folders)
+        job, history = self.run_job(preview)
+        self.assertEqual(job.copied_files, 2)
+        self.assertEqual(set(self.graph.folders), {"sub", "sub/deep"})
+        self.assertEqual(history.counts.copied, 2)
+
+    def test_empty_creation_conflict_and_timeout_are_not_retried(self):
+        for mode, code in (("collision", SyncReasonCode.DESTINATION_APPEARED),
+                           ("timeout", SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)):
+            with self.subTest(mode=mode):
+                (self.local_root / "empty.txt").write_bytes(b"")
+                self.graph.files.clear()
+                self.graph.calls.clear()
+                self.graph.create_mode = mode
+                job, history = self.run_job(self.preview())
+                self.assertEqual(job.copied_files, 0)
+                self.assertEqual(history.files[0].reason_code, code)
+                self.assertEqual(sum(call[0] == "PUT" for call in self.graph.calls), 1)
+
+    def test_folder_creation_conflict_and_timeout_stop_before_upload(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "new.txt").write_bytes(b"new")
+        for mode, code in (("collision", SyncReasonCode.DESTINATION_APPEARED),
+                           ("timeout", SyncReasonCode.TRANSFER_OUTCOME_UNKNOWN)):
+            with self.subTest(mode=mode):
+                self.graph.calls.clear()
+                self.graph.create_mode = mode
+                job, history = self.run_job(self.preview())
+                self.assertEqual(job.copied_files, 0)
+                self.assertEqual(history.files[0].reason_code, code)
+                self.assertFalse(any("createUploadSession" in call[1] for call in self.graph.calls))
+                self.assertEqual(sum(call[0] == "POST" for call in self.graph.calls), 1)
+
+    def test_parent_appearing_after_review_blocks_copy(self):
+        (self.local_root / "sub").mkdir()
+        (self.local_root / "sub" / "new.txt").write_bytes(b"new")
+        preview = self.preview()
+        self.graph.folders["sub"] = dict(id="external", name="sub", folder={})
+        job, history = self.run_job(preview)
+        self.assertEqual(job.copied_files, 0)
+        self.assertEqual(history.files[0].reason_code, SyncReasonCode.DESTINATION_APPEARED)
+        self.assertFalse(any(call[0] == "POST" for call in self.graph.calls))
 
     def test_fresh_metadata_lookup_detects_remote_change_after_scan(self):
         self.graph.files["remote.txt"] = item("remote.txt")

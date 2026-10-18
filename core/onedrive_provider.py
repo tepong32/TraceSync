@@ -35,6 +35,7 @@ class OneDriveProvider(StorageProvider):
         self._token_supplier, self._session = token_supplier, session
         self._records = {}
         self._parents = {"": folder_id}
+        self._created_parents = {}
 
     @property
     def display_name(self):
@@ -105,6 +106,7 @@ class OneDriveProvider(StorageProvider):
 
     def scan(self):
         self._records, self._parents = {}, {"": self.folder_id}
+        self._created_parents = {}
         seen_paths, seen_folders = set(), set()
         def walk(parent, prefix):
             if parent in seen_folders:
@@ -148,7 +150,8 @@ class OneDriveProvider(StorageProvider):
             return self._records[relative_path].storage_location
         parent, _, name = relative_path.rpartition("/")
         if parent not in self._parents:
-            raise ConditionalTransferUnsupported("Create the matching OneDrive folder, then compare again.")
+            return StorageLocation("onedrive", f"{self.drive_id}/pending:{self.folder_id}/{relative_path}",
+                                   f"{self.display_name}/{relative_path}")
         return StorageLocation("onedrive", f"{self.drive_id}/parent:{self._parents[parent]}/new:{name}",
                                f"{self.display_name}/{relative_path}")
 
@@ -193,16 +196,11 @@ class OneDriveProvider(StorageProvider):
         if not precondition.expects_destination_absent:
             raise ConditionalTransferUnsupported("OneDrive overwrites are disabled.")
         location = self.location_for(relative_path)
-        if not location.same_identity_as(precondition.destination_location) or "/new:" not in location.native_id:
+        if not location.same_identity_as(precondition.destination_location) or not any(marker in location.native_id for marker in ("/new:", "/pending:")):
             raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The reviewed destination changed.")
         if self._item(relative_path) is not None:
             raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The destination appeared after review.")
         parent, _, name = relative_path.rpartition("/")
-        parent_id = self._parents[parent]
-        if parent:
-            current_parent = self._item(parent)
-            if not current_parent or current_parent.get("id") != parent_id or "folder" not in current_parent or "remoteItem" in current_parent:
-                raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The destination folder changed.")
         with source.open_transfer_content(relative_path, precondition) as content, tempfile.TemporaryDirectory(prefix="tracesync-upload-") as directory:
             snapshot = Path(directory) / "content"
             shutil.copyfile(content.local_path, snapshot)
@@ -212,11 +210,73 @@ class OneDriveProvider(StorageProvider):
                     or snapshot.stat().st_size != precondition.source_metadata.size):
                 raise TransferPreconditionFailed(TransferPreconditionTarget.SOURCE, "The source changed while preparing upload.")
             size = snapshot.stat().st_size
+            parent_id = self._ensure_parent(parent)
             if size == 0:
-                raise ConditionalTransferUnsupported("Empty-file uploads await a verified create-only contract.")
+                self._create_empty(parent_id, name)
+                return
             session = self._request("POST", self._url(f"items/{quote(parent_id, safe='')}:/{quote(name, safe='')}:/createUploadSession"),
                                     json={"item": {"name": name, "@microsoft.graph.conflictBehavior": "fail"}})
             self._upload(self._signed_url(session.get("uploadUrl")), snapshot, size, name, parent_id)
+
+    def required_directories(self, relative_path):
+        parts = self._path(relative_path)[:-1]
+        return tuple("/".join(parts[:i]) for i in range(1, len(parts) + 1)
+                     if "/".join(parts[:i]) not in self._parents)
+
+    def _ensure_parent(self, parent):
+        parent_id = self.folder_id
+        parts = parent.split("/") if parent else []
+        for index, name in enumerate(parts):
+            path = "/".join(parts[:index + 1])
+            expected = self._parents.get(path) or self._created_parents.get(path)
+            current = self._item(path)
+            if expected:
+                if (not current or current.get("id") != expected or "folder" not in current
+                        or "remoteItem" in current or "deleted" in current):
+                    raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
+                                                    "The destination folder changed.")
+                parent_id = expected
+            else:
+                if current is not None:
+                    raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
+                                                    "A destination folder appeared after review.")
+                data = self._create_request("POST", self._url(f"items/{quote(parent_id, safe='')}/children"),
+                    json={"name": name, "folder": {}, "@microsoft.graph.conflictBehavior": "fail"})
+                self._verify_created(data, name, parent_id, folder=True)
+                parent_id = data["id"]
+                self._created_parents[path] = parent_id
+        return parent_id
+
+    def _create_request(self, method, url, **kwargs):
+        # A timeout or malformed reply after a mutating request is ambiguous.
+        try:
+            response = self._session.request(method, url,
+                headers={"Authorization": f"Bearer {self._token_supplier()}", "Content-Type": "application/json" if "json" in kwargs else "application/octet-stream"},
+                timeout=(15, 120), allow_redirects=False, **kwargs)
+            if response.status_code in (409, 412):
+                raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION,
+                                                "The destination appeared during creation.")
+            if response.status_code != 201:
+                raise TransferOutcomeUnknown("Creation was not confirmed. Compare again before retrying.")
+            return response.json()
+        except (TransferPreconditionFailed, TransferOutcomeUnknown):
+            raise
+        except Exception:
+            raise TransferOutcomeUnknown("Creation outcome is unknown. Compare again before retrying.") from None
+
+    @staticmethod
+    def _verify_created(data, name, parent_id, *, folder=False):
+        if (not isinstance(data, dict) or not data.get("id") or data.get("name") != name
+                or ("folder" if folder else "file") not in data
+                or "remoteItem" in data or "deleted" in data
+                or data.get("parentReference", {}).get("id") != parent_id
+                or (not folder and data.get("size") != 0)):
+            raise TransferOutcomeUnknown("Created item did not match the reviewed destination. Compare again.")
+
+    def _create_empty(self, parent_id, name):
+        url = self._url(f"items/{quote(parent_id, safe='')}:/{quote(name, safe='')}:/content")
+        data = self._create_request("PUT", url + "?@microsoft.graph.conflictBehavior=fail", data=b"")
+        self._verify_created(data, name, parent_id)
 
     def _upload(self, url, path, size, name, parent_id):
         offset, chunk_size = 0, 10 * 1024 * 1024

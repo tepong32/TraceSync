@@ -251,3 +251,24 @@ test account is an environmental blocker, not a pass.
 - [Microsoft MSAL overview](https://learn.microsoft.com/en-us/entra/identity-platform/msal-overview)
 - [Microsoft delegated permissions](https://learn.microsoft.com/en-us/graph/permissions-reference)
 - [Microsoft Graph upload sessions](https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=graph-rest-1.0)
+
+
+### Empty uploads and destination folders (development branch)
+
+On `codex/onedrive-create-folders-empty`, based on published source v0.14.0
+(`8ffb2d0`), empty uploads use Graph new-file content PUT with the explicit URL
+parameter `@microsoft.graph.conflictBehavior=fail`. This is the documented
+[driveItem creation conflict behavior](https://learn.microsoft.com/en-us/graph/api/resources/driveitem#instance-attributes),
+not the replacing default. Nonempty uploads retain upload sessions.
+
+Missing cloud parents required by selected files are listed in preview warnings
+before confirmation and created top-down with conflict failure. Existing parents
+must retain their scanned native IDs; parents created by this run are reused only
+with the same verified IDs. An external folder appearing after review blocks the
+copy. Creation responses must match parent, name and type; unknown outcomes are
+never retried. Created directories may remain after a failed/cancelled copy and
+are never automatically deleted. Empty standalone directory mirroring is outside
+this file-copy workflow. Both copy directions still prohibit replacements.
+
+This slice is checkpointed as source v0.15.0 and tested with fakes only. Live personal-account
+and packaged acceptance remain outstanding; the public binary remains v0.11.0.

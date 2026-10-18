@@ -124,9 +124,6 @@ class SyncService:
             if overwrite and (getattr(source, "create_only", False) or getattr(destination, "create_only", False)):
                 excluded += 1
                 continue
-            if getattr(destination, "create_only", False) and source_record.size == 0:
-                excluded += 1
-                continue
             try:
                 destination_location = destination.location_for(result.relative_path)
             except ConditionalTransferUnsupported:
@@ -160,7 +157,12 @@ class SyncService:
 
         warnings: list[str] = []
         if excluded:
-            warnings.append(f"{excluded} file(s) excluded: cloud overwrites, empty uploads, or missing destination folders are not supported yet.")
+            warnings.append(f"{excluded} file(s) excluded: existing-file replacements are disabled for cloud workflows.")
+        directories = sorted({directory for item in items
+            for directory in getattr(destination, "required_directories", lambda path: ())(item.relative_path)})
+        if directories:
+            warnings.append("Create cloud folders needed by selected files: " + ", ".join(directories)
+                            + ". Created folders may remain if copying fails or is cancelled.")
         overwrites = sum(item.overwrite for item in items)
         if overwrites:
             warnings.append(

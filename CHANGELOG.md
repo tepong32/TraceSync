@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0] - 2026-10-18
+### Added
+- Add create-only empty uploads and reviewed cloud folders
+
+## Unreleased — empty uploads and destination folders
+
+- Create empty OneDrive files with explicit conflict failure.
+- Review and create missing cloud parents required by selected files.
+- Block appeared/changed parents and preserve unknown outcomes without retry.
+- Keep overwrites disabled in both directions.
+
+
 ## [0.14.0] - 2026-10-18
 ### Added
 - Integrate reviewed create-only OneDrive copying

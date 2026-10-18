@@ -1,3 +1,35 @@
+# Active continuation — 2026-10-18
+
+Branch: codex/onedrive-create-folders-empty, in the existing worktree
+C:/Users/Administrator/.codex/worktrees/tracesync-onedrive-reviewed-copy.
+The reviewed-copy vm-commit completed through scripts/vm_release.py and the shared
+version_manager.py, after preview and 212 passing tests. Source v0.14.0,
+remote master and codex/onedrive-reviewed-copy were pushed atomically and verified
+at 8ffb2d007a70e08a85e1932ccb5807d195f97d09. No binary was published.
+
+Current local changes implement empty uploads and top-down cloud folder creation
+for selected files. Read docs/CLOUD_STORAGE.md's development section and
+AGENTS.md before extending. Both directions remain create-only. Empty standalone
+directory mirroring is not implemented. Created folders remain after a failed
+copy; there is no unsafe automatic cleanup. Live tests remain environmental:
+no disposable cloud test account/registration. Packaging/edit-delete UX and live
+acceptance remain open. The SFTP historical workspace is preserved.
+
+PASS: full local suite, 216 tests, no failures/skips:
+`C:/Users/Administrator/Desktop/GH/TraceSync/.venv/Scripts/python.exe -m unittest discover -s tests`
+(log .tmp-empty-folder-tests.log). Existing Tk ThemeChanged teardown diagnostics
+persist. PASS: git diff --check. Scope: provider and shared preview changes warrant
+the full suite. Tests cover empty creation, nested shared parents, conflicts,
+timeouts, source changes, history and blocked overwrites. One fake-ID parsing
+regression was corrected before final passing suite.
+NOT RUN - ENVIRONMENTAL: live OAuth/Graph and protected-cache packaging acceptance.
+NOT RUN - OUT OF SCOPE: new build/portfolio publication.
+Next: review this dependent slice, add live acceptance when a test account exists;
+retain fail-on-conflict and no retry/cleanup semantics. The slice is being checkpointed as source v0.15.0 after 216 passing tests;
+continue saved-pair editing/deletion on a dependent branch.
+
+---
+
 # TraceSync continuation
 
 Updated 2026-10-18. Active branch: codex/onedrive-reviewed-copy, worktree

@@ -539,3 +539,13 @@ The priority remains:
 > **Reliability before breadth.**
 
 TraceSync should become more capable without becoming more complicated for the people who use it.
+
+
+### Dependent create-only slice
+
+`codex/onedrive-create-folders-empty` starts from published source v0.14.0
+(8ffb2d0). Empty uploads and reviewed creation of cloud parents needed by selected
+files are implemented locally with conflict/unknown-outcome tests. This supersedes
+the earlier reviewed-copy exclusions on this branch. Standalone empty-directory
+mirroring is outside scope. Saved-pair editing, packaging and disposable-account
+acceptance remain open; the milestone is not live-accepted or binary-released.

@@ -164,3 +164,10 @@ review and confirm a direction before copying. Existing files are never replaced
 in either direction. Uploads currently require nonempty files and existing cloud
 parent folders; excluded items are explained in the preview. This is an offline-tested
 development feature, not a released or live-accepted cloud integration.
+
+
+The dependent `codex/onedrive-create-folders-empty` branch adds empty uploads and
+creation of missing cloud parents required by selected files. Review lists the
+folders before confirmation. Created folders may remain after a failed copy.
+These changes are locally tested and await live-account acceptance; see the
+[development status](docs/CLOUD_STORAGE.md#empty-uploads-and-destination-folders-development-branch).

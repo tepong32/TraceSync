@@ -14,6 +14,7 @@ Record deliberate direction changes in the plan instead of silently expanding it
 | codex/cloud-plan-checkpoint | Documentation and roadmap baseline | Current primary |
 | codex/onedrive-account-folder-pairs | Personal account connection, folder browser, credential-free saved pairs and offline tests | Plan checkpoint |
 | codex/onedrive-reviewed-copy | Pair activation, refresh/reconnect, reviewed create-only transfers and history | Reviewed setup branch |
+| codex/onedrive-create-folders-empty | Empty uploads and reviewed parents required by selected files | Published reviewed-copy source v0.14.0 |
 | codex/onedrive-safe-replacement | Conditional commit and recoverable replacement | Validated create-only workflow |
 | codex/google-drive-workflow | Google scope/Picker and provider-specific workflow | Shared setup boundaries validated |
 

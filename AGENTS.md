@@ -409,3 +409,13 @@ to both directions in preview and execution. OneDrive advertises CONDITIONAL_CRE
 never conditional replacement. Exclude unsupported empty uploads and missing cloud
 parent folders; never use replacing PUT as a fallback. Unknown outcomes are not retried.
 Live and packaged acceptance remain gates before releasing cloud functionality.
+
+
+### Create-only folder planning
+
+The dependent codex/onedrive-create-folders-empty branch supports empty uploads
+with explicit URL conflictBehavior=fail and reviewed missing cloud parents.
+Create only parents required by selected files; fail on appeared parents, verify
+native IDs of existing/run-created parents, and never retry unknown outcomes or
+automatically delete partial directories. Keep replacements blocked. Read the
+active development section in docs/CLOUD_STORAGE.md before changing these contracts.

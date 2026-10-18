@@ -122,3 +122,16 @@ size. Ambiguous responses become unknown history outcomes without retry.
 Provider create_only restrictions block replacements in preview and execution in
 both directions. Empty uploads and missing cloud parent folders are excluded.
 These limitations and live acceptance remain open in CLOUD_STORAGE.md.
+
+
+### Dependent create-only slice
+
+On codex/onedrive-create-folders-empty, missing parent paths use reviewed pending
+locations rooted in the selected native folder. Preview lists required parents;
+execution creates only ancestors needed by selected files after source validation.
+Scanned parents and run-created parents are kept separately so preview identities
+remain stable across sibling uploads. Each ancestor is freshly checked by ID;
+externally appeared parents block copying. Empty uploads use new-item content PUT
+with URL conflictBehavior=fail. Creation replies require exact name/parent/type;
+ambiguous outcomes remain unknown. Partial folders are retained, never deleted.
+See CLOUD_STORAGE.md for API evidence and remaining acceptance gates.
