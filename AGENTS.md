@@ -438,3 +438,6 @@ Run-owned parent IDs reset at job start; uncertain parent creation blocks siblin
 attempts until recompare. Completion metadata validation must be type-safe and
 preserve uncertainty after a mutation. See the post-implementation gate report in
 docs/ONEDRIVE_CREATE_VALIDATION.md.
+
+Cloud dependency installation, isolated Windows validation and build-tool blockers:
+[docs/ONEDRIVE_ENVIRONMENT.md](docs/ONEDRIVE_ENVIRONMENT.md).

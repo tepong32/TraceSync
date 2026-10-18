@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased - OneDrive runtime dependencies
+
+- Declare validated MSAL, MSAL Extensions and Requests pins.
+- Document isolated Windows setup, outstanding build-tool security gates and the committed safety checkpoint.
+
+
 ## Unreleased - create-only safety audit
 
 - Reject forged create-only previews carrying replacement metadata and block direct cloud-to-local replacements.

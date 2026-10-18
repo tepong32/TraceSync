@@ -117,7 +117,10 @@ See [Architecture](docs/ARCHITECTURE.md) for module responsibilities, [Roadmap](
 
 ## Running locally
 
-TraceSync requires Python 3 and Tkinter.
+TraceSync development is validated with Python 3.11 and Tkinter. Install the
+pinned requirements in an isolated environment before running it; see
+[Windows/OneDrive environment setup](docs/ONEDRIVE_ENVIRONMENT.md). Installing
+dependencies does not configure Microsoft sign-in or establish cloud acceptance.
 
 ```powershell
 python main.py

@@ -1,5 +1,13 @@
 # OneDrive create-only mission validation
 
+Checkpoint note: the historical audit below preceded local source commit
+`0de6aa23987a5661b0578ea40b83f5082abedb32`, parent `4ddfd55`. The safety
+patch is committed; its references to uncommitted work describe the audit date.
+Runtime dependency integration and current acceptance status are recorded in
+[ONEDRIVE_ENVIRONMENT.md](ONEDRIVE_ENVIRONMENT.md). No integration or release
+is implied.
+
+
 Date: 2026-10-18. Branch: codex/onedrive-create-safety-audit.
 Base and unchanged HEAD: 4ddfd55e2874fecb76e6cf1e054fc971b03bbb41 (v0.15.0),
 a verified descendant of requested v0.14.0 (8ffb2d0). Remote master was fetched and
