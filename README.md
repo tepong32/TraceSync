@@ -152,7 +152,15 @@ v0.11.0 download remains unchanged by the documentation checkpoint. See
 
 This feature branch adds **OneDrive setup...** beside Folder Pairs. It connects a
 personal account, browses cloud folders, and saves a named local/cloud relationship.
-Cloud copying is not enabled. Without a configured development build, connection
+The reviewed-copy branch enables reviewed new-file copies. Without a configured development build, connection
 reports that setup is unavailable; local workflows continue without cloud SDKs.
 Offline tests inject authentication and Graph responses; see
-[the current setup checkpoint](docs/CLOUD_STORAGE.md#active-branch-checkpoint).
+[the current setup checkpoint](docs/CLOUD_STORAGE.md#active-reviewed-copy-branch).
+
+On the reviewed-copy development branch, saved cloud pairs can be reopened in
+setup using **Open**, **Reconnect**, and **Disconnect**. The account and native
+folder identities are checked before reuse. **Use saved pair** activates comparison;
+review and confirm a direction before copying. Existing files are never replaced
+in either direction. Uploads currently require nonempty files and existing cloud
+parent folders; excluded items are explained in the preview. This is an offline-tested
+development feature, not a released or live-accepted cloud integration.

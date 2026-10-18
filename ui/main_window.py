@@ -4,6 +4,9 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from core.local_storage_provider import LocalStorageProvider
+from core.storage_provider import TransferError
+from ui.dialogs.readonly_task_dialog import ReadonlyTaskDialog
 from core.sync_service import SyncExecutionStartError, SyncService
 from core.sync_history_service import HistoryPersistenceError
 from core.sync_history_lock import SyncAlreadyActiveError
@@ -34,6 +37,8 @@ class MainWindow(tk.Tk):
         self.title(f"TraceSync v{get_application_version()}")
         self.geometry("1050x840")
         self.minsize(850, 600)
+        self._cloud_connection = None
+        self._applying_cloud = False
         self.results = []
         self.visible_results = []
         self.current_filter = None
@@ -451,6 +456,13 @@ class MainWindow(tk.Tk):
         ]
 
     def _on_folder_value_changed(self, *_args):
+        if self._applying_cloud:
+            return
+        if self._cloud_connection is not None:
+            self._cloud_connection = None
+            self._applying_cloud = True
+            self.server_var.set("")
+            self._applying_cloud = False
         had_comparison = self.comparison_completed or bool(self.results)
         self.comparison_completed = False
         self._sync_folder_pair_selection_from_paths()
@@ -506,9 +518,22 @@ class MainWindow(tk.Tk):
         return [pair for pair in self.settings.get("folder_pairs", []) if "server_endpoint" not in pair]
 
     def open_onedrive_setup(self):
+        if self._cloud_connection is not None:
+            self._on_folder_value_changed()
         dialog = OneDriveSetupDialog(self)
         self.wait_window(dialog)
-        # Only refresh saved definitions; setup never changes active endpoints.
+        if dialog.selected_connection is not None:
+            pair, provider = dialog.selected_connection
+            self._on_folder_value_changed()
+            self._applying_cloud = True
+            self.local_var.set(pair["local_folder"])
+            self.server_var.set(f"OneDrive: {provider.folder_name}")
+            self._applying_cloud = False
+            self._cloud_connection = (pair, provider)
+            self.folder_pair_var.set("")
+            self.status_var.set(f"Selected {pair['name']}. Compare before reviewing new-file copies.")
+            self._refresh_workflow_guidance()
+        # Refresh definitions without persisting the transient cloud display path.
         self.settings["folder_pairs"] = SettingsService.load().get("folder_pairs", [])
         self._refresh_folder_pair_values()
 
@@ -646,17 +671,26 @@ class MainWindow(tk.Tk):
             self.workflow_guide.show_progress("Comparing folders...")
             self.status_var.set("Comparing folders...")
             self.update_idletasks()
-            self.results = self.sync_service.compare(
-                local_folder,
-                server_folder,
-                user_ignore_patterns=self.settings.get("ignore_patterns", []),
-            )
-            self.settings["local_folder"] = local_folder
-            self.settings["server_folder"] = server_folder
-            SettingsService.save(self.settings)
+            if self._cloud_connection is not None:
+                pair, provider = self._cloud_connection
+                self.sync_service.local_provider = LocalStorageProvider(pair["local_folder"], "Local Folder")
+                self.sync_service.server_provider = provider
+                service = self.sync_service
+                patterns = list(self.settings.get("ignore_patterns", []))
+                dialog = ReadonlyTaskDialog(self, lambda: service.compare(user_ignore_patterns=patterns))
+                self.wait_window(dialog)
+                if dialog.error:
+                    raise ValueError(dialog.error)
+                self.results = dialog.result
+            else:
+                self.results = self.sync_service.compare(local_folder, server_folder,
+                    user_ignore_patterns=self.settings.get("ignore_patterns", []))
+                self.settings["local_folder"] = local_folder
+                self.settings["server_folder"] = server_folder
+                SettingsService.save(self.settings)
             self.comparison_completed = True
             self._show_comparison_results()
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, TransferError) as exc:
             self.comparison_completed = False
             self._set_sync_buttons(False)
             self._refresh_workflow_guidance()
@@ -796,9 +830,12 @@ class MainWindow(tk.Tk):
         self._open_selected_details()
 
     def prepare_sync(self, direction: SyncDirection):
+        if not self.comparison_completed:
+            self.status_var.set("Compare again before preparing synchronization.")
+            return
         preview = self.sync_service.create_preview(self.results, direction)
         if not preview.items:
-            messagebox.showinfo("Nothing to Synchronize", "There are no eligible files to copy in this direction.")
+            messagebox.showinfo("Nothing to Synchronize", "\n".join(preview.warnings) or "There are no eligible files to copy in this direction.")
             return
         dialog = SyncConfirmationDialog(self, preview)
         self.wait_window(dialog)
@@ -838,12 +875,19 @@ class MainWindow(tk.Tk):
         job_state = job.snapshot()
         summary = job.summary()
         try:
-            self.results = self.sync_service.compare(
-                user_ignore_patterns=self.settings.get("ignore_patterns", []),
-            )
+            if self._cloud_connection is not None:
+                service, patterns = self.sync_service, list(self.settings.get("ignore_patterns", []))
+                dialog = ReadonlyTaskDialog(self, lambda: service.compare(user_ignore_patterns=patterns))
+                self.wait_window(dialog)
+                if dialog.error:
+                    raise ValueError(dialog.error)
+                self.results = dialog.result
+            else:
+                self.results = self.sync_service.compare(
+                    user_ignore_patterns=self.settings.get("ignore_patterns", []))
             self.comparison_completed = True
             self._show_comparison_results()
-        except OSError:
+        except (OSError, ValueError, TransferError):
             self.comparison_completed = False
             self._set_sync_buttons(False)
             self._refresh_workflow_guidance()

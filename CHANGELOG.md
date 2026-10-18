@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.0] - 2026-10-18
+### Added
+- Integrate reviewed create-only OneDrive copying
+
+## Unreleased — OneDrive reviewed-copy integration
+
+- Reopen saved OneDrive pairs only after account, drive, folder and local access verification.
+- Add exact-account silent renewal, explicit reconnect and account-scoped disconnect.
+- Activate verified OneDrive pairs for comparison and confirmed create-only transfers with history.
+- Reject replacements in both directions; exclude empty uploads and missing cloud parent folders.
+- Validate fresh source evidence, fail on destination conflicts, and record uncertain uploads without retry.
+- Add offline provider and main-window regression coverage; live cloud acceptance remains outstanding.
+
+
 ## [0.13.0] - 2026-10-18
 ### Added
 - Add OneDrive account and folder pair setup preview

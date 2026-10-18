@@ -394,3 +394,18 @@ Pairs use server_endpoint native IDs and must never enter local-path selectors.
 Keep network/auth work off the Tk thread. Settings saves stage and atomically
 replace the JSON file; failed writes must preserve previous settings. Live OAuth,
 protected-cache packaging and account-matched reconnect remain acceptance gates.
+
+### Reviewed-copy identity boundary
+
+Read the active checkpoint in docs/CLOUD_STORAGE.md before extending this branch.
+Saved cloud pairs bind Graph account/drive/folder IDs independently of an optional
+MSAL home-account reference. Silent renewal must select the exact saved cache
+account; never fall back to the first account or launch a browser automatically.
+Explicit reconnect must pass Graph identity checks before restoring the pair.
+Disconnect is account-scoped and preserves other accounts/pairs. These setup
+checks do not authorize transfers or prove upload safety. Reviewed-copy development
+permits confirmed new-file transfers only. A provider create_only restriction applies
+to both directions in preview and execution. OneDrive advertises CONDITIONAL_CREATE,
+never conditional replacement. Exclude unsupported empty uploads and missing cloud
+parent folders; never use replacing PUT as a fallback. Unknown outcomes are not retried.
+Live and packaged acceptance remain gates before releasing cloud functionality.

@@ -124,6 +124,12 @@ class SyncJobRunner:
         return job
 
     def _run_item(self, job: SyncJob, item) -> None:
+        if item.overwrite and (getattr(self.source_provider, "create_only", False)
+                               or getattr(self.destination_provider, "create_only", False)):
+            self._record_issue(job, item, SyncFileOutcome.SKIPPED,
+                               SyncReasonCode.PROVIDER_UNSUPPORTED,
+                               "This cloud workflow permits new files only; replacement is disabled.")
+            return
         destination_capabilities = self.destination_provider.capabilities
         supports_transfer = (
             ProviderCapability.CONDITIONAL_TRANSFER in destination_capabilities

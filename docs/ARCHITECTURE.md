@@ -96,3 +96,29 @@ settings edits. Local manager edits preserve cloud records and reserve their nam
 
 Cloud transfers are deliberately not constructed by this setup branch. See
 [CLOUD_STORAGE.md](CLOUD_STORAGE.md) for remaining integration and acceptance gates.
+
+### Saved OneDrive identity and renewal
+
+The optional server_endpoint.auth_account_id stores a non-secret MSAL home-account
+reference, distinct from Graph account_id. Interactive token claims must identify
+one cache entry before recording that reference. Silent renewal targets it exactly;
+missing/ambiguous/expired cache entries require explicit reconnection. Reopening a
+pair also verifies Graph account, drive and folder IDs and local-folder access.
+Older pairs may bind a cache reference after explicit sign-in plus those checks.
+Disconnect removes only matching cache entries; it does not revoke remote consent.
+The service resets connection state before reopening and installs verified state
+only after all checks pass. Setup callbacks use a worker queue and Tk-side polling;
+workers do not retain the dialog. Use saved pair constructs a OneDriveProvider with
+an exact-account token supplier renewed at each Graph request. Cloud comparison
+runs in a worker; native IDs never become local path inputs. Endpoint changes
+invalidate reviewed results.
+
+The adapter scans ordinary files with native IDs and version evidence, then
+refreshes metadata before transfers. Downloads are staged and checked again before
+local no-replace publication. Uploads stage source bytes and use Graph upload
+sessions with conflictBehavior=fail; signed URLs receive no bearer token or
+redirect following. Final responses must identify the reviewed parent, name and
+size. Ambiguous responses become unknown history outcomes without retry.
+Provider create_only restrictions block replacements in preview and execution in
+both directions. Empty uploads and missing cloud parent folders are excluded.
+These limitations and live acceptance remain open in CLOUD_STORAGE.md.

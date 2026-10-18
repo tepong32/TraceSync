@@ -2,7 +2,7 @@ from core.backup_service import BackupService
 from core.comparer import compare_folders
 from core.ignore.ignore_engine import create_ignore_engine
 from core.local_storage_provider import LocalStorageProvider
-from core.storage_provider import StorageProvider
+from core.storage_provider import StorageProvider, ConditionalTransferUnsupported
 from core.storage_scanner import StorageScanner
 from core.sync_history_service import SyncHistoryService
 from models.compare_status import CompareStatus
@@ -101,8 +101,9 @@ class SyncService:
         direction: SyncDirection,
     ) -> SyncPreview:
         """Create the complete copy plan without touching either provider."""
-        _, destination, eligible_statuses = self._direction_context(direction)
+        source, destination, eligible_statuses = self._direction_context(direction)
         items: list[SyncPreviewItem] = []
+        excluded = 0
 
         for result in results:
             if result.status not in eligible_statuses:
@@ -120,7 +121,17 @@ class SyncService:
             if source_record is None:
                 continue
             overwrite = destination_record is not None
-            destination_location = destination.location_for(result.relative_path)
+            if overwrite and (getattr(source, "create_only", False) or getattr(destination, "create_only", False)):
+                excluded += 1
+                continue
+            if getattr(destination, "create_only", False) and source_record.size == 0:
+                excluded += 1
+                continue
+            try:
+                destination_location = destination.location_for(result.relative_path)
+            except ConditionalTransferUnsupported:
+                excluded += 1
+                continue
             items.append(
                 SyncPreviewItem(
                     relative_path=result.relative_path,
@@ -148,6 +159,8 @@ class SyncService:
             )
 
         warnings: list[str] = []
+        if excluded:
+            warnings.append(f"{excluded} file(s) excluded: cloud overwrites, empty uploads, or missing destination folders are not supported yet.")
         overwrites = sum(item.overwrite for item in items)
         if overwrites:
             warnings.append(

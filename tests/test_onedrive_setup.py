@@ -43,6 +43,86 @@ class OneDriveSetupTests(unittest.TestCase):
         self.assertNotIn("token", self.file.read_text())
         self.assertNotIn("server_folder", pair)
 
+    def test_saved_auth_reference_survives_reload_without_token(self):
+        self.auth.account_reference = "home-account"
+        pair = self.connect_and_save()
+        self.assertEqual(self.service.saved_pairs()[0]["server_endpoint"]["auth_account_id"], "home-account")
+        self.assertNotIn("secret-access-token", self.file.read_text())
+
+    def test_restore_renews_exact_account_and_checks_account_drive_folder(self):
+        self.auth.account_reference = "home-account"
+        pair = self.connect_and_save()
+        self.auth.acquire_for_account.return_value = ("renewed", {})
+        before = self.file.read_bytes()
+        restored, folder, children = self.service.restore_pair("Personal")
+        self.auth.acquire_for_account.assert_called_once_with("home-account", interactive=False)
+        self.assertEqual(restored, pair)
+        self.assertEqual(folder.id, "docs")
+        self.assertEqual(before, self.file.read_bytes())
+
+    def test_wrong_account_or_drive_blocks_before_folder_access(self):
+        self.auth.account_reference = "home-account"
+        self.connect_and_save()
+        self.auth.acquire_for_account.return_value = ("renewed", {})
+        before = self.file.read_bytes()
+        for account, drive in (("wrong", "drive"), ("account", "wrong")):
+            with self.subTest(account=account, drive=drive):
+                self.gateway.identity.return_value = (account, "same-display-name", drive)
+                self.gateway.folder.reset_mock()
+                with self.assertRaises(OneDriveSetupError):
+                    self.service.restore_pair("Personal")
+                self.gateway.folder.assert_not_called()
+                self.assertIsNone(self.service.root)
+        self.assertEqual(before, self.file.read_bytes())
+
+    def test_legacy_pair_requires_explicit_reconnect_and_verifies_graph_identity(self):
+        self.connect_and_save()
+        self.auth.reset_mock()
+        with self.assertRaises(OneDriveSetupError):
+            self.service.restore_pair("Personal")
+        self.auth.connect.assert_not_called()
+        pair, folder, children = self.service.restore_pair("Personal", interactive=True)
+        self.auth.connect.assert_called_once()
+        self.assertEqual(folder.id, "docs")
+
+    def test_verified_legacy_reconnect_saves_cache_reference_for_future_silent_open(self):
+        self.connect_and_save()
+        self.auth.account_reference = "verified-home"
+        self.service.restore_pair("Personal", interactive=True)
+        stored = self.service.saved_pairs()[0]
+        self.assertEqual(stored["server_endpoint"]["auth_account_id"], "verified-home")
+        self.assertNotIn("secret-access-token", self.file.read_text())
+
+    def test_legacy_reconnect_never_binds_wrong_graph_identity(self):
+        self.connect_and_save()
+        before = self.file.read_bytes()
+        self.auth.account_reference = "wrong-home"
+        self.gateway.identity.return_value = ("wrong-account", "Person", "drive")
+        with self.assertRaises(OneDriveSetupError):
+            self.service.restore_pair("Personal", interactive=True)
+        self.assertEqual(self.file.read_bytes(), before)
+
+    def test_removed_folder_and_failed_browse_clear_connection_without_changing_settings(self):
+        self.auth.account_reference = "home-account"
+        self.connect_and_save()
+        self.auth.acquire_for_account.return_value = ("renewed", {})
+        before = self.file.read_bytes()
+        self.gateway.children.side_effect = OneDriveSetupError("Access denied")
+        with self.assertRaises(OneDriveSetupError):
+            self.service.restore_pair("Personal")
+        self.assertIsNone(self.service.root)
+        self.assertEqual(self.service.account_id, "")
+        self.assertEqual(before, self.file.read_bytes())
+
+    def test_disconnect_preserves_pairs_and_requests_account_scoped_removal(self):
+        self.auth.account_reference = "home-account"
+        self.connect_and_save()
+        before = self.file.read_bytes()
+        self.service.disconnect_pair("Personal")
+        self.auth.forget_account.assert_called_once_with("home-account")
+        self.assertEqual(before, self.file.read_bytes())
+        self.assertIsNone(self.service.root)
+
     def test_cannot_save_or_browse_without_connecting(self):
         before = self.file.read_bytes()
         with self.assertRaises(OneDriveSetupError):

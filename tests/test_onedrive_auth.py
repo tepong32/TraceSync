@@ -4,10 +4,70 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from core.onedrive_auth import OneDriveAuth, OneDriveConfigurationError, OneDriveTokenStore
+from core.onedrive_auth import OneDriveAuth, OneDriveConfigurationError, OneDriveTokenStore, OneDriveReconnectRequired
 
 
 class OneDriveAuthTests(unittest.TestCase):
+    def make_auth(self):
+        auth = OneDriveAuth(Mock(), client_id="test-client")
+        app = Mock()
+        app.get_accounts.return_value = [
+            {"home_account_id": "other", "local_account_id": "local-other", "realm": "tenant"},
+            {"home_account_id": "saved", "local_account_id": "local-saved", "realm": "tenant"},
+        ]
+        auth._app = app
+        return auth, app
+
+    def test_silent_renewal_selects_saved_account_not_first_cached_account(self):
+        auth, app = self.make_auth()
+        app.acquire_token_silent.return_value = {"access_token": "renewed"}
+        with patch.dict(sys.modules, {"msal": Mock()}):
+            self.assertEqual(auth.acquire_for_account("saved")[0], "renewed")
+        self.assertEqual(app.acquire_token_silent.call_args.kwargs["account"]["home_account_id"], "saved")
+        app.acquire_token_interactive.assert_not_called()
+
+    def test_missing_ambiguous_or_expired_cache_requires_reconnect_without_browser(self):
+        for case in ("missing", "ambiguous", "expired", "network"):
+            with self.subTest(case=case):
+                auth, app = self.make_auth()
+                if case == "missing":
+                    app.get_accounts.return_value = []
+                elif case == "ambiguous":
+                    app.get_accounts.return_value = [{"home_account_id": "saved"}] * 2
+                elif case == "network":
+                    app.acquire_token_silent.side_effect = RuntimeError("secret-token")
+                else:
+                    app.acquire_token_silent.return_value = None
+                with patch.dict(sys.modules, {"msal": Mock()}):
+                    with self.assertRaises(OneDriveReconnectRequired) as error:
+                        auth.acquire_for_account("saved")
+                self.assertNotIn("secret-token", str(error.exception))
+                app.acquire_token_interactive.assert_not_called()
+
+    def test_explicit_reconnect_rejects_different_account(self):
+        auth, app = self.make_auth()
+        app.acquire_token_interactive.return_value = {
+            "access_token": "other-token", "id_token_claims": {"oid": "local-other", "tid": "tenant"}}
+        with patch.dict(sys.modules, {"msal": Mock()}):
+            with self.assertRaises(OneDriveReconnectRequired):
+                auth.acquire_for_account("saved", interactive=True)
+        self.assertEqual(auth.account_reference, "")
+
+    def test_interactive_result_binds_exact_cache_identity(self):
+        auth, app = self.make_auth()
+        app.acquire_token_interactive.return_value = {
+            "access_token": "saved-token", "id_token_claims": {"oid": "local-saved", "tid": "tenant"}}
+        with patch.dict(sys.modules, {"msal": Mock()}):
+            auth.acquire_for_account("saved", interactive=True)
+        self.assertEqual(auth.account_reference, "saved")
+
+    def test_disconnect_removes_only_matching_account_and_preserves_cache_file(self):
+        auth, app = self.make_auth()
+        with patch.dict(sys.modules, {"msal": Mock()}):
+            auth.forget_account("saved")
+        app.remove_account.assert_called_once_with(app.get_accounts.return_value[1])
+        auth.token_store.delete.assert_not_called()
+
     def test_connect_uses_personal_public_client_and_explicit_account_choice(self):
         msal = Mock()
         app = msal.PublicClientApplication.return_value

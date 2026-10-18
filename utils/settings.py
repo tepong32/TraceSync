@@ -92,6 +92,9 @@ def _normalize_folder_pairs(raw_pairs) -> list[dict[str, str]]:
                     "server_endpoint": {"provider": "onedrive", **{
                         key: endpoint[key].strip() for key in fields}},
                 })
+                account_reference = endpoint.get("auth_account_id")
+                if isinstance(account_reference, str) and account_reference.strip():
+                    normalized[-1]["server_endpoint"]["auth_account_id"] = account_reference.strip()
             continue
         server_folder = pair.get("server_folder")
         if not all(

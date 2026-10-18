@@ -31,7 +31,14 @@ deletion mirroring or automatic conflict resolution is authorized.
 Source checkpoint v0.13.0: `codex/onedrive-account-folder-pairs` now has
 read-only account/folder setup and credential-free saved pairs with offline tests.
 It is offline-tested, not live-accepted. Cloud comparison and copying remain blocked.
-The next slice must restore/activate pairs with account matching and token renewal.
+The setup checkpoint is now integrated into master. Work continues on
+codex/onedrive-reviewed-copy: reopening with account/drive/folder verification,
+account-matched silent renewal, explicit reconnect and scoped disconnect are
+implemented locally. Verified pairs now activate comparison and confirmed create-only
+transfers with history. Overwrites remain disabled in both directions. Empty uploads
+and missing cloud parent folders are excluded; reviewed folder creation, empty upload
+semantics, saved-pair editing and live/packaged acceptance remain pending. The
+reviewed-copy milestone is still in progress; integration is checkpointed as source v0.14.0, with no new binary.
 
 Read [CLOUD_STORAGE.md](CLOUD_STORAGE.md) for the authoritative accepted plan and
 [BRANCH_WORKFLOW.md](BRANCH_WORKFLOW.md) before implementation. The setup checkpoint adds source-level setup UI; it does not release cloud copying.

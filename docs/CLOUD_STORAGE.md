@@ -1,6 +1,31 @@
 # Cloud storage provider plan
 
-## Active branch checkpoint
+## Active reviewed-copy branch
+
+`codex/onedrive-reviewed-copy` starts from published source checkpoint v0.13.0
+(d18f494). The setup branch is integrated into master; no cloud executable has
+been published. Public download remains v0.11.0.
+
+The current offline-tested slice adds saved-pair reopening, exact MSAL account
+selection for silent renewal, explicit reconnect with independent Graph account/
+drive/folder checks, and account-scoped cache removal. Optional auth_account_id is
+non-secret persisted identity; old pairs require explicit reconnect before cache
+binding. Mismatches, lost access and unavailable local folders block reopening.
+Use saved pair activates verified endpoints in the main workspace. Comparison is
+read-only and runs off the UI thread. Existing review, confirmation and durable
+history now cover new-file uploads/downloads. Each Graph request renews the exact
+account token; signed transfer URLs never receive bearer credentials. Upload
+sessions explicitly fail on conflicts and validate completion; ambiguous outcomes
+are recorded as unknown without retry. Download metadata is checked around staging.
+
+Overwrites are blocked in both directions, including forged previews. Nonempty
+uploads require existing cloud parent folders; empty uploads and missing parent
+folders are excluded with preview warnings. Empty downloads are supported.
+Reviewed folder creation, empty upload semantics, saved-pair edit/delete UX and
+live/packaged acceptance remain open. The reviewed-copy milestone is not complete.
+No live account was used; local fakes validate contracts, not provider acceptance.
+
+## Setup checkpoint v0.13.0
 
 `codex/onedrive-account-folder-pairs` starts from documentation checkpoint
 `e5678b2` (source tag v0.12.0). The public executable remains v0.11.0.
@@ -15,8 +40,8 @@ Folder Pairs in the existing settings collection. Cloud IDs are stored under
 Cloud pairs are listed in setup but cannot activate local comparison/sync. Local
 pair management preserves cloud definitions and reserves their names.
 
-The next branch owns pair activation, account-matched silent token renewal,
-reconnect/sign-out UX, provider transfer contracts and history integration.
+The reviewed-copy branch owns the subsequent identity and transfer integration;
+its current progress and remaining scope are recorded above.
 This setup preview does not implement cloud copying, empty-file uploads, destination
 folder creation or safe replacement. Editing/deleting saved cloud pairs and
 restoring them in the setup browser also remain follow-up work.

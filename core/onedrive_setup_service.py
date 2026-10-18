@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
-from core.onedrive_auth import OneDriveAuth, OneDriveTokenStore
+from core.onedrive_auth import OneDriveAuth, OneDriveTokenStore, OneDriveReconnectRequired
 from utils.settings import SettingsService
 
 
@@ -94,10 +94,7 @@ class OneDriveSetupService:
         self._known = {}
 
     def connect(self):
-        self._gateway = None
-        self.root = None
-        self._known.clear()
-        self.account_id = self.account_name = self.drive_id = ""
+        self._clear_connection()
         try:
             if self._auth is None:
                 self._auth = OneDriveAuth(OneDriveTokenStore())
@@ -118,6 +115,93 @@ class OneDriveSetupService:
         self.root = root
         self._known[root.id] = root
         return root
+
+    def _clear_connection(self):
+        self._gateway = None
+        self.root = None
+        self._known.clear()
+        self.account_id = self.account_name = self.drive_id = ""
+
+    def restore_pair(self, name, *, interactive=False):
+        """Resolve saved native IDs without enabling comparison or copying."""
+        self._clear_connection()
+        pair = next((pair for pair in self.saved_pairs() if pair["name"] == name), None)
+        if pair is None:
+            raise OneDriveSetupError("This saved Folder Pair is no longer available.")
+        if not Path(pair["local_folder"]).is_dir():
+            raise OneDriveSetupError("The saved local folder is unavailable. Restore access before opening this pair.")
+        endpoint = pair["server_endpoint"]
+        try:
+            if self._auth is None:
+                self._auth = OneDriveAuth(OneDriveTokenStore())
+            reference = endpoint.get("auth_account_id", "")
+            if reference:
+                token, _result = self._auth.acquire_for_account(reference, interactive=interactive)
+            elif interactive:
+                token, _result = self._auth.connect()
+            else:
+                raise OneDriveReconnectRequired("This older pair needs an explicit reconnect to verify its account.")
+            gateway = self._gateway_factory(token)
+            account_id, account_name, drive_id = gateway.identity()
+            if account_id != endpoint["account_id"] or drive_id != endpoint["drive_id"]:
+                raise OneDriveSetupError("The connected account or drive does not match this Folder Pair. Reconnect the saved account.")
+            folder = gateway.folder(drive_id, endpoint["folder_id"])
+            if folder.id != endpoint["folder_id"]:
+                raise OneDriveSetupError("The saved cloud folder changed. Choose the folder again.")
+            folders = gateway.children(drive_id, folder.id)
+            # Upgrade an older pair's cache reference only after explicit sign-in
+            # and independent Graph identity checks. Keep unrelated settings.
+            renewed_reference = getattr(self._auth, "account_reference", "")
+            if (interactive and isinstance(renewed_reference, str) and renewed_reference
+                    and renewed_reference != endpoint.get("auth_account_id")):
+                settings = self._settings.load()
+                current = next((item for item in settings.get("folder_pairs", [])
+                                if item["name"] == name), None)
+                if current != pair:
+                    raise OneDriveSetupError("The saved pair changed while reconnecting. Open it again.")
+                pair = dict(pair, server_endpoint=dict(endpoint, auth_account_id=renewed_reference))
+                settings["folder_pairs"] = [pair if item["name"] == name else item
+                                            for item in settings["folder_pairs"]]
+                self._settings.save(settings)
+        except OneDriveReconnectRequired as error:
+            raise OneDriveSetupError(str(error)) from None
+        except OneDriveSetupError:
+            raise
+        except Exception:
+            raise OneDriveSetupError("Could not reopen this Folder Pair. Check access and reconnect if needed.") from None
+        self._gateway = gateway
+        self.account_id, self.account_name, self.drive_id = account_id, account_name, drive_id
+        self.root = folder
+        self._known = {item.id: item for item in [folder, *folders]}
+        return pair, folder, folders
+
+    def disconnect_pair(self, name):
+        self._clear_connection()
+        pair = next((pair for pair in self.saved_pairs() if pair["name"] == name), None)
+        if pair is None:
+            raise OneDriveSetupError("Choose a saved Folder Pair first.")
+        try:
+            if self._auth is None:
+                self._auth = OneDriveAuth(OneDriveTokenStore())
+            self._auth.forget_account(pair["server_endpoint"].get("auth_account_id", ""))
+        except OneDriveReconnectRequired as error:
+            raise OneDriveSetupError(str(error)) from None
+        except Exception:
+            raise OneDriveSetupError("The saved sign-in could not be removed. Please try again.") from None
+
+    def prepare_comparison(self, name):
+        """Resolve a saved pair afresh, then bind the transport to its exact account."""
+        from core.onedrive_provider import OneDriveProvider
+        pair, folder, _children = self.restore_pair(name)
+        reference = pair["server_endpoint"].get("auth_account_id", "")
+        if not reference:
+            raise OneDriveSetupError("Reconnect this pair before using it for comparison.")
+        auth = self._auth
+        def token_supplier():
+            return auth.acquire_for_account(reference)[0]
+        provider = OneDriveProvider(self.drive_id, folder.id, folder.name, token_supplier,
+                                    session=self._gateway._session)
+        return pair, provider
 
     def list_folders(self, folder_id):
         if self._gateway is None or folder_id not in self._known:
@@ -148,6 +232,9 @@ class OneDriveSetupService:
                 "folder_id": folder.id, "folder_name": folder.name,
             },
         }
+        reference = getattr(self._auth, "account_reference", "")
+        if isinstance(reference, str) and reference:
+            pair["server_endpoint"]["auth_account_id"] = reference
         updated = dict(settings, folder_pairs=[*pairs, pair])
         self._settings.save(updated)
         return pair

@@ -72,6 +72,9 @@ class StorageProvider(ABC):
     preview generation or job execution.
     """
 
+    # Workflow restriction in either direction, independent of transfer capabilities.
+    create_only = False
+
     @property
     @abstractmethod
     def display_name(self) -> str:
