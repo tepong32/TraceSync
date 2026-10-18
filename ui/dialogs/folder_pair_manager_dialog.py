@@ -15,6 +15,7 @@ class FolderPairManagerDialog(tk.Toplevel):
         current_server="",
         selected_name="",
         start_new=False,
+        reserved_names=(),
     ):
         super().__init__(parent)
         self.title("Folder Pairs")
@@ -24,6 +25,7 @@ class FolderPairManagerDialog(tk.Toplevel):
         self.grab_set()
 
         self.pairs = [dict(pair) for pair in pairs]
+        self._reserved_names = {name.casefold() for name in reserved_names}
         self.confirmed = False
         self._selected_index = None
         self._suggested_name = None
@@ -207,6 +209,9 @@ class FolderPairManagerDialog(tk.Toplevel):
                 "Please select both a Local Folder and a Server Folder.",
                 parent=self,
             )
+            return None
+        if name.casefold() in self._reserved_names:
+            messagebox.showwarning("Duplicate Name", "A cloud Folder Pair already uses this name.", parent=self)
             return None
         for index, pair in enumerate(self.pairs):
             if index == self._selected_index:

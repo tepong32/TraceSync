@@ -77,3 +77,22 @@ SFTP is excluded from this release and remains unfinished development.
 ## Presentation
 
 `ui/theme.py` centralizes styles; `WorkflowGuide` presents safe next actions in green and copy review in amber. `ScrollablePanel` keeps optional provider controls bounded and keyboard reachable. Styling never authorizes synchronization.
+
+## OneDrive setup boundary (development branch)
+
+OneDriveSetupService owns connection identity, read-only folder browsing and pair
+persistence; OneDriveSetupGateway owns bounded Graph GETs, pagination, and safe
+errors. OneDriveSetupDialog coordinates presentation through a worker/queue and
+Tk polling, with no filesystem scans or synchronization. The auth adapter uses
+MSAL's public-client browser flow and an encrypted persisted token cache.
+
+Existing local Folder Pair records retain their schema. Cloud records add an
+allowlisted server_endpoint containing provider, account ID/label, drive ID and
+folder ID/label. There is no server_folder fallback. Invalid cloud records are
+rejected; cloud pairs cannot be active local pairs. SettingsService normalizes
+before serializing to a temporary sibling, flushes/fsyncs, then atomically replaces
+settings.json. This protects against incomplete writes, not concurrent-process
+settings edits. Local manager edits preserve cloud records and reserve their names.
+
+Cloud transfers are deliberately not constructed by this setup branch. See
+[CLOUD_STORAGE.md](CLOUD_STORAGE.md) for remaining integration and acceptance gates.

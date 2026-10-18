@@ -12,6 +12,7 @@ from models.sync_direction import SyncDirection
 from models.comparison_decision import ConfidenceLevel
 from ui.dialogs.file_details_dialog import FileDetailsDialog
 from ui.dialogs.folder_pair_manager_dialog import FolderPairManagerDialog
+from ui.dialogs.onedrive_setup_dialog import OneDriveSetupDialog
 from ui.dialogs.ignore_settings_dialog import IgnoreSettingsDialog
 from ui.dialogs.sync_confirmation_dialog import SyncConfirmationDialog
 from ui.dialogs.sync_history_dialog import SyncHistoryDialog
@@ -101,6 +102,8 @@ class MainWindow(tk.Tk):
             style="UtilityNeutral.TButton",
         )
         self.folder_pair_save_button.grid(row=0, column=3)
+        ttk.Button(pair_toolbar, text="OneDrive setup...", command=self.open_onedrive_setup,
+                   style="UtilityNeutral.TButton").grid(row=1, column=0, columnspan=4, sticky="e", pady=(8, 0))
 
         folder_frame = ttk.Frame(self, padding=(16, 12))
         folder_frame.pack(fill="x")
@@ -499,6 +502,16 @@ class MainWindow(tk.Tk):
             return f"{drive}\\"
         return drive
 
+    def _local_folder_pairs(self):
+        return [pair for pair in self.settings.get("folder_pairs", []) if "server_endpoint" not in pair]
+
+    def open_onedrive_setup(self):
+        dialog = OneDriveSetupDialog(self)
+        self.wait_window(dialog)
+        # Only refresh saved definitions; setup never changes active endpoints.
+        self.settings["folder_pairs"] = SettingsService.load().get("folder_pairs", [])
+        self._refresh_folder_pair_values()
+
     def _find_folder_pair_by_name(self, pair_name):
         if not pair_name:
             return None
@@ -506,7 +519,7 @@ class MainWindow(tk.Tk):
         return next(
             (
                 pair
-                for pair in self.settings.get("folder_pairs", [])
+                for pair in self._local_folder_pairs()
                 if pair["name"].casefold() == name_key
             ),
             None,
@@ -520,7 +533,7 @@ class MainWindow(tk.Tk):
         return next(
             (
                 pair
-                for pair in self.settings.get("folder_pairs", [])
+                for pair in self._local_folder_pairs()
                 if self._folder_path_identity(pair["local_folder"]) == local_identity
                 and self._folder_path_identity(pair["server_folder"]) == server_identity
             ),
@@ -528,7 +541,7 @@ class MainWindow(tk.Tk):
         )
 
     def _refresh_folder_pair_values(self):
-        names = [pair["name"] for pair in self.settings.get("folder_pairs", [])]
+        names = [pair["name"] for pair in self._local_folder_pairs()]
         self.folder_pair_combo.configure(values=names)
         if not names:
             self.folder_pair_var.set("")
@@ -561,7 +574,8 @@ class MainWindow(tk.Tk):
     def _show_folder_pair_manager(self, *, start_new):
         dialog = FolderPairManagerDialog(
             self,
-            self.settings.get("folder_pairs", []),
+            self._local_folder_pairs(),
+            reserved_names=[pair["name"] for pair in self.settings.get("folder_pairs", []) if "server_endpoint" in pair],
             current_local=self.local_var.get().strip(),
             current_server=self.server_var.get().strip(),
             selected_name=self.folder_pair_var.get(),
@@ -570,7 +584,8 @@ class MainWindow(tk.Tk):
         self.wait_window(dialog)
         if not dialog.confirmed:
             return
-        self.settings["folder_pairs"] = dialog.pairs
+        cloud_pairs = [pair for pair in self.settings.get("folder_pairs", []) if "server_endpoint" in pair]
+        self.settings["folder_pairs"] = [*dialog.pairs, *cloud_pairs]
         self._refresh_folder_pair_values()
         self._sync_folder_pair_selection_from_paths()
         SettingsService.save(self.settings)

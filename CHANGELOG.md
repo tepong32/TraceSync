@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.13.0] - 2026-10-18
+### Added
+- Add OneDrive account and folder pair setup preview
+
+## Included in v0.13.0 — OneDrive setup source preview
+
+- Add asynchronous personal-account setup, folder browsing and saved cloud pairs.
+- Keep cloud execution disabled and local Folder Pairs compatible.
+- Preserve existing settings when writing a new settings file fails.
+
+
 ## [0.12.0] - 2026-10-18
 ### Documentation
 - Document personal cloud direction and scoped milestone workflow

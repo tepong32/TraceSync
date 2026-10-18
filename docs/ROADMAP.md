@@ -28,9 +28,13 @@ preserved separately and must not be merged implicitly.
 
 Manually initiated runs remain the product scope. No background scheduling,
 deletion mirroring or automatic conflict resolution is authorized.
+Source checkpoint v0.13.0: `codex/onedrive-account-folder-pairs` now has
+read-only account/folder setup and credential-free saved pairs with offline tests.
+It is offline-tested, not live-accepted. Cloud comparison and copying remain blocked.
+The next slice must restore/activate pairs with account matching and token renewal.
+
 Read [CLOUD_STORAGE.md](CLOUD_STORAGE.md) for the authoritative accepted plan and
-[BRANCH_WORKFLOW.md](BRANCH_WORKFLOW.md) before implementation. This checkpoint
-changes documentation only; no cloud connection is usable on primary yet.
+[BRANCH_WORKFLOW.md](BRANCH_WORKFLOW.md) before implementation. The setup checkpoint adds source-level setup UI; it does not release cloud copying.
 
 ## Documentation Hierarchy
 

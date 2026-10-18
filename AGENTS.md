@@ -385,3 +385,12 @@ belong in settings. Cloud replacements need their own safety/recovery contract.
 
 
 Follow docs/BRANCH_WORKFLOW.md for milestone branches and integration gates.
+
+### OneDrive setup branch state
+
+The account/folder-pair branch contains setup only, with cloud execution disabled.
+Read docs/CLOUD_STORAGE.md's active checkpoint before extending it. Cloud Folder
+Pairs use server_endpoint native IDs and must never enter local-path selectors.
+Keep network/auth work off the Tk thread. Settings saves stage and atomically
+replace the JSON file; failed writes must preserve previous settings. Live OAuth,
+protected-cache packaging and account-matched reconnect remain acceptance gates.

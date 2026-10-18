@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 from pathlib import Path
 
 SETTINGS_FILE = Path("settings.json")
@@ -73,6 +75,24 @@ def _normalize_folder_pairs(raw_pairs) -> list[dict[str, str]]:
 
         name = pair.get("name")
         local_folder = pair.get("local_folder")
+        if "server_endpoint" in pair:
+            endpoint = pair["server_endpoint"]
+            fields = ("account_id", "account_name", "drive_id", "folder_id", "folder_name")
+            if (not isinstance(endpoint, dict) or endpoint.get("provider") != "onedrive"
+                    or not all(isinstance(value, str) and value.strip()
+                               for value in (name, local_folder))
+                    or not all(isinstance(endpoint.get(key), str) and endpoint[key].strip()
+                               for key in fields)):
+                continue
+            name_key = name.strip().casefold()
+            if name_key not in seen_names:
+                seen_names.add(name_key)
+                normalized.append({
+                    "name": name.strip(), "local_folder": local_folder.strip(),
+                    "server_endpoint": {"provider": "onedrive", **{
+                        key: endpoint[key].strip() for key in fields}},
+                })
+            continue
         server_folder = pair.get("server_folder")
         if not all(
             isinstance(value, str)
@@ -107,7 +127,7 @@ def _normalize_active_folder_pair(raw_name, folder_pairs) -> str:
         return ""
 
     for pair in folder_pairs:
-        if pair["name"].casefold() == name_key:
+        if "server_endpoint" not in pair and pair["name"].casefold() == name_key:
             return pair["name"]
     return ""
 
@@ -171,30 +191,34 @@ class SettingsService:
 
     @staticmethod
     def save(settings):
-        with open(
-            SETTINGS_FILE,
-            "w",
-            encoding="utf-8"
-        ) as f:
-            settings_copy = dict(settings)
-            settings_copy["ignore_patterns"] = _normalize_ignore_patterns(
-                settings_copy.get("ignore_patterns"),
-            )
-            settings_copy["providers"] = _normalize_provider_settings(
-                settings_copy.get("providers"),
-            )
-            settings_copy["folder_pairs"] = _normalize_folder_pairs(
-                settings_copy.get(
-                    "folder_pairs",
-                    settings_copy.get("recent_pairs", []),
-                ),
-            )
-            settings_copy["active_folder_pair"] = _normalize_active_folder_pair(
-                settings_copy.get("active_folder_pair"),
-                settings_copy["folder_pairs"],
-            )
-            json.dump(
-                settings_copy,
-                f,
-                indent=4,
-            )
+        settings_copy = dict(settings)
+        settings_copy["ignore_patterns"] = _normalize_ignore_patterns(
+            settings_copy.get("ignore_patterns"),
+        )
+        settings_copy["providers"] = _normalize_provider_settings(
+            settings_copy.get("providers"),
+        )
+        settings_copy["folder_pairs"] = _normalize_folder_pairs(
+            settings_copy.get(
+                "folder_pairs",
+                settings_copy.get("recent_pairs", []),
+            ),
+        )
+        settings_copy["active_folder_pair"] = _normalize_active_folder_pair(
+            settings_copy.get("active_folder_pair"),
+            settings_copy["folder_pairs"],
+        )
+        # Serialize before touching the destination; replace only a complete file.
+        content = json.dumps(settings_copy, indent=4)
+        staged = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=SETTINGS_FILE.parent,
+                                             prefix=".tracesync-settings-", delete=False) as output:
+                staged = Path(output.name)
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(staged, SETTINGS_FILE)
+        finally:
+            if staged is not None:
+                staged.unlink(missing_ok=True)

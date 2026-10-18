@@ -1,8 +1,42 @@
 # Cloud storage provider plan
 
-## Status
+## Active branch checkpoint
 
-Development evidence below belongs to the preserved local `codex/cloud-sftp-resume` workspace based on v0.11.0, not this documentation-only primary-branch checkpoint.
+`codex/onedrive-account-folder-pairs` starts from documentation checkpoint
+`e5678b2` (source tag v0.12.0). The public executable remains v0.11.0.
+This branch imports only `core/onedrive_auth.py` from the preserved scaffold
+(origin/codex/onedrive-provider at 6d21895), then adapts explicit personal-account
+sign-in. It does not import the transfer provider or unfinished SFTP code.
+
+Captured in source checkpoint v0.13.0: a dedicated setup dialog, asynchronous browser sign-in and
+read-only folder navigation, paginated Graph folder listings, and saved OneDrive
+Folder Pairs in the existing settings collection. Cloud IDs are stored under
+`server_endpoint`, never as local filesystem paths. Tokens remain outside settings.
+Cloud pairs are listed in setup but cannot activate local comparison/sync. Local
+pair management preserves cloud definitions and reserves their names.
+
+The next branch owns pair activation, account-matched silent token renewal,
+reconnect/sign-out UX, provider transfer contracts and history integration.
+This setup preview does not implement cloud copying, empty-file uploads, destination
+folder creation or safe replacement. Editing/deleting saved cloud pairs and
+restoring them in the setup browser also remain follow-up work.
+
+Developer-only prerequisites for future live validation: a Microsoft public-client
+registration accepting personal accounts, localhost redirect, and optional msal,
+msal-extensions and requests packages. Configure TRACESYNC_ONEDRIVE_CLIENT_ID in a
+development environment; consumers must not be asked to register an app. SDK
+versions/packaging are not validated or added to release requirements in this
+slice. No live OAuth, credential-cache, Graph or packaged test was performed.
+
+Explicit Connect always lets the user select an account; it does not silently
+choose the first cached account. MSAL's protected cache adapter is tested with a
+fake library; actual Windows DPAPI acceptance remains open. Closing during sign-in
+discards setup results but cannot revoke browser sign-in already in progress.
+Closing is temporarily disabled while a save finishes; no partial pair is applied.
+
+## Preserved scaffold evidence
+
+Development evidence below belongs to the preserved local `codex/cloud-sftp-resume` workspace based on v0.11.0, not the scoped setup checkpoint.
 It preserves SFTP work and imports scaffold files from remote Google Drive
 `5f01d88` and OneDrive `6d21895` feature branches. Those histories have not been
 merged into master. The remote v0.11.1 tag denotes scaffolding, not a published

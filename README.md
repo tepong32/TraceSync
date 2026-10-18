@@ -147,3 +147,12 @@ longer in the consumer roadmap; existing work is preserved separately. The publi
 v0.11.0 download remains unchanged by the documentation checkpoint. See
 [approved plan](docs/CLOUD_STORAGE.md), [roadmap](docs/ROADMAP.md), and
 [branch workflow](docs/BRANCH_WORKFLOW.md). Cloud connections are not released.
+
+### OneDrive setup development preview
+
+This feature branch adds **OneDrive setup...** beside Folder Pairs. It connects a
+personal account, browses cloud folders, and saves a named local/cloud relationship.
+Cloud copying is not enabled. Without a configured development build, connection
+reports that setup is unavailable; local workflows continue without cloud SDKs.
+Offline tests inject authentication and Graph responses; see
+[the current setup checkpoint](docs/CLOUD_STORAGE.md#active-branch-checkpoint).

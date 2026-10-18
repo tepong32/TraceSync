@@ -1,0 +1,191 @@
+"""Non-blocking setup presentation; service owns auth, browsing and persistence."""
+import queue
+import threading
+import tkinter as tk
+from tkinter import filedialog, ttk
+
+from ui.theme import AMBER
+from core.onedrive_setup_service import OneDriveSetupError, OneDriveSetupService
+
+
+class OneDriveSetupDialog(tk.Toplevel):
+    def __init__(self, parent, service=None):
+        super().__init__(parent)
+        self.service = service or OneDriveSetupService()
+        self.title("OneDrive Folder Pair — setup preview")
+        self.geometry("720x640")
+        self.minsize(640, 580)
+        self.transient(parent)
+        self.grab_set()
+        self._queue = queue.Queue()
+        self._busy = False
+        self._saving = False
+        self._closed = False
+        self._poll_id = None
+        self._path = []
+        self._folders = []
+        self.account = tk.StringVar(value="No account connected")
+        self.location = tk.StringVar(value="Choose a cloud folder after connecting")
+        self.name = tk.StringVar()
+        self.local = tk.StringVar()
+        self.status = tk.StringVar(value="Next: connect your personal Microsoft account.")
+        body = ttk.Frame(self, padding=16)
+        body.pack(fill="both", expand=True)
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(4, weight=1)
+        ttk.Label(body, text="Connect account → Choose folder → Save Folder Pair",
+                  style="WorkflowTitle.TLabel", padding=10).grid(row=0, column=0, sticky="ew")
+        ttk.Label(body, text="Setup preview: saves your choices. Cloud comparison and copying are not enabled.",
+                  wraplength=650, foreground=AMBER).grid(row=1, column=0, sticky="w", pady=10)
+        self.connect_button = ttk.Button(body, text="Connect account", command=self._connect,
+                                         style="GuideNext.TButton")
+        self.connect_button.grid(row=2, column=0, sticky="w")
+        ttk.Label(body, textvariable=self.account).grid(row=3, column=0, sticky="w", pady=8)
+        browser = ttk.LabelFrame(body, text="Choose OneDrive folder", padding=8)
+        browser.grid(row=4, column=0, sticky="nsew")
+        browser.columnconfigure(0, weight=1)
+        browser.rowconfigure(1, weight=1)
+        ttk.Label(browser, textvariable=self.location, wraplength=580).grid(row=0, column=0, columnspan=3, sticky="w")
+        self.folders = tk.Listbox(browser, exportselection=False, height=7)
+        self.folders.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=8)
+        scroll = ttk.Scrollbar(browser, command=self.folders.yview)
+        scroll.grid(row=1, column=2, sticky="ns")
+        self.folders.configure(yscrollcommand=scroll.set)
+        self.folders.bind("<Double-1>", lambda event: self._open())
+        self.open_button = ttk.Button(browser, text="Open selected folder", command=self._open)
+        self.open_button.grid(row=2, column=0, sticky="w")
+        self.up_button = ttk.Button(browser, text="Up", command=self._up)
+        self.up_button.grid(row=2, column=1, sticky="e")
+        editor = ttk.Frame(body)
+        editor.grid(row=5, column=0, sticky="ew", pady=10)
+        editor.columnconfigure(1, weight=1)
+        ttk.Label(editor, text="Local folder").grid(row=0, column=0, sticky="w")
+        self.local_entry = ttk.Entry(editor, textvariable=self.local)
+        self.local_entry.grid(row=0, column=1, sticky="ew", padx=8)
+        self.browse_button = ttk.Button(editor, text="Browse...", command=self._browse)
+        self.browse_button.grid(row=0, column=2)
+        ttk.Label(editor, text="Pair name").grid(row=1, column=0, sticky="w", pady=8)
+        self.name_entry = ttk.Entry(editor, textvariable=self.name)
+        self.name_entry.grid(row=1, column=1, columnspan=2, sticky="ew", padx=8)
+        self.save_button = ttk.Button(body, text="Save pair with current cloud folder", command=self._save,
+                                      style="GuideNext.TButton")
+        self.save_button.grid(row=6, column=0, sticky="w")
+        ttk.Label(body, textvariable=self.status, wraplength=650).grid(row=7, column=0, sticky="w", pady=8)
+        self.saved = ttk.Label(body, wraplength=650)
+        self.saved.grid(row=8, column=0, sticky="w")
+        self.close_button = ttk.Button(body, text="Close", command=self._close)
+        self.close_button.grid(row=9, column=0, sticky="e", pady=(8, 0))
+        self.protocol("WM_DELETE_WINDOW", self._close)
+        self.bind("<Escape>", lambda event: self._close())
+        self._show_saved()
+        self._controls()
+
+    def _show_saved(self):
+        pairs = self.service.saved_pairs()
+        self.saved.configure(text="Saved OneDrive pairs: " + (", ".join(pair["name"] for pair in pairs) or "none"))
+
+    def _controls(self):
+        self.connect_button.configure(state="disabled" if self._busy else "normal",
+                                      style="TButton" if self._path else "GuideNext.TButton")
+        for widget in (self.open_button, self.save_button):
+            widget.configure(state="normal" if self._path and not self._busy else "disabled")
+        self.up_button.configure(state="normal" if len(self._path) > 1 and not self._busy else "disabled")
+        for widget in (self.browse_button, self.local_entry, self.name_entry):
+            widget.configure(state="disabled" if self._busy else "normal")
+        self.close_button.configure(state="disabled" if self._saving else "normal")
+
+    def _run(self, operation, completed, message):
+        if self._busy:
+            return
+        self._busy = True
+        self.status.set(message)
+        self._controls()
+        def worker():
+            try:
+                self._queue.put((True, operation()))
+            except OneDriveSetupError as error:
+                self._queue.put((False, str(error)))
+            except Exception:
+                self._queue.put((False, "Setup could not finish. Check your connection or settings and try again."))
+        threading.Thread(target=worker, daemon=True).start()
+        self._poll_id = self.after(50, lambda: self._poll(completed))
+
+    def _poll(self, completed):
+        if self._closed:
+            return
+        try:
+            success, result = self._queue.get_nowait()
+        except queue.Empty:
+            self._poll_id = self.after(50, lambda: self._poll(completed))
+            return
+        self._poll_id = None
+        self._busy = self._saving = False
+        if success:
+            completed(result)
+        else:
+            if not self._path:
+                self.account.set("No account connected")
+            self.status.set(result)
+        self._controls()
+
+    def _connect(self):
+        if self._busy:
+            return
+        self._path = []
+        self._folders = []
+        self.folders.delete(0, "end")
+        self.account.set("Connecting…")
+        self.location.set("No cloud folder selected")
+        def connect():
+            root = self.service.connect()
+            return root, self.service.list_folders(root.id)
+        def connected(result):
+            root, folders = result
+            self.account.set(self.service.account_name)
+            self._display([root], folders)
+        self._run(connect, connected, "Complete sign-in in your browser. Closing setup discards folder selection; browser sign-in may still finish.")
+
+    def _display(self, path, folders):
+        self._path, self._folders = path, folders
+        self.location.set(" / ".join(folder.name for folder in path))
+        self.folders.delete(0, "end")
+        for folder in folders:
+            self.folders.insert("end", folder.name)
+        self.status.set("Next: open a folder, or use this folder; choose a local folder and a pair name.")
+
+    def _navigate(self, path):
+        self._run(lambda: self.service.list_folders(path[-1].id),
+                  lambda folders: self._display(path, folders), "Opening folder…")
+
+    def _open(self):
+        selected = self.folders.curselection()
+        if selected and not self._busy and self._path:
+            self._navigate([*self._path, self._folders[selected[0]]])
+
+    def _up(self):
+        if len(self._path) > 1 and not self._busy:
+            self._navigate(self._path[:-1])
+
+    def _browse(self):
+        selected = filedialog.askdirectory(parent=self)
+        if selected:
+            self.local.set(selected)
+
+    def _save(self):
+        if self._busy or not self._path:
+            return
+        name, local, folder_id = self.name.get(), self.local.get(), self._path[-1].id
+        self._saving = True
+        def saved(pair):
+            self.status.set(f"Saved '{pair['name']}'. Cloud copying is not enabled in this preview.")
+            self._show_saved()
+        self._run(lambda: self.service.save_pair(name, local, folder_id), saved, "Verifying folder and saving pair…")
+
+    def _close(self):
+        if self._saving:
+            return
+        self._closed = True
+        if self._poll_id is not None:
+            self.after_cancel(self._poll_id)
+        self.grab_release()
+        self.destroy()
