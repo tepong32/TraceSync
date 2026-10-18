@@ -139,3 +139,11 @@ utils/      settings and application-version utilities
 tests/      synchronization, persistence, export, and UI behavior tests
 docs/       vision, roadmap, retrospective, architecture, backlog, and icebox
 ```
+
+## Cloud development direction
+
+OneDrive personal is the next milestone, followed by Google Drive. SFTP is no
+longer in the consumer roadmap; existing work is preserved separately. The public
+v0.11.0 download remains unchanged by the documentation checkpoint. See
+[approved plan](docs/CLOUD_STORAGE.md), [roadmap](docs/ROADMAP.md), and
+[branch workflow](docs/BRANCH_WORKFLOW.md). Cloud connections are not released.

@@ -14,11 +14,23 @@ Existing-file replacement retains the accepted concurrent-writer limitation.
 
 ## Development status
 
-SFTP Provider Workflow remains unfinished on the separate development branch.
-Do not release it until disposable-server integration and packaged credentials,
-trust and create-only behavior have been validated. Remote replacement remains
-outside the accepted safety contract. The release build contains local/mapped
-folder support only; provider choices remain planning controls.
+Approved direction, 2026-10-18: personal cloud storage for everyday Windows users.
+OneDrive personal comes first, Google Drive next. Dropbox is a later candidate.
+SFTP is removed from the consumer roadmap; its unfinished code and profiles are
+preserved separately and must not be merged implicitly.
+
+| Milestone | Scope | Completion gate |
+| --- | --- | --- |
+| OneDrive account and Folder Pair setup | Connect account, choose cloud/local folders, save native IDs without secrets | Offline service/settings/UI tests; live OAuth acceptance remains separate |
+| OneDrive reviewed copying | Restore pairs, refresh/reconnect, compare, review, confirm, copy, history; nested folders and empty files | Conflict/interruption tests plus disposable-account acceptance |
+| OneDrive safe replacement | Conditional replacement and backup/recovery | Proven commit-time protection; no local-race exception |
+| Google Drive workflow | Picker/scopes, account storage, identity/export policy, same user flow | Provider-specific safety and acceptance |
+
+Manually initiated runs remain the product scope. No background scheduling,
+deletion mirroring or automatic conflict resolution is authorized.
+Read [CLOUD_STORAGE.md](CLOUD_STORAGE.md) for the authoritative accepted plan and
+[BRANCH_WORKFLOW.md](BRANCH_WORKFLOW.md) before implementation. This checkpoint
+changes documentation only; no cloud connection is usable on primary yet.
 
 ## Documentation Hierarchy
 

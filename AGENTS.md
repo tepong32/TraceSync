@@ -369,3 +369,19 @@ Start with affected unittest modules under tests/. Broaden across synchronizatio
 Green indicates a safe setup/compare step; amber remains review or warning. Styling must not choose a copy direction or bypass confirmation. Existing local overwrite and restore are backup-protected but not atomic compare-and-swap; preserve the documented concurrent-writer limitation. New-file publication must never replace an occupied destination.
 
 Use `scripts/vm_release.py` with the shared external version manager for releases. The adapter restricts automatic changes to VERSION and CHANGELOG so historical product-tour versions remain accurate; update current release prose deliberately. See docs/RELEASE.md.
+
+### Cloud product direction — check before code changes
+
+Before any provider, settings, authentication, Folder Pair or workflow change,
+read docs/CLOUD_STORAGE.md (approved direction and delivery sequence), the active
+roadmap milestone and CONTINUE.md. Check implementation and tests against that
+plan; record any intentional scope change there before coding.
+Target everyday users: OneDrive personal first, Google Drive next. SFTP is no
+longer a consumer feature target; preserve its unfinished work and profiles.
+Cloud setup is Connect account -> Choose folder -> Save Folder Pair. Manual runs
+retain compare-review-confirm-sync; no implicit scheduling or deletion mirroring.
+Developer registration stays outside normal user flows. Protected tokens never
+belong in settings. Cloud replacements need their own safety/recovery contract.
+
+
+Follow docs/BRANCH_WORKFLOW.md for milestone branches and integration gates.

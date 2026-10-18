@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.12.0] - 2026-10-18
+### Documentation
+- Document personal cloud direction and scoped milestone workflow
+
 ## [0.11.0] - 2026-10-11
 ### Added
 - Add guided workflow, backup recovery and safe local creation

@@ -1,55 +1,40 @@
 # TraceSync continuation
 
-Updated 2026-10-11 for v0.11.0, Guided workflow and recovery.
-Read AGENTS.md, README.md, docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/RELEASE.md.
+Updated 2026-10-18: documentation-only cloud direction checkpoint.
 
-## Release scope
+## Source versus published application
 
-Material-inspired UI (green next step, pale-green guide, amber review/warnings),
-local new-file race fix and regression tests, backup-before-overwrite and history
-restore, provider-neutral transfer foundation. Existing-file overwrite/restore
-retain the accepted external-writer race documented in architecture.
+The public downloadable application remains v0.11.0 (local/mapped folders,
+guided workflow and backup recovery). This checkpoint changes plans/instructions
+only; the version-manager source tag is not a new executable or portfolio release.
+No cloud or SFTP feature is enabled by this checkpoint.
 
-Release preparation uses codex/ui-release-v011, combining committed foundation
-8c00cab with origin/master 2c9c007 and selected local safety/presentation changes.
-The original codex/provider-aware-comparison-backup workspace keeps unfinished
-SFTP services, setup UI, settings, dependencies, tests and packaging uncommitted.
-Do not reset that workspace or release its SFTP work implicitly. The release uses
-local-only provider controls and excludes all SFTP modules/dependencies.
+## Accepted direction
 
-## Actual validation
+Everyday users; OneDrive personal first, Google Drive second; Dropbox later.
+SFTP is removed from the consumer roadmap with unfinished work preserved.
+Manual compare-review-confirm-sync remains mandatory. Safe cloud overwrite has
+its own future milestone; local overwrite limitations are not transferable.
 
-- PASS: `python -m unittest discover -s tests`: 159 tests, no skips. Broad suite
-  selected for shared UI/transfer and a public release. Tk ThemeChanged teardown
-  diagnostics remain without failures.
-- PASS: `python -m unittest tests.test_ui_theme tests.test_sync_history_dialog`:
-  17 tests, also passed on the original SFTP development workspace.
-- PASS: PyInstaller 6.20.0 / hooks 2026.6, Python 3.11 Windows x64 build using
-  `python -m PyInstaller --noconfirm TraceSync.spec`. VERSION resource is 0.11.0.
-- PASS: actual executable startup, comparison of six sample files, amber
-  low-confidence warning and both directions, explicit preview, two sample copies
-  (one overwrite), durable v0.11.0 history and backup, confirmed backup restore;
-  destination bytes verified after copy and restore. Isolated settings/folders/
-  LOCALAPPDATA only. Packaged screenshots are in docs/images/v0.11.0/.
-- FAIL - CAUSED BY CURRENT WORK, corrected: increased row spacing exposed footer
-  starvation in history details. Reserve button space before the expanding tree;
-  regression checks compact geometry. Retain Counts StringVar so counts render.
-- PASS: VM preview through scripts/vm_release.py changes only VERSION/CHANGELOG;
-  historical v0.10 product-tour text and images remain unchanged.
-- PASS: git diff --check.
-- NOT RUN - ENVIRONMENTAL: real mapped-drive/alternate-DPI acceptance and real
-  SFTP server validation. SFTP is excluded, not declared accepted.
+Read AGENTS.md, docs/CLOUD_STORAGE.md, docs/ROADMAP.md and docs/BRANCH_WORKFLOW.md
+before changing code. The next branch is codex/onedrive-account-folder-pairs:
+connect account -> choose folder -> save Folder Pair, using local fake-based tests.
+Do not activate cloud transfers or claim live acceptance during that slice.
 
-## Build artifact
+## Preserved development
 
-Unsigned portable Windows x64 executable, 12,805,215 bytes.
-SHA-256: 1205D84AE619D395B42D367F01901388E4185355AA01879285CDA1E63F37810C
-Portfolio destination: https://tepong32.github.io/assets/downloads/TraceSync-v0.11.0.exe
-Keep historical downloads. Verify master/tag push and portfolio Pages deployment
-against this checksum; publication outcomes are recorded in the portfolio handoff.
+Canonical workspace: C:/Users/Administrator/Desktop/GH/TraceSync on
+codex/cloud-sftp-resume, based on 378bad8, with unreleased SFTP/cloud work.
+Stash: TraceSync pre-pull SFTP workspace 2026-10-18.
+Backup: C:/Users/Administrator/.codex/worktrees/tracesync-resume-backup-20261018.
+Its prior suite ran 260 tests (256 passed, four SFTP tests skipped). Those results
+belong to that workspace, not primary-branch cloud capabilities. Preserve it.
 
-## Next work
+## Validation and limitations
 
-Continue SFTP in its preserved development workspace, reconciling the release UI
-fixes before integration. Its explicit disposable endpoint and packaged credential/
-host-trust gates remain outstanding. Do not claim atomic existing-file replacement.
+PASS: documentation diff/relative-link checks; source scope review confirms no
+application code changes. Required branch/ruleset checks inspected: primary is
+unprotected and no rulesets were returned. No bypass was used.
+NOT RUN - OUT OF SCOPE: application suite/build for documentation-only changes.
+NOT RUN - ENVIRONMENTAL: live OAuth/cloud acceptance; no app registration or test
+endpoint. Continue offline scaffolding and tests as the user requested.
