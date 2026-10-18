@@ -496,8 +496,11 @@ class MainWindow(tk.Tk):
             return
 
         self.folder_pair_var.set("")
-        self.local_var.set(self.settings.get("local_folder", ""))
-        self.server_var.set(self.settings.get("server_folder", ""))
+        # Field traces update settings, so capture both paths before setting either.
+        local_folder = self.settings.get("local_folder", "")
+        server_folder = self.settings.get("server_folder", "")
+        self.local_var.set(local_folder)
+        self.server_var.set(server_folder)
         self._sync_folder_pair_selection_from_paths()
 
     @staticmethod

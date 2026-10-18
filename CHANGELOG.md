@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased - saved folder startup restoration
+
+- Restore the saved Server Folder before field-change callbacks can erase it.
+- Add startup, Browse persistence, named-pair and unavailable-path regressions.
+
 ## Unreleased - OneDrive runtime dependencies
 
 - Declare validated MSAL, MSAL Extensions and Requests pins.

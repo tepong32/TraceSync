@@ -125,3 +125,14 @@ Retain create-only transfers, explicit review/confirmation, exact account matchi
 no blind retry and honest unknown/partial history. Ancestor TOCTOU and incomplete
 post-crash folder accounting remain documented in ONEDRIVE_CREATE_VALIDATION.md.
 No automatic sync, mirroring, replacements or provider expansion is introduced.
+
+
+## Subsequent isolated builder and startup-fix evidence
+
+The dependency validation and security assessment above are historical. An
+external builder was subsequently authorized with PyInstaller 6.22.3, hooks
+2026.7 and setuptools 78.1.1, leaving repository pins unchanged. It built and
+smoke-tested a local acceptance executable, finding a saved Server restoration
+defect. The uncommitted fix and rebuilt packaged restart PASS are documented in
+[SAVED_FOLDER_VALIDATION.md](SAVED_FOLDER_VALIDATION.md). Frozen cloud/cache and
+standard-user acceptance remain open; no binary publication is authorized.
