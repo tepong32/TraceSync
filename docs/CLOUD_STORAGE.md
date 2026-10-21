@@ -2,6 +2,14 @@
 
 ## Current create-only safety audit
 
+Current local source checkpoint is 3996629, after dependency checkpoint 5292753.
+Gate A standard-user local acceptance and Gate B's acceptance-only frozen synthetic
+DPAPI diagnostic passed; see [GATE_B_VALIDATION.md](GATE_B_VALIDATION.md). No real
+account was used. Production cloud lifecycle and live-provider acceptance remain
+open. The diagnostic changes are uncommitted; production auth/sync logic, spec
+and dependency pins are unchanged. Earlier preparation snapshots below are
+historical and do not override this acceptance status.
+
 The `codex/onedrive-create-safety-audit` branch starts from published source
 v0.15.0 (4ddfd55), which already implemented empty uploads and folder creation.
 Safety checkpoint `0de6aa2` commits immutable folder evidence, fresh root/parent-link checks,

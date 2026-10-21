@@ -136,3 +136,16 @@ smoke-tested a local acceptance executable, finding a saved Server restoration
 defect. The uncommitted fix and rebuilt packaged restart PASS are documented in
 [SAVED_FOLDER_VALIDATION.md](SAVED_FOLDER_VALIDATION.md). Frozen cloud/cache and
 standard-user acceptance remain open; no binary publication is authorized.
+
+## Current acceptance evidence
+
+The restoration fix was committed as 3996629. A clean rebuild with the same
+isolated toolchain produced the public local acceptance artifact
+95b3553265a23e4018b9e03a88525b5f74f4692a008e85f121d6a293a719dbbe.
+Gate A passed with directly verified non-elevated Medium execution and user-reported
+local workflow checks. The uncommitted acceptance-only diagnostic then passed
+Gate B in eight separate frozen processes under test normal user: genuine DPAPI
+round trip and injected/real failure cases are distinguished in
+[GATE_B_VALIDATION.md](GATE_B_VALIDATION.md). Production spec, runtime pins and
+production artifact remain unchanged. Real-account lifecycle and eventual full
+production cloud acceptance remain open; no publication is authorized.

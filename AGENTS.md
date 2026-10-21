@@ -441,3 +441,10 @@ docs/ONEDRIVE_CREATE_VALIDATION.md.
 
 Cloud dependency installation, isolated Windows validation and build-tool blockers:
 [docs/ONEDRIVE_ENVIRONMENT.md](docs/ONEDRIVE_ENVIRONMENT.md).
+
+Acceptance-only cache diagnostics live under acceptance/ and are absent from the
+production spec and normal entry point. Never wire them into ordinary startup.
+Use scripts/build_cache_acceptance.py to generate an external temporary spec;
+the separately named artifact exits before GUI/authentication, requires explicit
+synthetic TEMP fixtures and Medium integrity, and blocks network/browser/auth
+construction. See docs/GATE_B_VALIDATION.md; source tests are not frozen acceptance.

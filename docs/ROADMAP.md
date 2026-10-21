@@ -2,6 +2,14 @@
 
 ## Current create-only safety audit
 
+Current local source checkpoint is 3996629 (saved-folder restoration), following
+5292753 (runtime dependencies). Gate A standard-user local acceptance passed.
+An uncommitted acceptance-only diagnostic passed Gate B's frozen synthetic Windows
+protected-cache checks; see [GATE_B_VALIDATION.md](GATE_B_VALIDATION.md). These do
+not pass live-account lifecycle or full production cloud acceptance. Earlier
+dependency/preparation snapshots below are historical; no diagnostic publication
+or source integration is authorized.
+
 The `codex/onedrive-create-safety-audit` branch starts from published source
 v0.15.0 (4ddfd55), which already implemented empty uploads and folder creation.
 Safety checkpoint `0de6aa2` commits immutable folder evidence, fresh root/parent-link checks,
