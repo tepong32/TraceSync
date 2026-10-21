@@ -225,7 +225,7 @@ class OneDriveSetupService:
         if any(pair["name"].casefold() == name.strip().casefold() for pair in pairs):
             raise OneDriveSetupError("That Folder Pair name is already used. Choose another name.")
         pair = {
-            "name": name.strip(), "local_folder": str(Path(local_folder)),
+            "name": name.strip(), "local_folder": str(Path(local_folder).resolve()),
             "server_endpoint": {
                 "provider": "onedrive", "account_id": self.account_id,
                 "account_name": self.account_name, "drive_id": self.drive_id,
@@ -238,6 +238,45 @@ class OneDriveSetupService:
         updated = dict(settings, folder_pairs=[*pairs, pair])
         self._settings.save(updated)
         return pair
+
+    def edit_pair(self, expected, name, local_folder, folder_id=None):
+        """Update one reviewed definition; offline edits retain cloud identity."""
+        if not name.strip() or not local_folder.strip() or not Path(local_folder).is_dir():
+            raise OneDriveSetupError("Enter a pair name and choose an existing local folder.")
+        endpoint = dict(expected.get("server_endpoint", {}))
+        if endpoint.get("provider") != "onedrive":
+            raise OneDriveSetupError("Choose a saved OneDrive Folder Pair.")
+        if folder_id is not None:
+            if (self._gateway is None or folder_id not in self._known
+                    or self.account_id != endpoint["account_id"] or self.drive_id != endpoint["drive_id"]):
+                raise OneDriveSetupError("Connect this pair's saved account before changing its cloud folder.")
+            folder = self._gateway.folder(self.drive_id, folder_id)
+            if folder.id != folder_id:
+                raise OneDriveSetupError("The selected folder changed. Choose it again.")
+            endpoint.update(folder_id=folder.id, folder_name=folder.name)
+        settings, pairs, index = self._checked_pair(expected)
+        if any(i != index and pair["name"].casefold() == name.strip().casefold()
+               for i, pair in enumerate(pairs)):
+            raise OneDriveSetupError("That Folder Pair name is already used. Choose another name.")
+        updated = dict(expected, name=name.strip(), local_folder=str(Path(local_folder).resolve()), server_endpoint=endpoint)
+        pairs[index] = updated
+        self._settings.save(dict(settings, folder_pairs=pairs))
+        return updated
+
+    def delete_pair(self, expected):
+        """Remove only a saved definition; never touch tokens or file content."""
+        settings, pairs, index = self._checked_pair(expected)
+        del pairs[index]
+        self._settings.save(dict(settings, folder_pairs=pairs))
+
+    def _checked_pair(self, expected):
+        settings = self._settings.load()
+        pairs = list(settings.get("folder_pairs", []))
+        index = next((i for i, pair in enumerate(pairs) if pair["name"] == expected["name"]), None)
+        if (index is None or pairs[index] != expected
+                or expected.get("server_endpoint", {}).get("provider") != "onedrive"):
+            raise OneDriveSetupError("The saved pair changed or was removed. Select it again before editing.")
+        return settings, pairs, index
 
     def saved_pairs(self):
         return [pair for pair in self._settings.load().get("folder_pairs", [])

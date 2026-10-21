@@ -39,6 +39,8 @@ class CloudMainWindowTests(unittest.TestCase):
         self.window.compare_folders()
         self.assertTrue(self.window.comparison_completed)
         self.assertEqual(len(self.window.results), 1)
+        self.assertNotIn("disabled", self.window.local_to_server_button.state())
+        self.assertIn("disabled", self.window.server_to_local_button.state())
         self.assertIs(self.window.sync_service.server_provider, self.provider)
         self.assertNotIn("OneDrive:", str(self.settings))
         with patch("ui.main_window.SyncConfirmationDialog") as confirmation, patch.object(self.window, "wait_window"):

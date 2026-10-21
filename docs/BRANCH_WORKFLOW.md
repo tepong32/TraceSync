@@ -35,3 +35,14 @@ push and verify remote identities. Do not publish a binary for a docs checkpoint
 Preserved work: the canonical cloud-sftp-resume workspace, its pre-pull stash and
 file backup remain intact until independently reconciled. SFTP is off the consumer
 roadmap. New cloud work must not depend on its settings, authentication or UI.
+
+## Local provider completion work — 2026-10-21
+
+OneDrive and Google completion use separate branches from local ec009ff:
+`codex/onedrive-provider-completion` and `codex/google-drive-provider-completion`.
+The latter selectively includes shared OneDrive fixes, not a merge of unfinished
+history. Record shared file hashes before eventual integration and reconcile once;
+do not merge an entire dirty/historical provider worktree. These changes are
+preserved in local source preparation checkpoints. The user's current local-only restriction overrides the universal
+vm-commit integration/push default. No build, release or live sign-in is authorized.
+See PROVIDER_COMPLETION.md and PROVIDER_COMPLETION_VALIDATION.md.

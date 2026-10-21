@@ -46,6 +46,56 @@ class OneDriveSetupDialogTests(unittest.TestCase):
         self.service.save_pair.assert_called_once_with("Personal", "C:/Documents", "docs")
         self.assertIn("compare before copying", self.dialog.status.get())
 
+    def prepare_saved_pair(self):
+        pair = {"name": "Personal", "local_folder": "C:/missing", "server_endpoint": {
+            "provider": "onedrive", "account_name": "person", "folder_name": "Documents"}}
+        self.service.saved_pairs.return_value = [pair]
+        self.dialog._show_saved()
+        return pair
+
+    def test_edit_offline_save_and_cancel(self):
+        pair = self.prepare_saved_pair()
+        self.dialog._edit()
+        self.assertIn("disabled", self.dialog.use_button.state())
+        self.assertEqual(self.dialog.local.get(), "C:/missing")
+        self.dialog.name.set("Changed")
+        self.dialog.local.set("C:/repaired")
+        updated = dict(pair, name="Changed", local_folder="C:/repaired")
+        self.service.edit_pair.return_value = updated
+        self.service.saved_pairs.return_value = [updated]
+        self.dialog._save()
+        self.wait_idle()
+        self.service.edit_pair.assert_called_once_with(pair, "Changed", "C:/repaired", None)
+        self.assertIsNone(self.dialog._editing)
+        self.dialog._edit()
+        self.dialog._cancel_edit()
+        self.assertIsNone(self.dialog._editing)
+        self.assertEqual(self.service.edit_pair.call_count, 1)
+
+    def test_delete_confirmation_cancel_and_success(self):
+        pair = self.prepare_saved_pair()
+        with patch("ui.dialogs.onedrive_setup_dialog.messagebox.askyesno", return_value=False):
+            self.dialog._delete()
+        self.service.delete_pair.assert_not_called()
+        with patch("ui.dialogs.onedrive_setup_dialog.messagebox.askyesno", return_value=True):
+            self.dialog._delete()
+        self.wait_idle()
+        self.service.delete_pair.assert_called_once_with(pair)
+        self.assertIn("Files and saved sign-in are unchanged", self.dialog.status.get())
+
+    def test_failed_edit_preserves_unsaved_fields_and_definition(self):
+        from core.onedrive_setup_service import OneDriveSetupError
+        self.prepare_saved_pair()
+        self.dialog._edit()
+        self.dialog.name.set("Unsaved")
+        self.service.edit_pair.side_effect = OneDriveSetupError("Settings could not be saved")
+        self.dialog._save()
+        self.wait_idle()
+        self.assertEqual(self.dialog.name.get(), "Unsaved")
+        self.assertIsNotNone(self.dialog._editing)
+        self.assertFalse(self.dialog._saving)
+        self.assertIn("could not be saved", self.dialog.status.get())
+
     def test_close_before_worker_result_does_not_apply_result(self):
         import threading
         ready = threading.Event()
@@ -74,7 +124,8 @@ class OneDriveSetupDialogTests(unittest.TestCase):
         self.dialog.geometry("640x580")
         self.root.update()
         for widget in (self.dialog.connect_button, self.dialog.save_button, self.dialog.close_button,
-                       self.dialog.reopen_button, self.dialog.reconnect_button, self.dialog.disconnect_button):
+                       self.dialog.reopen_button, self.dialog.reconnect_button, self.dialog.disconnect_button,
+                       self.dialog.edit_button, self.dialog.delete_button, self.dialog.cancel_edit_button):
             bottom = widget.winfo_rooty() - self.dialog.winfo_rooty() + widget.winfo_height()
             self.assertLessEqual(bottom, self.dialog.winfo_height())
 

@@ -476,12 +476,25 @@ class MainWindow(tk.Tk):
             self.status_var.set("Folders changed. Compare again before synchronizing.")
         self._refresh_workflow_guidance()
 
+    def _cloud_copy_availability(self):
+        if self._cloud_connection is None or not self.comparison_completed:
+            return {}
+        availability = {}
+        for direction, key in ((SyncDirection.LOCAL_TO_SERVER, "local_to_server_available"),
+                               (SyncDirection.SERVER_TO_LOCAL, "server_to_local_available")):
+            try:
+                availability[key] = bool(self.sync_service.create_preview(self.results, direction).items)
+            except (TransferError, OSError, ValueError):
+                availability[key] = False
+        return availability
+
     def _refresh_workflow_guidance(self):
         self.workflow_guide.refresh(
             local_folder=self.local_var.get(),
             server_folder=self.server_var.get(),
             comparison_completed=self.comparison_completed,
             results=self.results,
+            **self._cloud_copy_availability(),
         )
 
     def _load_saved_folders(self):
@@ -530,7 +543,11 @@ class MainWindow(tk.Tk):
             self._on_folder_value_changed()
             self._applying_cloud = True
             self.local_var.set(pair["local_folder"])
-            self.server_var.set(f"OneDrive: {provider.folder_name}")
+            endpoint_label = f"OneDrive: {provider.folder_name}"
+            account_name = pair.get("server_endpoint", {}).get("account_name", "")
+            if account_name:
+                endpoint_label += f" ({account_name})"
+            self.server_var.set(endpoint_label)
             self._applying_cloud = False
             self._cloud_connection = (pair, provider)
             self.folder_pair_var.set("")
@@ -923,3 +940,8 @@ class MainWindow(tk.Tk):
         state = "normal" if enabled and self.results else "disabled"
         self.local_to_server_button.configure(state=state)
         self.server_to_local_button.configure(state=state)
+        if enabled:
+            availability = self._cloud_copy_availability()
+            if availability:
+                self.local_to_server_button.configure(state="normal" if availability["local_to_server_available"] else "disabled")
+                self.server_to_local_button.configure(state="normal" if availability["server_to_local_available"] else "disabled")

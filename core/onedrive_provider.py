@@ -3,14 +3,15 @@
 Create-only uploads use explicit conflict failure; no replacement or directory
 creation fallback is permitted. All HTTP is injectable for offline tests.
 """
+import os
 from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
 import shutil
 import tempfile
 from urllib.parse import quote, urlsplit
 
 from core.comparison_evidence import EvidenceMatch, compare_snapshot
+from core.onedrive_timestamps import parse_modified_time, format_modified_time
 from core.storage_provider import (StorageProvider, ProviderCapability, TransferFailed,
     TransferPreconditionFailed, TransferPreconditionTarget, TransferOutcomeUnknown,
     ConditionalTransferUnsupported)
@@ -61,9 +62,11 @@ class OneDriveProvider(StorageProvider):
                or part.endswith((".", " ")) or any(ord(c) < 32 for c in part) for part in parts):
             raise ValueError("OneDrive contains a path that cannot safely map to a Windows file.")
         # Windows device names remain reserved even when an extension is present.
-        reserved = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+        reserved = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$",
+                    *(f"COM{digit}" for digit in "¹²³"), *(f"LPT{digit}" for digit in "¹²³"),
+                    *(f"COM{i}" for i in range(1, 10)),
                     *(f"LPT{i}" for i in range(1, 10))}
-        if any(part.split(".")[0].upper() in reserved for part in parts):
+        if any(part.split(".")[0].rstrip(" .").upper() in reserved for part in parts):
             raise ValueError("OneDrive contains a reserved Windows filename.")
         return parts
 
@@ -99,8 +102,10 @@ class OneDriveProvider(StorageProvider):
             raise TransferFailed("The OneDrive path is not an ordinary file.")
         if item.get("name") != relative.rsplit("/", 1)[-1]:
             raise TransferFailed("OneDrive returned a different filename.")
-        modified = item.get("lastModifiedDateTime")
-        timestamp = datetime.fromisoformat(modified.replace("Z", "+00:00")).timestamp() if modified else None
+        client_info = item.get("fileSystemInfo")
+        modified = (client_info.get("lastModifiedDateTime") if isinstance(client_info, dict) else None)
+        modified = modified or item.get("lastModifiedDateTime")
+        timestamp = parse_modified_time(modified) if modified else None
         metadata = ComparisonMetadata(size=int(item["size"]), modified_time=timestamp,
                                       version_id=item.get("eTag"), timestamp_reliable=timestamp is not None)
         location = StorageLocation("onedrive", f"{self.drive_id}/item:{item['id']}", f"{self.display_name}/{relative}")
@@ -165,20 +170,34 @@ class OneDriveProvider(StorageProvider):
             raise TransferFailed("OneDrive returned an invalid transfer address.")
         return url
 
-    def _reviewed_source(self, relative, precondition):
+    def _reviewed_source(self, relative, source_location, source_metadata):
         item = self._item(relative)
         record = self._record(item, relative) if item else None
-        if (record is None or not record.storage_location.same_identity_as(precondition.source_location)
-                or not precondition.source_metadata.version_id
-                or record.metadata != precondition.source_metadata):
+        if (record is None or not record.storage_location.same_identity_as(source_location)
+                or not source_metadata.version_id
+                or record.metadata != source_metadata):
             raise TransferPreconditionFailed(TransferPreconditionTarget.SOURCE, "The OneDrive source changed after review.")
         return item
 
     @contextmanager
     def open_transfer_content(self, relative_path, precondition):
-        item = self._reviewed_source(relative_path, precondition)
+        with self._materialize_reviewed_content(relative_path, precondition.source_location,
+                                                precondition.source_metadata) as content:
+            yield content
+
+    @contextmanager
+    def open_backup_content(self, relative_path):
+        record = self.get_record(relative_path)
+        if record is None:
+            raise TransferFailed("The OneDrive file is unavailable for a verified backup.")
+        with self._materialize_reviewed_content(relative_path, record.storage_location, record.metadata) as content:
+            yield content
+
+    @contextmanager
+    def _materialize_reviewed_content(self, relative_path, source_location, source_metadata):
+        item = self._reviewed_source(relative_path, source_location, source_metadata)
         url = self._signed_url(item.get("@microsoft.graph.downloadUrl"))
-        with tempfile.TemporaryDirectory(prefix="tracesync-onedrive-") as directory:
+        with tempfile.TemporaryDirectory(prefix="tracesync-onedrive-", ignore_cleanup_errors=True) as directory:
             path = Path(directory) / "content"
             try:
                 with self._session.get(url, stream=True, timeout=(15, 120), allow_redirects=False) as response:
@@ -189,11 +208,13 @@ class OneDriveProvider(StorageProvider):
                             output.write(chunk)
             except Exception:
                 raise TransferFailed("OneDrive download failed.") from None
-            self._reviewed_source(relative_path, precondition)
-            if path.stat().st_size != precondition.source_metadata.size:
+            self._reviewed_source(relative_path, source_location, source_metadata)
+            if path.stat().st_size != source_metadata.size:
                 raise TransferFailed("OneDrive download did not match the reviewed size.")
-            yield BackupContent(path, path.stat().st_size, precondition.source_metadata.modified_time,
-                                precondition.source_metadata)
+            if source_metadata.modified_time is not None:
+                os.utime(path, (source_metadata.modified_time, source_metadata.modified_time))
+            materialized = path.stat()
+            yield BackupContent(path, materialized.st_size, materialized.st_mtime, source_metadata)
 
     def transfer_from(self, source, relative_path, precondition):
         self._notes[relative_path] = []
@@ -208,7 +229,7 @@ class OneDriveProvider(StorageProvider):
         if self._item(relative_path) is not None:
             raise TransferPreconditionFailed(TransferPreconditionTarget.DESTINATION, "The destination appeared after review.")
         parent, _, name = relative_path.rpartition("/")
-        with source.open_transfer_content(relative_path, precondition) as content, tempfile.TemporaryDirectory(prefix="tracesync-upload-") as directory:
+        with source.open_transfer_content(relative_path, precondition) as content, tempfile.TemporaryDirectory(prefix="tracesync-upload-", ignore_cleanup_errors=True) as directory:
             snapshot = Path(directory) / "content"
             shutil.copyfile(content.local_path, snapshot)
             current = source.get_record(relative_path)
@@ -217,15 +238,22 @@ class OneDriveProvider(StorageProvider):
                     or snapshot.stat().st_size != precondition.source_metadata.size):
                 raise TransferPreconditionFailed(TransferPreconditionTarget.SOURCE, "The source changed while preparing upload.")
             size = snapshot.stat().st_size
+            modified = precondition.source_metadata.modified_time
+            stamp = format_modified_time(modified) if modified is not None else None
             parent_id = self._ensure_parent(parent, relative_path)
             # Recheck the full chain after creation, before publishing file content.
             self._ensure_parent(parent, relative_path)
             if size == 0:
-                self._create_empty(parent_id, name)
-                return
-            session = self._request("POST", self._url(f"items/{quote(parent_id, safe='')}:/{quote(name, safe='')}:/createUploadSession"),
-                                    json={"item": {"name": name, "@microsoft.graph.conflictBehavior": "fail"}})
-            self._upload(self._signed_url(session.get("uploadUrl")), snapshot, size, name, parent_id)
+                created = self._create_empty(parent_id, name)
+            else:
+                properties = {"name": name, "@microsoft.graph.conflictBehavior": "fail"}
+                if stamp is not None:
+                    properties["fileSystemInfo"] = {"lastModifiedDateTime": stamp}
+                session = self._request("POST", self._url(f"items/{quote(parent_id, safe='')}:/{quote(name, safe='')}:/createUploadSession"),
+                                        json={"item": properties})
+                created = self._upload(self._signed_url(session.get("uploadUrl")), snapshot, size, name, parent_id)
+            if stamp is not None:
+                self._preserve_client_time(created, name, parent_id, size, stamp, relative_path)
 
     def begin_transfer_run(self):
         self._created_parents = {}
@@ -312,6 +340,7 @@ class OneDriveProvider(StorageProvider):
         url = self._url(f"items/{quote(parent_id, safe='')}:/{quote(name, safe='')}:/content")
         data = self._create_request("PUT", url + "?@microsoft.graph.conflictBehavior=fail", data=b"")
         self._verify_created(data, name, parent_id)
+        return data
 
     def _upload(self, url, path, size, name, parent_id):
         offset, chunk_size = 0, 10 * 1024 * 1024
@@ -333,6 +362,7 @@ class OneDriveProvider(StorageProvider):
                         if response.status_code not in (200, 201):
                             raise TransferOutcomeUnknown("OneDrive did not confirm the reviewed file. Compare again before retrying.")
                         self._verify_created(data, name, parent_id, size=size)
+                        return data
                     elif response.status_code != 202 or data.get("nextExpectedRanges") != [f"{offset+len(chunk)}-"]:
                         raise TransferOutcomeUnknown("OneDrive upload progress is uncertain. Compare again before retrying.")
                 except (TransferPreconditionFailed, TransferOutcomeUnknown, TransferFailed):
@@ -340,3 +370,34 @@ class OneDriveProvider(StorageProvider):
                 except Exception:
                     raise TransferOutcomeUnknown("OneDrive upload outcome is unknown. Compare again before retrying.") from None
                 offset += len(chunk)
+
+    def _preserve_client_time(self, created, name, parent_id, size, stamp, relative_path):
+        """Metadata only, bound to confirmed new ID/version; never retry."""
+        warning = "File copied; preserving its modification time was not confirmed. Compare again. No retry attempted."
+        try:
+            info = created.get("fileSystemInfo")
+            if isinstance(info, dict) and parse_modified_time(info.get("lastModifiedDateTime", "")) == parse_modified_time(stamp):
+                return
+        except (ValueError, TypeError, AttributeError):
+            pass
+        version = created.get("eTag")
+        if not isinstance(version, str) or not version.strip():
+            self._notes[relative_path].append(warning)
+            return
+        try:
+            response = self._session.request("PATCH", self._url(f"items/{quote(created['id'], safe='')}"),
+                headers={"Authorization": f"Bearer {self._token_supplier()}", "Content-Type": "application/json", "If-Match": version},
+                json={"fileSystemInfo": {"lastModifiedDateTime": stamp}},
+                timeout=(15, 120), allow_redirects=False)
+            if response.status_code != 200:
+                self._notes[relative_path].append(warning)
+                return
+            updated = response.json()
+            self._verify_created(updated, name, parent_id, size=size)
+            if (updated["id"] != created["id"]
+                    or parse_modified_time(updated["fileSystemInfo"]["lastModifiedDateTime"]) != parse_modified_time(stamp)):
+                raise ValueError()
+        except Exception:
+            # Content creation was already positively confirmed. A metadata-only
+            # error must not relabel known copied bytes as failed or unknown.
+            self._notes[relative_path].append(warning)

@@ -156,3 +156,28 @@ provider calls. begin_transfer_run clears run-owned parent IDs/notes; uncertain
 folder creations stay blocked until recompare, including sibling transfers.
 Shared completion validation handles malformed structure without converting a
 possibly committed mutation into a definite failure. See gate report for evidence.
+
+
+## Provider completion: standalone configuration and settings
+
+Public OAuth application IDs are read through utils/provider_config.py. An explicit
+cloud build validates selected provider IDs and writes only allowlisted public
+fields into build data; default local builds have no fabricated cloud identity.
+Protected credentials remain outside settings and build data. Development overrides
+do not require end-user environment configuration. Settings use per-user APPDATA,
+read legacy working-directory settings only when no current user file exists,
+and retain atomic replacement without modifying the legacy file.
+
+OneDrive read-only backup materialization shares its reviewed download path and
+uses actual staged file stat values for the local backup store. Cloud modification
+time is preserved on downloaded staging; it is not confused with an unmodified
+temporary file timestamp. Personal MSAL account matching recognizes consumers only
+for the documented personal tenant UUID and requires unique verified account
+identity. This does not enable cloud replacement or remote restore.
+
+OneDrive client modification time is serialized and parsed at 100 ns precision, with
+eTag still the version identity. Nonempty session metadata carries reviewed time;
+empty uploads may change only the new ID's filesystem facet under If-Match using
+its confirmed eTag. Failure after byte creation adds a durable copied-file note,
+shown in the amber scrolling sync summary, and never retries or changes the known
+content outcome. This is not conditional content replacement or recovery.

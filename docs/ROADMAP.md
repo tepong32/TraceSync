@@ -1,6 +1,22 @@
 # TraceSync Roadmap
 
-## Current create-only safety audit
+## Active provider completion — 2026-10-21
+
+Continue OneDrive first from local Gate B checkpoint `ec009ff`; Google gets a
+separate branch reconciled onto the newer foundation. Complete saved-pair
+management and build-time public configuration, then outstanding provider safety
+and lifecycle work. Safe replacement remains required, not implicitly enabled.
+See [PROVIDER_COMPLETION.md](PROVIDER_COMPLETION.md) for required outcomes and the
+owner setup/acceptance gate. Dropbox remains a later candidate; SFTP stays parked.
+
+## Historical create-only safety audit snapshots
+
+Status correction for these historical snapshots: Gate B was committed locally
+as ec009ff on 2026-10-21, following 3996629. Provider completion is preserved as local preparation checkpoints on
+the separate branches above. Earlier statements about uncommitted diagnostics or
+pending dependency declarations describe their original checkpoints, not today.
+See PROVIDER_COMPLETION_VALIDATION.md for current validation and open gates.
+
 
 Current local source checkpoint is 3996629 (saved-folder restoration), following
 5292753 (runtime dependencies). Gate A standard-user local acceptance passed.

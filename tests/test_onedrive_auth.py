@@ -1,4 +1,6 @@
 import sys
+import base64
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,6 +10,60 @@ from core.onedrive_auth import OneDriveAuth, OneDriveConfigurationError, OneDriv
 
 
 class OneDriveAuthTests(unittest.TestCase):
+    def test_real_msal_personal_cache_binds_consumer_realm_to_returned_home_identity(self):
+        import msal
+        tenant="9188040d-6c67-4c5b-b112-36a304b66dad"
+        claims={"oid":"synthetic-local", "sub":"synthetic-sub", "tid":tenant}
+        info=base64.urlsafe_b64encode(json.dumps({"uid":"synthetic-home", "utid":tenant}).encode()).decode().rstrip("=")
+        response={"access_token":"synthetic-only", "client_info":info, "id_token_claims":claims}
+        cache=msal.SerializableTokenCache()
+        cache.add({"client_id":"synthetic-client", "token_endpoint":"https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+                   "scope":["User.Read"], "response":response})
+        accounts=list(cache.search(cache.CredentialType.ACCOUNT))
+        self.assertEqual(accounts[0]["realm"],"consumers")
+        auth=OneDriveAuth(Mock(),client_id="synthetic-client")
+        from types import SimpleNamespace
+        # Avoid discovery/browser/network while exercising the real SDK's cache
+        # grouping and public get_accounts representation, not a hand-made account.
+        app=msal.PublicClientApplication.__new__(msal.PublicClientApplication)
+        app.authority=SimpleNamespace(instance="login.microsoftonline.com")
+        app.token_cache=cache
+        app.acquire_token_interactive=Mock(return_value=response)
+        auth._app=app
+        auth.connect()
+        self.assertEqual(auth.account_reference,"synthetic-home."+tenant)
+
+    def test_returned_home_identity_disambiguates_accounts_with_same_local_identity(self):
+        auth,app=self.make_auth()
+        tenant="9188040d-6c67-4c5b-b112-36a304b66dad"
+        info=base64.urlsafe_b64encode(json.dumps({"uid":"right","utid":tenant}).encode()).decode().rstrip("=")
+        app.get_accounts.return_value=[
+            {"home_account_id":"wrong."+tenant,"local_account_id":"local","realm":"consumers"},
+            {"home_account_id":"right."+tenant,"local_account_id":"local","realm":"consumers"}]
+        app.acquire_token_interactive.return_value={"access_token":"synthetic","client_info":info,
+            "id_token_claims":{"oid":"local","tid":tenant}}
+        auth.connect()
+        self.assertEqual(auth.account_reference,"right."+tenant)
+
+    def test_invalid_client_info_never_falls_back_to_first_cached_account(self):
+        auth,app=self.make_auth()
+        for info in ("invalid-base64", "", {}, base64.urlsafe_b64encode(b'{"uid":12,"utid":"tenant"}').decode()):
+            with self.subTest(info=type(info).__name__):
+                app.acquire_token_interactive.return_value={"access_token":"synthetic-private", "client_info":info,
+                    "id_token_claims":{"oid":"local-saved","tid":"tenant"}}
+                with self.assertRaises(OneDriveConfigurationError) as caught:
+                    auth.connect()
+                self.assertNotIn("synthetic-private",str(caught.exception))
+                self.assertEqual(auth.account_reference,"")
+
+    def test_consumer_realm_alias_is_not_accepted_for_an_arbitrary_tenant(self):
+        auth,app=self.make_auth()
+        app.get_accounts.return_value=[{"home_account_id":"wrong","local_account_id":"local","realm":"consumers"}]
+        app.acquire_token_interactive.return_value={"access_token":"synthetic",
+            "id_token_claims":{"oid":"local","tid":"different-tenant"}}
+        auth.connect()
+        self.assertEqual(auth.account_reference,"")
+
     def make_auth(self):
         auth = OneDriveAuth(Mock(), client_id="test-client")
         app = Mock()
@@ -80,6 +136,7 @@ class OneDriveAuthTests(unittest.TestCase):
                          "https://login.microsoftonline.com/consumers")
         self.assertNotIn("client_credential", msal.PublicClientApplication.call_args.kwargs)
         self.assertEqual(app.acquire_token_interactive.call_args.kwargs["prompt"], "select_account")
+        self.assertEqual(app.acquire_token_interactive.call_args.kwargs["timeout"], 300)
         app.acquire_token_silent.assert_not_called()
 
     def test_oauth_error_details_are_not_exposed(self):

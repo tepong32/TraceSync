@@ -2,6 +2,13 @@
 
 TraceSync is a Windows desktop utility for safely comparing and synchronizing two folders. It is designed for office and shared-file environments where users must understand a copy operation before it changes a file.
 
+Development checkout: **codex/onedrive-provider-completion**. The public executable remains v0.11.0;
+source-only cloud checkpoints are not new public downloads. See the
+[completion plan](docs/PROVIDER_COMPLETION.md) and [owner setup checklist](docs/CLOUD_OWNER_SETUP.md).
+This branch adds saved OneDrive pair editing/deletion and public build configuration.
+Cloud replacements remain disabled; Google uploads and live-account/package acceptance
+remain unfinished. Offline success does not establish cloud readiness.
+
 Current release: **v0.11.0**
 
 This release adds material-inspired green next-step guidance, amber review warnings,

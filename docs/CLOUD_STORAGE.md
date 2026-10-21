@@ -1,6 +1,21 @@
 # Cloud storage provider plan
 
-## Current create-only safety audit
+## Active completion work — 2026-10-21
+
+Gate B is committed locally as `ec009ff` using source-only Version Manager
+checkpoint `0da5ac4`; neither is integrated or published. Completion now runs on
+`codex/onedrive-provider-completion`. Read [PROVIDER_COMPLETION.md](PROVIDER_COMPLETION.md)
+for the full approved scope, separate Google branch and owner-input gate. Earlier
+uncommitted/scaffold statements below are historical, not current capabilities.
+
+## Historical create-only safety audit snapshots
+
+Status correction for these historical snapshots: Gate B was committed locally
+as ec009ff on 2026-10-21, following 3996629. Provider completion is preserved as local preparation checkpoints on
+the separate branches above. Earlier statements about uncommitted diagnostics or
+pending dependency declarations describe their original checkpoints, not today.
+See PROVIDER_COMPLETION_VALIDATION.md for current validation and open gates.
+
 
 Current local source checkpoint is 3996629, after dependency checkpoint 5292753.
 Gate A standard-user local acceptance and Gate B's acceptance-only frozen synthetic

@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import os
+import base64
+import json
 from pathlib import Path
+from utils.provider_config import get_onedrive_client_id, get_onedrive_tenant
 
 
 CLIENT_ID_ENV = "TRACESYNC_ONEDRIVE_CLIENT_ID"
 TENANT_ENV = "TRACESYNC_ONEDRIVE_TENANT"
 GRAPH_SCOPES = ["User.Read", "Files.ReadWrite"]
+PERSONAL_TENANT_ID = "9188040d-6c67-4c5b-b112-36a304b66dad"
 
 
 class OneDriveConfigurationError(RuntimeError):
@@ -23,8 +27,8 @@ class OneDriveAuth:
     """Acquire and cache delegated Graph tokens for a desktop public client."""
 
     def __init__(self, token_store, client_id: str | None = None, tenant: str | None = None):
-        self.client_id = (client_id or os.environ.get(CLIENT_ID_ENV, "")).strip()
-        self.tenant = (tenant or os.environ.get(TENANT_ENV, "consumers")).strip()
+        self.client_id = (client_id or get_onedrive_client_id()).strip()
+        self.tenant = (tenant or get_onedrive_tenant()).strip()
         self.token_store = token_store
         self._app = None
         self.account_reference = ""
@@ -48,7 +52,7 @@ class OneDriveAuth:
     def connect(self) -> tuple[str, dict]:
         self.account_reference = ""
         app = self._application()
-        result = app.acquire_token_interactive(scopes=GRAPH_SCOPES, prompt="select_account")
+        result = app.acquire_token_interactive(scopes=GRAPH_SCOPES, prompt="select_account", timeout=300)
         if not result or "access_token" not in result:
             raise OneDriveConfigurationError(
                 "Microsoft sign-in did not complete. Please try connecting again."
@@ -58,10 +62,31 @@ class OneDriveAuth:
         claims = result.get("id_token_claims", {})
         local_id = claims.get("oid") or claims.get("sub")
         tenant_id = claims.get("tid")
+        home_id = None
+        client_info = result.get("client_info")
+        if client_info is not None:
+            try:
+                if not isinstance(client_info, str):
+                    raise ValueError()
+                decoded = json.loads(base64.b64decode(client_info + "=" * (-len(client_info) % 4),
+                                                      altchars=b"-_", validate=True))
+                uid, utid = decoded["uid"], decoded["utid"]
+                if not all(isinstance(value, str) and value.strip() == value and value for value in (uid, utid)):
+                    raise ValueError()
+                home_id = uid + "." + utid
+            except (ValueError, TypeError, KeyError):
+                raise OneDriveConfigurationError("Microsoft returned an invalid account identity. Reconnect this account.") from None
+        realms = {tenant_id}
+        # MSAL uses the token endpoint's realm in its cache. The consumers
+        # endpoint and personal-account tenant UUID denote the same authority,
+        # but this exception must never admit an arbitrary tenant or account.
+        if self.tenant == "consumers" and tenant_id == PERSONAL_TENANT_ID:
+            realms.add("consumers")
         accounts = app.get_accounts() if local_id and tenant_id else []
         matches = [account for account in accounts
                    if account.get("local_account_id") == local_id
-                   and account.get("realm") == tenant_id]
+                   and account.get("realm") in realms
+                   and (home_id is None or account.get("home_account_id") == home_id)]
         if len(matches) == 1:
             self.account_reference = matches[0].get("home_account_id", "")
         return result["access_token"], result

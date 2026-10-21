@@ -3,7 +3,9 @@ import os
 import tempfile
 from pathlib import Path
 
-SETTINGS_FILE = Path("settings.json")
+DEFAULT_SETTINGS_FILE = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "TraceSync" / "settings.json"
+LEGACY_SETTINGS_FILE = Path("settings.json")
+SETTINGS_FILE = DEFAULT_SETTINGS_FILE
 PROVIDER_OPTIONS = (
     "Local Folder (active)",
     "OneDrive (coming soon)",
@@ -154,12 +156,16 @@ class SettingsService:
     @staticmethod
     def load():
         settings = _default_settings()
-        if not SETTINGS_FILE.exists():
-            return settings
+        source = SETTINGS_FILE
+        if not source.exists():
+            if SETTINGS_FILE == DEFAULT_SETTINGS_FILE and LEGACY_SETTINGS_FILE.is_file():
+                source = LEGACY_SETTINGS_FILE
+            else:
+                return settings
 
         try:
             with open(
-                SETTINGS_FILE,
+                source,
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -214,6 +220,7 @@ class SettingsService:
         # Serialize before touching the destination; replace only a complete file.
         content = json.dumps(settings_copy, indent=4)
         staged = None
+        SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=SETTINGS_FILE.parent,
                                              prefix=".tracesync-settings-", delete=False) as output:
