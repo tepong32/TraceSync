@@ -1,12 +1,18 @@
 from collections import Counter
 import ntpath
+from threading import Thread
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from core.credential_store import GoogleTokenStore
+from core.google_drive_auth import GoogleDrivePickerCancelled, revoke_google_sign_in
+from core.google_drive_provider import GoogleDriveConfigurationError, GoogleDriveProvider
+from core.local_storage_provider import LocalStorageProvider
 from core.sync_service import SyncExecutionStartError, SyncService
 from core.sync_history_service import HistoryPersistenceError
 from core.sync_history_lock import SyncAlreadyActiveError
+from core.storage_provider import ProviderCapability
 from models.compare_status import CompareStatus
 from models.sync_direction import SyncDirection
 from models.comparison_decision import ConfidenceLevel
@@ -22,7 +28,16 @@ from ui.widgets.workflow_guide import WorkflowGuide
 from ui.widgets.scrollable_panel import ScrollablePanel
 from ui.theme import configure_theme
 from utils.application_version import get_application_version
-from utils.settings import PROVIDER_OPTIONS, SettingsService
+from utils.settings import (
+    LOCAL_SIDE_PROVIDER_OPTIONS,
+    PROVIDER_OPTIONS,
+    SERVER_SIDE_PROVIDER_OPTIONS,
+    SettingsService,
+)
+
+
+GOOGLE_DRIVE_OPTION = "Google Drive (read and download)"
+LOCAL_PROVIDER_OPTION = PROVIDER_OPTIONS[0]
 
 
 class MainWindow(tk.Tk):
@@ -53,6 +68,7 @@ class MainWindow(tk.Tk):
         self.source_provider_status_var = tk.StringVar(value="")
         self.destination_provider_status_var = tk.StringVar(value="")
         self.folder_pair_var = tk.StringVar(value="")
+        self._server_endpoint_display = ""
         self._build_ui()
         self._load_saved_folders()
         self._load_saved_providers()
@@ -132,11 +148,11 @@ class MainWindow(tk.Tk):
         )
         provider_panel.pack(fill="x", padx=10, pady=(0, 10))
 
-        ttk.Label(provider_panel, text="Source provider:").grid(row=0, column=0, sticky="w")
+        ttk.Label(provider_panel, text="Local side provider:").grid(row=0, column=0, sticky="w")
         self.source_provider_combo = ttk.Combobox(
             provider_panel,
             textvariable=self.source_provider_var,
-            values=self.provider_options,
+            values=LOCAL_SIDE_PROVIDER_OPTIONS,
             state="readonly",
             width=36,
         )
@@ -160,11 +176,11 @@ class MainWindow(tk.Tk):
             style="UtilityNeutral.TButton",
         ).grid(row=0, column=2, padx=(10, 0), sticky="w")
 
-        ttk.Label(provider_panel, text="Destination provider:").grid(row=2, column=0, sticky="w")
+        ttk.Label(provider_panel, text="Server side provider:").grid(row=2, column=0, sticky="w")
         self.destination_provider_combo = ttk.Combobox(
             provider_panel,
             textvariable=self.destination_provider_var,
-            values=self.provider_options,
+            values=SERVER_SIDE_PROVIDER_OPTIONS,
             state="readonly",
             width=36,
         )
@@ -181,12 +197,20 @@ class MainWindow(tk.Tk):
             foreground="#4b5563",
         ).grid(row=3, column=1, sticky="w", padx=(10, 0), pady=(4, 10))
 
-        ttk.Button(
+        self.connect_google_drive_button = ttk.Button(
             provider_panel,
-            text="Connect Destination Provider (Planned)",
-            state="disabled",
+            text="Connect Google Drive...",
+            command=self.connect_google_drive,
             style="UtilityNeutral.TButton",
-        ).grid(row=2, column=2, padx=(10, 0), sticky="w")
+        )
+        self.connect_google_drive_button.grid(row=2, column=2, padx=(10, 0), sticky="w")
+        self.disconnect_google_drive_button = ttk.Button(
+            provider_panel,
+            text="Disconnect",
+            command=self.disconnect_google_drive,
+            style="UtilityNeutral.TButton",
+        )
+        self.disconnect_google_drive_button.grid(row=3, column=2, padx=(10, 0), sticky="w")
 
 
         planning_panel = ttk.LabelFrame(
@@ -198,8 +222,8 @@ class MainWindow(tk.Tk):
         ttk.Label(
             planning_panel,
             text=(
-                "TraceSync currently ships with Local Folder Sync only."
-                " Use the provider selections above to record where remote workflows are planned."
+                "Google Drive is available as a read and download source to a local folder."
+                " Drive uploads and other cloud providers are not enabled yet."
             ),
             wraplength=900,
             justify="left",
@@ -207,8 +231,8 @@ class MainWindow(tk.Tk):
         ttk.Label(
             planning_panel,
             text=(
-                "Future releases will connect these provider settings to active remote/cloud workflows."
-                " No remote data is moved in this version."
+                "Use Connect Google Drive to sign in and choose a folder."
+                " Copying still uses TraceSync's normal compare, review, and confirmation steps."
             ),
             wraplength=900,
             justify="left",
@@ -407,15 +431,15 @@ class MainWindow(tk.Tk):
             ),
             (
                 self.provider_toggle_button,
-                "Show or hide planning-only provider options. Remote and cloud synchronization is not active.",
+                "Show or hide provider connection and endpoint settings.",
             ),
             (
                 self.source_provider_combo,
-                "Records a planned source provider preference. It does not enable remote synchronization.",
+                "The local side currently uses a local or mapped folder.",
             ),
             (
                 self.destination_provider_combo,
-                "Records a planned destination provider preference. It does not enable remote synchronization.",
+                "Choose a local folder or connect a Google Drive folder for comparison and download.",
             ),
             (
                 self.ignore_settings_button,
@@ -541,6 +565,11 @@ class MainWindow(tk.Tk):
     def _sync_folder_pair_selection_from_paths(self):
         local_folder = self.local_var.get().strip()
         server_folder = self.server_var.get().strip()
+        if self.destination_provider_var.get() == GOOGLE_DRIVE_OPTION:
+            self.folder_pair_var.set("")
+            self.settings["active_folder_pair"] = ""
+            self.settings["local_folder"] = local_folder
+            return
         matched_pair = self._find_folder_pair_by_paths(local_folder, server_folder)
         active_pair_name = matched_pair["name"] if matched_pair else ""
         self.folder_pair_var.set(active_pair_name)
@@ -584,12 +613,15 @@ class MainWindow(tk.Tk):
 
     def _load_saved_providers(self):
         providers = self.settings.get("providers", {})
-        self.source_provider_var.set(providers.get("source_provider", self.provider_options[0]))
+        self.source_provider_var.set(providers.get("source_provider", LOCAL_PROVIDER_OPTION))
         self.destination_provider_var.set(
-            providers.get("destination_provider", self.provider_options[0]),
+            providers.get("destination_provider", LOCAL_PROVIDER_OPTION),
         )
+        self._refresh_server_endpoint_display()
 
     def _on_provider_selection_changed(self):
+        self._refresh_server_endpoint_display()
+        self._on_folder_value_changed()
         self._persist_provider_selection()
         self._refresh_provider_status()
 
@@ -609,6 +641,106 @@ class MainWindow(tk.Tk):
         }
         SettingsService.save(self.settings)
 
+    def _refresh_server_endpoint_display(self):
+        google_selected = self.destination_provider_var.get() == GOOGLE_DRIVE_OPTION
+        if google_selected:
+            endpoint = self.settings.get("provider_endpoints", {}).get("google_drive")
+            if endpoint:
+                display = (
+                    f"Google Drive: {endpoint['folder_name']} "
+                    f"({endpoint['account_email']})"
+                )
+            else:
+                display = "Connect Google Drive to select a folder"
+            self._server_endpoint_display = display
+            self.server_var.set(display)
+            self.server_entry.configure(state="readonly")
+            self.server_browse_button.configure(state="disabled")
+            self.folder_pair_manage_button.configure(state="disabled")
+            self.folder_pair_save_button.configure(state="disabled")
+            self.disconnect_google_drive_button.configure(
+                state="normal" if endpoint else "disabled",
+            )
+        else:
+            current_value = self.server_var.get()
+            self.server_entry.configure(state="normal")
+            self.server_browse_button.configure(state="normal")
+            self.folder_pair_manage_button.configure(state="normal")
+            self.folder_pair_save_button.configure(state="normal")
+            self.disconnect_google_drive_button.configure(state="disabled")
+            if current_value == self._server_endpoint_display:
+                self.server_var.set(self.settings.get("server_folder", ""))
+            self._server_endpoint_display = ""
+
+    def connect_google_drive(self):
+        self.status_var.set("Opening Google sign-in and folder selection...")
+        self.update_idletasks()
+        self.connect_google_drive_button.configure(state="disabled")
+        Thread(target=self._connect_google_drive_worker, daemon=True).start()
+
+    def _connect_google_drive_worker(self):
+        try:
+            provider = GoogleDriveProvider.authenticate(GoogleTokenStore())
+            error = None
+        except Exception as exc:
+            provider = None
+            error = exc
+        try:
+            self.after(0, self._finish_google_drive_connection, provider, error)
+        except tk.TclError:
+            # The window was closed while the system browser was open.
+            return
+
+    def _finish_google_drive_connection(self, provider, error):
+        self.connect_google_drive_button.configure(state="normal")
+        if error is not None:
+            if isinstance(error, GoogleDrivePickerCancelled):
+                self.status_var.set("Google Drive folder selection cancelled.")
+                messagebox.showinfo("Google Drive", str(error))
+            else:
+                self.status_var.set("Google Drive connection failed.")
+                messagebox.showerror("Google Drive Connection Error", str(error))
+            return
+        if provider is None:
+            self.status_var.set("Google Drive connection failed.")
+            return
+        self.settings.setdefault("provider_endpoints", {})["google_drive"] = {
+            "folder_id": provider.folder_id,
+            "folder_name": provider.folder_name,
+            "account_email": provider.account_email,
+        }
+        self.destination_provider_var.set(GOOGLE_DRIVE_OPTION)
+        self._persist_provider_selection()
+        self._refresh_server_endpoint_display()
+        self._refresh_provider_status()
+        self._on_folder_value_changed()
+        self.status_var.set(
+            f"Connected Google Drive folder: {provider.folder_name}. Compare to review its files."
+        )
+
+    def disconnect_google_drive(self):
+        if not messagebox.askyesno(
+            "Disconnect Google Drive",
+            "Disconnect this Google account, revoke its saved sign-in when online, and remove the selected folder?",
+        ):
+            return
+        try:
+            revoked = revoke_google_sign_in(GoogleTokenStore())
+        except Exception as exc:
+            messagebox.showerror("Google Drive", f"Could not remove the saved sign-in: {exc}")
+            return
+        self.settings.get("provider_endpoints", {}).pop("google_drive", None)
+        self.destination_provider_var.set(LOCAL_PROVIDER_OPTION)
+        self._persist_provider_selection()
+        self._refresh_server_endpoint_display()
+        self._refresh_provider_status()
+        self._on_folder_value_changed()
+        self.status_var.set(
+            "Google Drive was disconnected and its sign-in revoked."
+            if revoked else
+            "Google Drive was disconnected locally; online token revocation could not be confirmed."
+        )
+
     def browse_local(self):
         self._browse_folder(self.local_var, "local_folder")
 
@@ -623,25 +755,51 @@ class MainWindow(tk.Tk):
             SettingsService.save(self.settings)
 
     def compare_folders(self):
-        local_folder, server_folder = self.local_var.get().strip(), self.server_var.get().strip()
-        if not local_folder or not server_folder:
-            messagebox.showwarning("Missing Folder", "Please select both a Local Folder and a Server Folder.")
+        local_folder = self.local_var.get().strip()
+        if not local_folder:
+            messagebox.showwarning("Missing Folder", "Please select a Local Folder.")
             return
         try:
             self.workflow_guide.show_progress("Comparing folders...")
             self.status_var.set("Comparing folders...")
             self.update_idletasks()
-            self.results = self.sync_service.compare(
-                local_folder,
-                server_folder,
-                user_ignore_patterns=self.settings.get("ignore_patterns", []),
-            )
+            server_provider_choice = self.destination_provider_var.get()
+            if self.source_provider_var.get() != LOCAL_PROVIDER_OPTION:
+                raise ValueError("Only the Local Folder provider is available on the left side currently.")
+            if server_provider_choice == LOCAL_PROVIDER_OPTION:
+                server_folder = self.server_var.get().strip()
+                if not server_folder:
+                    messagebox.showwarning("Missing Folder", "Please select a Server Folder.")
+                    return
+                self.sync_service = SyncService()
+                self.results = self.sync_service.compare(
+                    local_folder,
+                    server_folder,
+                    user_ignore_patterns=self.settings.get("ignore_patterns", []),
+                )
+                self.settings["server_folder"] = server_folder
+            elif server_provider_choice == GOOGLE_DRIVE_OPTION:
+                endpoint = self.settings.get("provider_endpoints", {}).get("google_drive")
+                if not endpoint:
+                    raise GoogleDriveConfigurationError(
+                        "Connect to Google Drive and choose a folder before comparing."
+                    )
+                self.sync_service = SyncService(
+                    local_provider=LocalStorageProvider(local_folder, "Local Folder"),
+                    server_provider=GoogleDriveProvider.from_saved_selection(
+                        GoogleTokenStore(), endpoint,
+                    ),
+                )
+                self.results = self.sync_service.compare(
+                    user_ignore_patterns=self.settings.get("ignore_patterns", []),
+                )
+            else:
+                raise ValueError(f"{server_provider_choice} is not available yet.")
             self.settings["local_folder"] = local_folder
-            self.settings["server_folder"] = server_folder
             SettingsService.save(self.settings)
             self.comparison_completed = True
             self._show_comparison_results()
-        except (OSError, ValueError) as exc:
+        except Exception as exc:
             self.comparison_completed = False
             self._set_sync_buttons(False)
             self._refresh_workflow_guidance()
@@ -671,14 +829,21 @@ class MainWindow(tk.Tk):
         return " ".join(parts)
 
     def _refresh_provider_status(self):
-        local_ready = "Connected to local-folder mode (no remote sync yet)."
-        remote_planned = "Planned for a future remote setup. Continue local sync workflow."
+        local_ready = "Local folder is ready."
+        remote_planned = "This provider is not connected yet."
         self.source_provider_status_var.set(
             local_ready if self.source_provider_var.get() == self.provider_options[0] else remote_planned
         )
-        self.destination_provider_status_var.set(
-            local_ready if self.destination_provider_var.get() == self.provider_options[0] else remote_planned
-        )
+        if self.destination_provider_var.get() == LOCAL_PROVIDER_OPTION:
+            self.destination_provider_status_var.set(local_ready)
+        elif self.destination_provider_var.get() == GOOGLE_DRIVE_OPTION:
+            endpoint = self.settings.get("provider_endpoints", {}).get("google_drive")
+            self.destination_provider_status_var.set(
+                f"Selected {endpoint['folder_name']} for download to Local."
+                if endpoint else "Connect and select a Google Drive folder."
+            )
+        else:
+            self.destination_provider_status_var.set(remote_planned)
 
     def apply_filter(self, status):
         self.current_filter = status
@@ -858,6 +1023,26 @@ class MainWindow(tk.Tk):
             self.compare_folders()
 
     def _set_sync_buttons(self, enabled: bool):
-        state = "normal" if enabled and self.results else "disabled"
-        self.local_to_server_button.configure(state=state)
-        self.server_to_local_button.configure(state=state)
+        can_review = enabled and bool(self.results)
+        local_provider = self.sync_service.local_provider
+        server_provider = self.sync_service.server_provider
+        local_to_server_safe = bool(
+            server_provider
+            and (
+                ProviderCapability.CONDITIONAL_CREATE in server_provider.capabilities
+                or ProviderCapability.CONDITIONAL_TRANSFER in server_provider.capabilities
+            )
+        )
+        server_to_local_safe = bool(
+            local_provider
+            and (
+                ProviderCapability.CONDITIONAL_CREATE in local_provider.capabilities
+                or ProviderCapability.CONDITIONAL_TRANSFER in local_provider.capabilities
+            )
+        )
+        self.local_to_server_button.configure(
+            state="normal" if can_review and local_to_server_safe else "disabled",
+        )
+        self.server_to_local_button.configure(
+            state="normal" if can_review and server_to_local_safe else "disabled",
+        )

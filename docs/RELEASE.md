@@ -14,6 +14,13 @@ source and VERSION used for packaging. Build with:
 
 `python -m PyInstaller --noconfirm --clean TraceSync.spec`
 
+The cloud-enabled Google Drive branch requires `TRACESYNC_GOOGLE_CLIENT_ID` in
+the build environment. The spec packages that public desktop OAuth client ID as
+application data so recipients do not need to set a machine environment
+variable. No client secret or user token is packaged. Each Windows device still
+requires the user to sign in once; refresh credentials remain in that device's
+Windows credential store.
+
 Run the full unittest suite and inspect the actual executable with isolated sample
 folders, settings and LOCALAPPDATA. Record SHA-256, runtime/tool versions, test
 outcomes and manual scope in CONTINUE.md. Integrate with current origin/master,

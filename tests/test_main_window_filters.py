@@ -112,6 +112,90 @@ class MainWindowProviderSectionTests(unittest.TestCase):
             "Show Provider Options",
         )
 
+    def test_google_endpoint_display_preserves_local_server_folder_setting(self):
+        from ui.main_window import GOOGLE_DRIVE_OPTION, LOCAL_PROVIDER_OPTION
+
+        self.window.settings["server_folder"] = "C:/saved/server"
+        self.window.settings["provider_endpoints"] = {
+            "google_drive": {
+                "folder_id": "folder-1",
+                "folder_name": "Reports",
+                "account_email": "user@example.test",
+            }
+        }
+        self.window.server_var.set("C:/saved/server")
+        self.window.destination_provider_var.set(GOOGLE_DRIVE_OPTION)
+        self.window._refresh_server_endpoint_display()
+
+        self.assertEqual(self.window.server_var.get(), "Google Drive: Reports (user@example.test)")
+        self.assertEqual(self.window.settings["server_folder"], "C:/saved/server")
+        self.assertEqual(str(self.window.server_browse_button.cget("state")), "disabled")
+
+        self.window.destination_provider_var.set(LOCAL_PROVIDER_OPTION)
+        with patch("ui.main_window.SettingsService.save"):
+            self.window._on_provider_selection_changed()
+
+        self.assertEqual(self.window.server_var.get(), "C:/saved/server")
+
+    def test_google_sign_in_runs_off_the_tk_thread_and_saves_safe_endpoint_fields(self):
+        from types import SimpleNamespace
+        from ui.main_window import GOOGLE_DRIVE_OPTION
+
+        with (
+            patch("ui.main_window.Thread") as thread_type,
+            patch("ui.main_window.SettingsService.save"),
+        ):
+            self.window.connect_google_drive()
+
+            thread_type.assert_called_once()
+            thread_type.return_value.start.assert_called_once()
+            self.assertEqual(str(self.window.connect_google_drive_button.cget("state")), "disabled")
+
+            self.window._finish_google_drive_connection(
+                SimpleNamespace(
+                    folder_id="folder-123",
+                    folder_name="Reports",
+                    account_email="user@example.test",
+                ),
+                None,
+            )
+
+        self.assertEqual(self.window.destination_provider_var.get(), GOOGLE_DRIVE_OPTION)
+        self.assertEqual(
+            self.window.settings["provider_endpoints"]["google_drive"],
+            {
+                "folder_id": "folder-123",
+                "folder_name": "Reports",
+                "account_email": "user@example.test",
+            },
+        )
+        self.assertEqual(str(self.window.connect_google_drive_button.cget("state")), "normal")
+
+    def test_google_endpoint_display_preserves_local_server_folder_setting(self):
+        from ui.main_window import GOOGLE_DRIVE_OPTION, LOCAL_PROVIDER_OPTION
+
+        self.window.settings["server_folder"] = "C:/saved/server"
+        self.window.settings["provider_endpoints"] = {
+            "google_drive": {
+                "folder_id": "folder-1",
+                "folder_name": "Reports",
+                "account_email": "user@example.test",
+            }
+        }
+        self.window.server_var.set("C:/saved/server")
+        self.window.destination_provider_var.set(GOOGLE_DRIVE_OPTION)
+        self.window._refresh_server_endpoint_display()
+
+        self.assertEqual(self.window.server_var.get(), "Google Drive: Reports (user@example.test)")
+        self.assertEqual(self.window.settings["server_folder"], "C:/saved/server")
+        self.assertEqual(str(self.window.server_browse_button.cget("state")), "disabled")
+
+        self.window.destination_provider_var.set(LOCAL_PROVIDER_OPTION)
+        with patch("ui.main_window.SettingsService.save"):
+            self.window._on_provider_selection_changed()
+
+        self.assertEqual(self.window.server_var.get(), "C:/saved/server")
+
     def test_folder_pair_controls_are_present_without_showing_provider_ui(self):
         self.assertIsNotNone(self.window.folder_pair_combo)
         self.assertIsNotNone(self.window.folder_pair_manage_button)

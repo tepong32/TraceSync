@@ -2,15 +2,19 @@
 
 ## Status
 
-Planned on `codex/cloud-storage-foundation`; not implemented or user-accessible.
-The intended user experience is account sign-in in a system browser, selecting a
-cloud folder, then using TraceSync's existing compare, review, confirm, sync,
-summary, and history workflow. Google Drive and OneDrive use separate native API
-providers behind the shared `StorageProvider` boundary.
+The shared provider boundary is in place. Google Drive has an experimental,
+read-only integration on `codex/google-drive-provider` that supports sign-in,
+folder selection, comparison, review, and downloads to local storage. It has not
+passed live account validation and is not part of a release. OneDrive remains a
+separate planned branch. The intended workflow uses each provider's native API
+behind `StorageProvider` and preserves TraceSync's compare, review, confirm,
+sync, summary, and history flow.
 
 ## User flow
 
-1. Choose Google Drive or OneDrive for either endpoint and select **Sign in**.
+1. On a provider-enabled development build, choose Google Drive or OneDrive for
+   an endpoint and select **Sign in**. Currently only Google Drive is wired, and
+   only as a source for local downloads.
 2. TraceSync opens the provider's sign-in and consent page in the system browser.
    The user signs into their account and approves the requested file access.
 3. Return to TraceSync and choose the cloud folder. Show the connected account and
@@ -49,12 +53,40 @@ providers behind the shared `StorageProvider` boundary.
 
 Branch: `codex/google-drive-provider`, based on the shared cloud foundation.
 
+Current implementation status: the app has a tested desktop Picker OAuth flow,
+Windows credential-store integration, saved non-secret folder references, and
+UI wiring to compare a selected Drive folder with a local folder and download
+reviewed files to local storage. Uploads to Drive are unavailable because Drive
+does not provide the required path-level atomic absence guarantee. The scan
+adapter follows pagination across My Drive/shared-drive results, rejects
+duplicate sibling names and case-insensitive Windows collisions, rejects
+Windows-invalid names and unsupported Workspace documents/shortcuts, checks
+`canListChildren` to avoid incomplete scans, and fetches fresh source metadata
+around downloads. The Windows Keyring backend is bundled in PyInstaller and a
+frozen set/read/delete credential probe passed. This is not yet a validated
+release: live consent, `drive.file` subtree access, app OAuth, and real transfers
+still need a disposable-account check.
+
 - Use Google desktop OAuth in the system browser.
-- Investigate Google Picker with the `drive.file` scope first. It is the narrower
-  scope and is intended for files the user selects or opens with the app. Verify
-  that the selected-folder workflow can enumerate its entire intended subtree.
-  If not, pause and assess broader Drive scopes, their consent screen and
-  verification requirements before requesting them.
+- Use the desktop/mobile Google Picker OAuth trigger with `drive.file` and
+  folder selection. Do not ship or require a confidential client secret in a
+  desktop executable; desktop OAuth clients are public clients and Google
+  supports PKCE.
+- The selected folder ID and account are endpoint references, not credentials.
+  Store tokens in Windows credential storage and endpoint references in
+  TraceSync settings.
+- Verify that the selected-folder workflow can enumerate its entire intended
+  subtree using `drive.file`. If not, assess broader Drive scopes and their
+  consent-screen and verification requirements before requesting them.
+- For development, configure a Desktop OAuth client, enable both the Drive API
+  and Google Picker API, declare `drive.file`, and add the test account to the
+  consent screen's test-user list. Google expires Testing-mode authorizations
+  after seven days, including offline refresh tokens, so that mode is only for
+  integration checks. Before distributing to general users, configure a
+  production OAuth consent screen and complete Google's applicable branding/
+  verification steps. `drive.file` is a non-sensitive, per-file scope, but
+  public distribution still requires the applicable basic OAuth app verification.
+  Use a separate Google Cloud project for production.
 - Use Drive file IDs for `StorageLocation` identity and provider version/ETag,
   modified time, size, and checksum only where the API provides them.
 - Detect duplicate names among siblings. Google Drive's API says a file name
@@ -86,9 +118,10 @@ Branch: `codex/onedrive-provider`, based on the shared cloud foundation.
 1. **Foundation branch:** document the contract, then define minimal account and
    endpoint settings, secure token-store boundary, cloud sign-in lifecycle, and
    provider factory integration points. Keep local behavior unchanged.
-2. **Google Drive branch:** implement account sign-in, Picker/folder selection,
-   read-only scan and downloads first; resolve duplicate-name and scope behavior;
-   then add create-only upload if its guarantees meet the safety contract.
+2. **Google Drive branch:** validate account sign-in, Picker/folder selection,
+   read-only scan and downloads with a disposable account; resolve `drive.file`
+   subtree access. Keep uploads unavailable unless the API can meet the safety
+   contract.
 3. **OneDrive branch:** implement the same user flow with MSAL and Graph; scan,
    download, then create-only upload sessions with explicit conflict failure.
 4. **Integration:** merge providers separately, expose only validated choices,
@@ -104,6 +137,8 @@ test account is an environmental blocker, not a pass.
 ## External API references
 
 - [Google desktop OAuth](https://developers.google.com/identity/protocols/oauth2/native-app)
+- [Google OAuth testing and verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification)
+- [Google OAuth publishing status and test-user limits](https://support.google.com/cloud/answer/15549945?hl=en)
 - [Google Drive scope guidance](https://developers.google.com/workspace/drive/api/guides/api-specific-auth)
 - [Google Picker overview](https://developers.google.com/workspace/drive/picker/guides/overview)
 - [Google Drive file resource](https://developers.google.com/workspace/drive/api/reference/rest/v3/files)

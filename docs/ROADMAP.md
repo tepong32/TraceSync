@@ -20,9 +20,12 @@ trust and create-only behavior have been validated. Remote replacement remains
 outside the accepted safety contract. The release build contains local/mapped
 folder support only; provider choices remain planning controls.
 
-Google Drive is the preferred first cloud integration, with Microsoft OneDrive
-planned as a separate provider branch. Shared design and implementation order
-are in [Cloud storage provider plan](CLOUD_STORAGE.md). Cloud APIs require
+Google Drive is under development on `codex/google-drive-provider` as a
+read/download source for local copies. Live authentication and packaged
+credential validation remain outstanding; it is not part of the current release.
+Microsoft OneDrive remains a separate planned provider branch. Shared design,
+current implementation scope, and validation gates are in
+[Cloud storage provider plan](CLOUD_STORAGE.md). Cloud APIs require
 provider-specific account consent, folder identity, conflict semantics, and
 packaged token handling; this work does not imply general cloud-drive support.
 

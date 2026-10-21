@@ -59,6 +59,8 @@ The following captures come from the tagged v0.10.0 release and use representati
 
 > **Scope boundary:** v0.10.0 does not provide automatic synchronization, active cloud providers, bidirectional conflict resolution, backup, or rollback.
 
+The tagged v0.11.0 release remains local-folder only. The `codex/google-drive-provider` development branch adds an unvalidated Google Drive read/download path; it is not part of the released executable. See [Cloud storage provider plan](docs/CLOUD_STORAGE.md) for its current scope and validation gates.
+
 ## v0.11.0 interface
 
 ![Green next-step guidance](docs/images/v0.11.0/next-step.png)
@@ -86,7 +88,7 @@ The following captures come from the tagged v0.10.0 release and use representati
 - History review, backup restore, and selected-run CSV export, including spreadsheet formula-injection protection.
 - A lightweight operating-system lock that permits only one active synchronization per user profile.
 - JSON settings that retain selected folders, saved Folder Pairs, the active pair, and future provider-specific settings.
-- Collapsible, planning-only provider selections and status messaging; these are hidden by default and do not connect to or move data through remote services.
+- Collapsible provider controls, hidden by default. The tagged v0.11.0 release uses them for planning only; the separate Google Drive development branch connects a selected folder for read/download.
 
 ## Safety model
 
@@ -96,7 +98,7 @@ History details identify files with backups and provide a confirmed Restore acti
 
 If the final history update fails after copying, TraceSync preserves the real synchronization result and warns the user. The durable record remains `in_progress`; on a later launch it is honestly classified as `interrupted` because completion cannot be proven from the history store.
 
-The tagged v0.10.0 release did not include backup or restore; v0.11.0 adds those capabilities. Automatic synchronization, active cloud providers, and bidirectional conflict resolution remain out of scope.
+The tagged v0.10.0 release did not include backup or restore; v0.11.0 adds those capabilities. Automatic synchronization, cloud uploads, and bidirectional conflict resolution remain out of scope. Google Drive read/download is in development and has not passed live account or packaged credential validation.
 
 ## Architecture
 
@@ -111,7 +113,7 @@ MainWindow
      -> SyncHistoryService -> JsonSyncHistoryStore
 ```
 
-`LocalStorageProvider` is the only concrete provider. The provider abstraction keeps scanning and synchronization independent of the local filesystem API, ready for later storage backends without changing the UI workflow. Folder Pair persistence remains a UI/settings concern and does not alter comparison or synchronization logic.
+`LocalStorageProvider` remains the only provider that can receive transfers. The Google Drive development branch adds a read-only source adapter for comparison and reviewed downloads to local storage; it does not advertise destination transfer capabilities. Other provider work remains separate and unfinished. The provider abstraction keeps synchronization orchestration independent of provider APIs. Folder Pair persistence remains a UI/settings concern and does not alter comparison or synchronization logic.
 
 See [Architecture](docs/ARCHITECTURE.md) for module responsibilities, [Roadmap](docs/ROADMAP.md) for completed commitments and current status, and the [v0.1-v0.9.1 Retrospective](docs/RETROSPECTIVE_V0.1_V0.9.1.md) for the reconciled product history. Future possibilities remain separately classified in the [Backlog](docs/BACKLOGS.md) and [Icebox](docs/ICEBOX.md); neither is a development commitment.
 

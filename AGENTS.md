@@ -205,6 +205,10 @@ overwrite protection only by safely materializing and verifying its current
 content through `StorageProvider.open_backup_content`; failure must block the
 overwrite.
 
+User settings belong under `%APPDATA%\TraceSync`; OAuth refresh credentials
+belong in Windows-protected credential storage. Never copy provider credentials
+into settings, history, logs, or packaged application files.
+
 Target structure:
 
 ui/
@@ -337,7 +341,7 @@ Preserve compare-review-confirm-sync, truthful history, service/UI separation an
 
 ### Development state
 
-v0.11.0 includes the material-inspired UI, backup recovery, provider-neutral transfer foundation and local new-file race fix. SFTP remains separate unfinished development and is excluded from this release.
+v0.11.0 includes the material-inspired UI, backup recovery, provider-neutral transfer foundation and local new-file race fix. Google Drive read/download integration is under development on `codex/google-drive-provider`; live Google validation remains open. OneDrive and SFTP work remain separate from this release.
 
 ### Read next
 

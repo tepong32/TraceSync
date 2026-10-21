@@ -1,6 +1,8 @@
 # TraceSync continuation
 
-Updated 2026-10-11 for v0.11.0, Guided workflow and recovery.
+Updated 2026-10-21 for Google Drive provider development on
+`codex/google-drive-provider`. The v0.11.0 release remains the current tagged
+local-only release; this branch is experimental and has not been released.
 Read AGENTS.md, README.md, docs/ARCHITECTURE.md, docs/ROADMAP.md and docs/RELEASE.md.
 
 ## Release scope
@@ -50,28 +52,39 @@ against this checksum; publication outcomes are recorded in the portfolio handof
 
 ## Current development branches
 
-- `codex/google-drive-provider`: initial Google API adapter and OS credential
-  store are scaffolding only; this is not a usable Google Drive release. Before
-  integration can be considered complete:
-  - Replace the broad `drive` permission with the narrowest suitable scope and
-    complete Google Picker-based folder selection. Verify whether a picked
-    folder grants access to the intended subtree.
-  - Add UI for browser sign-in, account/folder selection, connection state,
-    disconnect/revoke, and settings-backed non-secret endpoint references.
-  - Wire provider selection through comparison, preview, sync, history, and
-    packaged startup without bypassing compare-review-confirm-sync.
-  - Handle pagination, duplicate names across both files and folders, shortcuts,
-    shared drives, unsupported Google Workspace documents, and stale/deleted
-    items. Keep ambiguous trees blocked.
-  - Implement downloads with source revalidation and temporary-file cleanup;
-    implement create-only uploads with explicit conflict/unknown-outcome handling
-    and no overwrite claim. Keep overwrites blocked without cloud backup support.
-  - Add provider and settings tests, verify credential storage and PyInstaller
-    packaging, and perform sign-in, consent, folder-access, download/upload, and
-    conflict checks against a disposable Google account. App OAuth values remain
-    configuration placeholders until supplied.
-  No Google sign-in or Drive validation has been performed. Dependencies were
-  added but not installed.
+- `codex/google-drive-provider`: Google Drive read/download integration is now
+  wired through desktop Picker OAuth, saved folder endpoints, comparison, review,
+  local download execution, and disconnect/revoke. The adapter handles paging,
+  shared-drive results, ambiguous/Windows-invalid names, unsupported Workspace
+  items, folder-list access checks, source version revalidation, temporary
+  downloads, size checks, and MD5 checks. Drive uploads remain disabled because
+  Drive cannot enforce the required path-level conditional create. Settings now
+  migrate to `%APPDATA%\TraceSync`; refresh credentials stay in Windows
+  credential storage. PyInstaller packaging requires `TRACESYNC_GOOGLE_CLIENT_ID`
+  and embeds that public client ID, not a secret or user token. Validation:
+  - PASS: `python -m unittest discover -s tests`: 178 tests, no skips. Drive
+    transfer tests cover materialization, checksum/size validation, pre-transfer
+    source-version failure, rechecks, and temporary-file cleanup. Reserved
+    Windows device suffixes are covered too.
+  - PASS: `python -m compileall -q` on changed Python modules and `git diff --check`.
+  - PASS: PyInstaller 6.20.0 / hooks 2026.6, Python 3.11.9 Windows x64 build
+    with `TRACESYNC_GOOGLE_CLIENT_ID=packaging-test.apps.googleusercontent.com`.
+    Replacing `dist/TraceSync.exe` failed with WinError 5 twice (a TraceSync
+    process was present on the first attempt; none was present on the second).
+    The successful build used `--distpath dist-google-smoke` and is now
+    `dist/TraceSync-google-smoke.exe`, 37,940,373 bytes.
+  - PASS: fixed PyInstaller's missing Windows Credential Manager backend by
+    explicitly including `keyring.backends.Windows`. The full TraceSync archive
+    contains that backend plus `pywin32-ctypes` modules.
+  - PASS: frozen Keyring probe stored, read, and deleted a disposable credential
+    through Windows Credential Manager. A separate bundled TraceSync launch
+    reached the Tk event loop with isolated app data. These smoke checks do not
+    establish live OAuth or Drive transfers.
+  - NOT RUN - ENVIRONMENTAL: real sign-in, consent, `drive.file` subtree access,
+    packaged app OAuth, and downloads. The owner must provide the public
+    Desktop OAuth client ID, enable Drive API and Picker API, configure the
+    consent screen/test users, and provide a disposable account/folder. No real
+    client ID or live Google account has been supplied.
 - `codex/onedrive-provider`: sibling branch from the shared cloud foundation;
   integration has not started. Add MSAL delegated sign-in and secure token
   storage, OneDrive folder selection, settings/provider/UI wiring, Graph scan and

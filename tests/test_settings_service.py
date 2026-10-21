@@ -8,6 +8,26 @@ import utils.settings as settings_module
 
 
 class SettingsServiceTests(unittest.TestCase):
+    def test_settings_migrate_from_working_directory_to_appdata_path(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            legacy_file = Path(workspace) / "settings.json"
+            appdata_file = Path(workspace) / "appdata" / "TraceSync" / "settings.json"
+            legacy_file.write_text(
+                json.dumps({"local_folder": "C:/Legacy", "ignore_patterns": ["*.tmp"]}),
+                encoding="utf-8",
+            )
+
+            with (
+                patch.object(settings_module, "SETTINGS_FILE", appdata_file),
+                patch.object(settings_module, "DEFAULT_SETTINGS_FILE", appdata_file),
+                patch.object(settings_module, "LEGACY_SETTINGS_FILE", legacy_file),
+            ):
+                loaded = settings_module.SettingsService.load()
+
+            self.assertEqual(loaded["local_folder"], "C:/Legacy")
+            self.assertEqual(loaded["ignore_patterns"], ["*.tmp"])
+            self.assertTrue(appdata_file.is_file())
+
     def test_provider_preferences_default_when_missing_or_invalid(self):
         with tempfile.TemporaryDirectory() as workspace:
             settings_file = Path(workspace) / "settings.json"
@@ -15,7 +35,7 @@ class SettingsServiceTests(unittest.TestCase):
                 json.dumps(
                     {
                         "providers": {
-                            "source_provider": "Google Drive (coming soon)",
+                            "source_provider": "Google Drive (source only)",
                             "destination_provider": "Not a real option",
                         },
                     },
@@ -29,7 +49,7 @@ class SettingsServiceTests(unittest.TestCase):
 
             self.assertEqual(
                 loaded["providers"]["source_provider"],
-                "Google Drive (coming soon)",
+                settings_module.DEFAULT_PROVIDER,
             )
             self.assertEqual(
                 loaded["providers"]["destination_provider"],
@@ -42,8 +62,8 @@ class SettingsServiceTests(unittest.TestCase):
             with patch.object(settings_module, "SETTINGS_FILE", settings_file):
                 settings = settings_module.SettingsService.load()
                 settings["providers"] = {
-                    "source_provider": "Dropbox (coming soon)",
-                    "destination_provider": "OneDrive (coming soon)",
+                    "source_provider": settings_module.DEFAULT_PROVIDER,
+                    "destination_provider": "Google Drive (read and download)",
                 }
                 settings_module.SettingsService.save(settings)
 
@@ -51,12 +71,40 @@ class SettingsServiceTests(unittest.TestCase):
 
             self.assertEqual(
                 reloaded["providers"]["source_provider"],
-                "Dropbox (coming soon)",
+                settings_module.DEFAULT_PROVIDER,
             )
             self.assertEqual(
                 reloaded["providers"]["destination_provider"],
-                "OneDrive (coming soon)",
+                "Google Drive (read and download)",
             )
+
+    def test_google_endpoint_persists_only_safe_selection_references(self):
+        with tempfile.TemporaryDirectory() as workspace:
+            settings_file = Path(workspace) / "settings.json"
+            with patch.object(settings_module, "SETTINGS_FILE", settings_file):
+                settings = settings_module.SettingsService.load()
+                settings["provider_endpoints"] = {
+                    "google_drive": {
+                        "folder_id": "drive-folder-123",
+                        "folder_name": "Reports",
+                        "account_email": "user@example.test",
+                        "refresh_token": "must-not-be-written",
+                    },
+                    "unknown_provider": {"token": "must-not-be-written"},
+                }
+                settings_module.SettingsService.save(settings)
+                persisted_text = settings_file.read_text(encoding="utf-8")
+                reloaded = settings_module.SettingsService.load()
+
+            self.assertEqual(
+                reloaded["provider_endpoints"]["google_drive"],
+                {
+                    "folder_id": "drive-folder-123",
+                    "folder_name": "Reports",
+                    "account_email": "user@example.test",
+                },
+            )
+            self.assertNotIn("must-not-be-written", persisted_text)
 
     def test_folder_pairs_are_normalized_and_deduplicated(self):
         with tempfile.TemporaryDirectory() as workspace:

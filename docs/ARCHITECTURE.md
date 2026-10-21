@@ -17,7 +17,7 @@ MainWindow -> SyncHistoryDialog -> SyncHistoryService -> JsonSyncHistoryStore
 
 ## Storage providers
 
-`StorageProvider` is the boundary between synchronization logic and a storage backend. Providers advertise capabilities and implement scanning, safe location resolution, and conditional transfer. `LocalStorageProvider` supports ordinary local folders and mapped/network filesystem paths today. Future providers should implement this interface rather than adding provider-specific conditions to `SyncService`.
+`StorageProvider` is the boundary between synchronization logic and a storage backend. Providers advertise capabilities and implement scanning, safe location resolution, and conditional transfer. `LocalStorageProvider` supports ordinary local folders and mapped/network filesystem paths. The Google Drive development branch adds a source-only provider for selected folders; it does not advertise destination transfer because Drive's name semantics do not meet TraceSync's conditional-create contract. Other providers should implement this interface rather than adding provider-specific conditions to `SyncService`.
 
 Every approved operation carries an immutable `TransferPrecondition` containing the reviewed source and destination `StorageLocation` and `ComparisonMetadata` values. Missing destination metadata means the destination was absent during review. Source providers expose reviewed content through `open_transfer_content`, which may yield a direct local path or a verified temporary materialization. A destination advertising `CONDITIONAL_TRANSFER` must enforce the preconditions as part of its create or replacement operation. A state mismatch is reported separately from an operational transfer failure and is never automatically retried.
 
@@ -43,7 +43,7 @@ The history details dialog enables Restore only for a row with a backup ID. Rest
 
 ## Settings compatibility
 
-Settings remain a JSON dictionary so existing `local_folder` and `server_folder` entries continue to work. v0.10 adds normalized `folder_pairs` and `active_folder_pair` values for named Local ↔ Server relationships. Existing `recent_pairs` data is accepted as a migration source only when `folder_pairs` is absent.
+Settings remain a JSON dictionary under `%APPDATA%\TraceSync\settings.json` so packaged startup does not depend on the process working directory. A one-time migration reads the prior working-directory `settings.json` when the app-data copy does not exist. Existing `local_folder` and `server_folder` entries continue to work. v0.10 adds normalized `folder_pairs` and `active_folder_pair` values for named Local ↔ Server relationships. Existing `recent_pairs` data is accepted as a migration source only when `folder_pairs` is absent. Cloud endpoint references are non-secret settings; OAuth refresh credentials stay in Windows-protected credential storage.
 
 `FolderPairManagerDialog` owns the editing interaction, while `MainWindow` applies a selected relationship to the current folder fields. Changing either endpoint invalidates stale comparison results before synchronization can be enabled again. Folder Pairs do not introduce another comparison engine, background job queue, multi-job workspace, or provider transport.
 
