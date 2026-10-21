@@ -1,6 +1,23 @@
 # TraceSync Roadmap
 
-## Current create-only safety audit
+## Active Google provider completion — 2026-10-21
+
+On codex/google-drive-provider-completion from ec009ff: reconcile Google onto the
+newer OneDrive safety foundation; use native folder browsing, protected account
+storage and reviewed downloads. See PROVIDER_COMPLETION.md and CLOUD_OWNER_SETUP.md.
+Google uploads/replacements and OneDrive safe replacement remain explicit engineering
+gates; live registration/acceptance and packaging are separate. Older snapshots below
+are historical. Keep provider worktrees separate and SFTP parked.
+
+
+## Historical create-only safety audit snapshots
+
+Status correction for these historical snapshots: Gate B was committed locally
+as ec009ff on 2026-10-21, following 3996629. Provider completion is preserved as local preparation checkpoints on
+the separate branches above. Earlier statements about uncommitted diagnostics or
+pending dependency declarations describe their original checkpoints, not today.
+See PROVIDER_COMPLETION_VALIDATION.md for current validation and open gates.
+
 
 Current local source checkpoint is 3996629 (saved-folder restoration), following
 5292753 (runtime dependencies). Gate A standard-user local acceptance passed.

@@ -104,6 +104,7 @@ class SyncService:
         source, destination, eligible_statuses = self._direction_context(direction)
         items: list[SyncPreviewItem] = []
         excluded = 0
+        unsupported = 0
 
         for result in results:
             if result.status not in eligible_statuses:
@@ -127,7 +128,7 @@ class SyncService:
             try:
                 destination_location = destination.location_for(result.relative_path)
             except ConditionalTransferUnsupported:
-                excluded += 1
+                unsupported += 1
                 continue
             items.append(
                 SyncPreviewItem(
@@ -159,6 +160,8 @@ class SyncService:
         warnings: list[str] = []
         if excluded:
             warnings.append(f"{excluded} file(s) excluded: existing-file replacements are disabled for cloud workflows.")
+        if unsupported:
+            warnings.append(f"{unsupported} file(s) excluded: this destination does not support the requested transfer.")
         directories = sorted({directory for item in items
             for directory, identity in item.destination_folders if directory and identity is None})
         if directories:

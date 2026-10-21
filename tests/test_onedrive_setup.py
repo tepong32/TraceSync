@@ -33,6 +33,60 @@ class OneDriveSetupTests(unittest.TestCase):
         self.service.list_folders("root")
         return self.service.save_pair("Personal", str(self.local), "docs")
 
+    def test_offline_edit_repairs_local_path_and_preserves_identity_and_other_settings(self):
+        pair = self.connect_and_save()
+        self.service._clear_connection()
+        self.gateway.reset_mock()
+        updated = self.service.edit_pair(pair, "Renamed", str(self.local))
+        self.assertEqual(updated["server_endpoint"], pair["server_endpoint"])
+        self.assertEqual(self.service.saved_pairs(), [updated])
+        loaded = settings_module.SettingsService.load()
+        self.assertEqual(loaded["folder_pairs"][0], self.original["folder_pairs"][0])
+        self.assertEqual(loaded["sftp_profiles"], self.original["sftp_profiles"])
+        self.gateway.folder.assert_not_called()
+
+    def test_edit_cloud_folder_requires_same_connected_account_and_known_folder(self):
+        pair = self.connect_and_save()
+        updated = self.service.edit_pair(pair, "Personal", str(self.local), "root")
+        self.assertEqual(updated["server_endpoint"]["folder_id"], "root")
+        self.service.account_id = "other"
+        with self.assertRaises(OneDriveSetupError):
+            self.service.edit_pair(updated, "Personal", str(self.local), "docs")
+        self.assertEqual(self.service.saved_pairs(), [updated])
+
+    def test_edit_rejects_duplicate_names_invalid_paths_and_stale_definition(self):
+        pair = self.connect_and_save()
+        for name, local in (("local", str(self.local)), (" ", str(self.local)),
+                            ("Personal", str(self.local / "missing"))):
+            with self.subTest(name=name, local=local), self.assertRaises(OneDriveSetupError):
+                self.service.edit_pair(pair, name, local)
+        self.service.edit_pair(pair, "Changed", str(self.local))
+        for operation in (lambda: self.service.delete_pair(pair),
+                          lambda: self.service.edit_pair(pair, "Lost update", str(self.local))):
+            with self.assertRaises(OneDriveSetupError):
+                operation()
+        self.assertEqual(self.service.saved_pairs()[0]["name"], "Changed")
+
+    def test_delete_definition_offline_preserves_files_tokens_and_other_pairs(self):
+        pair = self.connect_and_save()
+        self.service._clear_connection()
+        self.auth.reset_mock()
+        self.service.delete_pair(pair)
+        self.assertEqual(self.service.saved_pairs(), [])
+        self.assertEqual(settings_module.SettingsService.load()["folder_pairs"], self.original["folder_pairs"])
+        self.assertTrue(self.local.is_dir())
+        self.assertFalse(self.auth.mock_calls)
+
+    def test_edit_and_delete_write_failures_preserve_settings(self):
+        pair = self.connect_and_save()
+        before = self.file.read_bytes()
+        with patch.object(settings_module.os, "replace", side_effect=OSError("disk failure")):
+            for operation in (lambda: self.service.delete_pair(pair),
+                              lambda: self.service.edit_pair(pair, "Renamed", str(self.local))):
+                with self.assertRaises(OSError):
+                    operation()
+                self.assertEqual(self.file.read_bytes(), before)
+
     def test_connect_browse_save_roundtrip_preserves_local_and_sftp_settings(self):
         pair = self.connect_and_save()
         loaded = settings_module.SettingsService.load()

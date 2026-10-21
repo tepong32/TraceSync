@@ -1,4 +1,6 @@
 import gc
+import os
+import shutil
 import tempfile
 import unittest
 from copy import deepcopy
@@ -41,6 +43,7 @@ class Graph:
     def __init__(self):
         self.files, self.calls = {}, []
         self.upload_mode = "success"
+        self.upload_properties = {}
         self.folders = {}
         self.create_mode = "success"
         self.download = b"remote"
@@ -58,6 +61,13 @@ class Graph:
             name = suffix.split(":/", 1)[1]
             record = self.files.get(name) or self.folders.get(name)
             return Response(record, 200 if record is not None else 404)
+        if method == "PATCH":
+            current = next(record for record in self.files.values() if suffix == "items/" + record["id"])
+            if kwargs["headers"]["If-Match"] != current["eTag"]:
+                return Response({}, 412)
+            current["fileSystemInfo"] = deepcopy(kwargs["json"]["fileSystemInfo"])
+            current["eTag"] = "metadata-v2"
+            return Response(current)
         if method == "POST" and suffix.endswith("/children"):
             body = kwargs["json"]
             assert body["@microsoft.graph.conflictBehavior"] == "fail"
@@ -87,6 +97,7 @@ class Graph:
             return Response(result, 201)
         self.target_parent = suffix.split("/")[1].split(":")[0]
         self.target = kwargs["json"]["item"]["name"]
+        self.upload_properties = deepcopy(kwargs["json"]["item"])
         assert kwargs["json"]["item"]["@microsoft.graph.conflictBehavior"] == "fail"
         return Response({"uploadUrl": "https://upload.example.invalid/private-session"})
     def put(self, url, **kwargs):
@@ -100,6 +111,8 @@ class Graph:
             return Response({}, 202)
         self.files[self.target] = item(self.target, kwargs["data"])
         self.files[self.target]["parentReference"]["id"] = self.target_parent
+        if "fileSystemInfo" in self.upload_properties:
+            self.files[self.target]["fileSystemInfo"] = deepcopy(self.upload_properties["fileSystemInfo"])
         result = deepcopy(self.files[self.target])
         if self.upload_mode == "wrong-result":
             result["name"] = "different.txt"
@@ -111,6 +124,33 @@ class Graph:
 
 
 class OneDriveTransferTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows temporary-file sharing behavior")
+    def test_locked_upload_snapshot_does_not_turn_a_committed_copy_into_failure(self):
+        from unittest.mock import patch
+        original = tempfile.TemporaryDirectory
+        locked = []
+        class LockedTemporaryDirectory(original):
+            def __exit__(temporary, *args):
+                directory = Path(temporary.name)
+                if directory.name.startswith("tracesync-upload-"):
+                    locked.append((directory, (directory / "content").open("rb")))
+                return super().__exit__(*args)
+        (self.local_root / "new.txt").write_bytes(b"synthetic")
+        try:
+            with patch("core.onedrive_provider.tempfile.TemporaryDirectory", LockedTemporaryDirectory):
+                job, history = self.run_job(self.preview())
+            self.assertEqual(len(locked), 1)
+            self.assertEqual(job.copied_files, 1)
+            self.assertEqual(job.failed_files, 0)
+            self.assertEqual(history.counts.copied, 1)
+        finally:
+            for directory, handle in locked:
+                handle.close()
+                resolved = directory.resolve()
+                self.assertEqual(resolved.parent, Path(tempfile.gettempdir()).resolve())
+                self.assertTrue(resolved.name.startswith("tracesync-upload-"))
+                shutil.rmtree(resolved, ignore_errors=True)
+
     def setUp(self):
         gc.collect()
         self.temp = tempfile.TemporaryDirectory()

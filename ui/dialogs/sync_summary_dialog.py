@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 
 from models.sync_job import SyncJob
+from models.sync_history import SyncFileOutcome
+from ui.theme import AMBER
 
 
 class SyncSummaryDialog(tk.Toplevel):
@@ -29,4 +31,17 @@ class SyncSummaryDialog(tk.Toplevel):
         if summary.errors:
             error_text = "\n".join(f"• {error.relative_path}: {error.message}" for error in summary.errors)
             ttk.Label(frame, text=error_text, foreground="#a00000", wraplength=550).pack(anchor="w", pady=(10, 0))
+        notes = [outcome for outcome in summary.file_outcomes
+                 if outcome.outcome is SyncFileOutcome.COPIED and outcome.message]
+        if notes:
+            ttk.Label(frame, text="Copy notes - review before running again", foreground=AMBER).pack(anchor="w", pady=(10, 4))
+            note_frame = ttk.Frame(frame)
+            note_frame.pack(fill="both", expand=True)
+            text = tk.Text(note_frame, height=6, width=70, wrap="word", foreground=AMBER)
+            scrollbar = ttk.Scrollbar(note_frame, orient="vertical", command=text.yview)
+            text.configure(yscrollcommand=scrollbar.set)
+            text.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+            text.insert("1.0", "\n\n".join(f"{outcome.relative_path}: {outcome.message}" for outcome in notes))
+            text.configure(state="disabled")
         ttk.Button(frame, text="Close", command=self.destroy).pack(side="right", pady=(15, 0))

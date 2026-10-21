@@ -3,7 +3,9 @@ import os
 import tempfile
 from pathlib import Path
 
-SETTINGS_FILE = Path("settings.json")
+DEFAULT_SETTINGS_FILE = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / "TraceSync" / "settings.json"
+LEGACY_SETTINGS_FILE = Path("settings.json")
+SETTINGS_FILE = DEFAULT_SETTINGS_FILE
 PROVIDER_OPTIONS = (
     "Local Folder (active)",
     "OneDrive (coming soon)",
@@ -77,8 +79,11 @@ def _normalize_folder_pairs(raw_pairs) -> list[dict[str, str]]:
         local_folder = pair.get("local_folder")
         if "server_endpoint" in pair:
             endpoint = pair["server_endpoint"]
-            fields = ("account_id", "account_name", "drive_id", "folder_id", "folder_name")
-            if (not isinstance(endpoint, dict) or endpoint.get("provider") != "onedrive"
+            provider = endpoint.get("provider") if isinstance(endpoint, dict) else None
+            fields = ("account_id", "account_name", "folder_id", "folder_name")
+            if provider == "onedrive":
+                fields += ("drive_id",)
+            if (not isinstance(endpoint, dict) or provider not in ("onedrive", "google_drive")
                     or not all(isinstance(value, str) and value.strip()
                                for value in (name, local_folder))
                     or not all(isinstance(endpoint.get(key), str) and endpoint[key].strip()
@@ -89,7 +94,7 @@ def _normalize_folder_pairs(raw_pairs) -> list[dict[str, str]]:
                 seen_names.add(name_key)
                 normalized.append({
                     "name": name.strip(), "local_folder": local_folder.strip(),
-                    "server_endpoint": {"provider": "onedrive", **{
+                    "server_endpoint": {"provider": provider, **{
                         key: endpoint[key].strip() for key in fields}},
                 })
                 account_reference = endpoint.get("auth_account_id")
@@ -154,12 +159,16 @@ class SettingsService:
     @staticmethod
     def load():
         settings = _default_settings()
-        if not SETTINGS_FILE.exists():
-            return settings
+        source = SETTINGS_FILE
+        if not source.exists():
+            if SETTINGS_FILE == DEFAULT_SETTINGS_FILE and LEGACY_SETTINGS_FILE.is_file():
+                source = LEGACY_SETTINGS_FILE
+            else:
+                return settings
 
         try:
             with open(
-                SETTINGS_FILE,
+                source,
                 "r",
                 encoding="utf-8"
             ) as f:
@@ -214,6 +223,7 @@ class SettingsService:
         # Serialize before touching the destination; replace only a complete file.
         content = json.dumps(settings_copy, indent=4)
         staged = None
+        SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
         try:
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=SETTINGS_FILE.parent,
                                              prefix=".tracesync-settings-", delete=False) as output:

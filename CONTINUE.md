@@ -1,53 +1,81 @@
-# TraceSync continuation
+# TraceSync provider completion handoff
 
-Active worktree: C:/Users/Administrator/.codex/worktrees/tracesync-onedrive-create-safety.
-Branch: codex/onedrive-create-safety-audit.
-HEAD: 3996629a9cce7a7421fe000d1008a60c5dc430b6 (saved folder restoration fix).
-Parent: 5292753873beed89a49daee03f83123772baa634 (runtime dependency checkpoint).
-Both source checkpoints remain local and unmerged; no upstream on this branch.
+Updated 2026-10-21. Branch `codex/google-drive-provider-completion` at base ec009ffb3a06f7218b0e9563f91e96befa5d977a.
+Worktree: C:/Users/Administrator/.codex/worktrees/tracesync-google-drive-completion.
+This local source preparation checkpoint preserves the current completion work. No merge/push/tag/build or
+publication is authorized. Original Gate B checkpoint ec009ff and Version Manager
+checkpoint 0da5ac4 are committed locally; earlier uncommitted wording in historical
+reports describes the pre-checkpoint state. Canonical SFTP, original pair-management
+and accepted safety worktrees remain intact. Public build copies were absent before
+checkpointing; retained builder copies have their recorded hashes. No rebuild here.
 
-Read AGENTS.md, docs/CLOUD_STORAGE.md, docs/ROADMAP.md,
-docs/BRANCH_WORKFLOW.md, docs/ONEDRIVE_CREATE_VALIDATION.md,
-docs/ONEDRIVE_ENVIRONMENT.md and docs/GATE_B_VALIDATION.md before changes.
+Read AGENTS.md, docs/PROVIDER_COMPLETION.md, docs/CLOUD_OWNER_SETUP.md,
+docs/CLOUD_STORAGE.md and docs/BRANCH_WORKFLOW.md. User authorized unattended work:
+make routine project decisions, skip manual sign-in/input gates, preserve safety.
+Dummy IDs belong in tests; do not fake live sign-in success or ship placeholders.
 
-Gate A passed for the public rebuilt artifact (95b35532...719dbbe): test normal
-user, Medium RID 8192/non-elevated directly verified for launcher/application;
-user reported local startup, saved folders/pairs, copying/overwrites working.
-Historical source restoration validation: 82 focused / 239 full tests passed.
-The source fix is committed; earlier uncommitted wording in historical reports
-refers to the pre-checkpoint validation, not current Git state.
+## Current implementation
 
-Current uncommitted work: acceptance-only frozen cache hook, path/identity
-validation, synthetic cases, isolated temporary-spec builder, launcher, focused
-tests and documentation. Production entry point/spec/dependencies/cache/auth/sync
-logic unchanged. Gate B source validation PASS 19 focused / 249 full, compilation
-and diff checks; frozen missing-invocation/elevated refusal checks PASS.
-Diagnostic artifact: C:/Users/Public/Documents/TraceSync-Gate-B-3996629.
-See docs/GATE_B_VALIDATION.md for exact SHA-256, commands and limits.
-Gate B PASS for the diagnostic artifact: eight separate frozen processes ran as
-test normal user, non-elevated/Medium RID 8192. Real Windows DPAPI cross-process
-round trip and plaintext absence passed; all rejection/failure/guard cases passed.
-The user confirmed completion; saved sanitized results were independently checked.
-See docs/GATE_B_VALIDATION.md for evidence and injected-case qualifications.
+Shared OneDrive pair management was selectively copied from the preserved dirty
+pair-management worktree after verifying its four implementation/test files had
+unchanged bases. Original work remains untouched. Pair edits/deletes preserve file
+content and saved sign-in. Public build configuration is allowlisted, settings are
+per-user with nondestructive legacy fallback, and Windows device aliases are blocked.
+The historical Gate B spec fixture remains explicit; builder checks are not relaxed.
+Real MSAL cache fixtures exposed and fixed personal-account consumers-realm binding.
+OneDrive backup materialization reuses reviewed download checks; local durable
+backup and actual Windows locked-temp cleanup are tested. Download staging keeps
+provider modification time. Uploads carry client time; empty creates use a
+metadata-only update bound to their confirmed ID/eTag. Failed metadata updates
+stay copied with warnings, without retries. Precision helpers preserve NTFS 100 ns
+timestamps. Final timestamp/UI regressions pass; see validation below.
+Replacements and remote restore remain disabled.
 
-Closure audit reproduced 19 focused / 249 full tests and verified source/spec/
-artifact/result hashes plus production archive isolation; see the closure section
-of docs/GATE_B_VALIDATION.md. Read-only VM patch preview proposes v0.15.1 and adds
-VERSION/CHANGELOG updates plus a tag. No staging/commit/tag occurred. Exact Gate B
-scope is 13 files; strict source-only/no-tag checkpoints are unsupported by the
-current VM tool. Resolve that scope before execution. The diagnostic builder is
-pinned to HEAD 3996629; the report documents isolated reconstruction after a future
-checkpoint. No implementation or artifact was changed during the closure audit.
+Google code was selectively imported from 8cec558, without its old UI/settings
+history. Standard desktop PKCE replaces undocumented Picker query parameters.
+Google account identity is Drive user.permissionId; cached credentials are keyed
+by app/account and use Windows Credential Manager directly. Full-folder reads use
+restricted drive.readonly, explained before sign-in. GoogleSetupService supports
+native browsing and save/reopen/edit/delete/disconnect; UI reuses Folder Pair
+presentation and activates the existing comparison/review/job/history workflow.
+Uploads/replacements are blocked, including preview and execution. Fresh file and
+ancestor checks, complete pagination, Windows names, size/checksum and temporary
+cleanup have offline coverage. Windows synthetic credential write/read/delete
+passed in source mode under this session; this is not frozen/non-elevated acceptance.
 
-No real account/cache access, OAuth or cloud mutations. Remaining gates include
-real-account lifecycle and eventual production cloud acceptance. Diagnostic Gate B
-is not acceptance of real OAuth or the unchanged production executable's full
-cloud lifecycle. Retain create-only in both cloud directions, explicit review and
-confirmation, no blind unknown-outcome retry, ancestor TOCTOU and post-crash
-folder-accounting limits. Diagnostic failure injection is not production recovery.
+## Validation and next work
 
-No commit, integration, push, tag, signing or publication authorized. Production
-public executable remains v0.11.0; local acceptance artifacts are not releases.
-Preserve dirty pair-management worktree at
-C:/Users/Administrator/.codex/worktrees/tracesync-onedrive-reviewed-copy and the
-canonical historical SFTP workspace/stash/backup; do not merge unfinished history.
+Existing builder interpreter: C:/xxx/_INSTALLS/_HERE/_xxx/TraceSync-builder-5292753/venv/Scripts/python.exe.
+Separate SDK test interpreter: C:/xxx/_INSTALLS/_HERE/_xxx/TraceSync-cloud-tests-20261021/Scripts/python.exe.
+The latter was authorized separately and contains pinned Google SDKs plus the
+existing OneDrive runtime pins needed by shared tests; established environments
+are unchanged. Pip check passes. Package freeze and current logs are under
+C:/xxx/_INSTALLS/_HERE/_xxx/TraceSync-provider-completion-20261021.
+Latest full runs passed 285 OneDrive and 329 Google tests. Focused runs, compile,
+diff and preservation evidence are recorded in docs/PROVIDER_COMPLETION_VALIDATION.md
+and the external validation.json/manifest files. Logs retain earlier environment
+failures and their correction rather than calling those initial runs a pass.
+
+Next: review the preserved patch/manifest, then continue remaining engineering,
+not just app-ID collection. OneDrive safe
+replacement needs a supported commit-time conditional operation plus backup and
+recovery. Google's upload/replacement identity/name contract and write consent
+remain unfinished. Do not weaken these requirements to enable a button. Dropbox
+is a later candidate, SFTP remains parked. Live account lifecycle, production
+frozen credential path and packaged standard-user cloud acceptance still need
+owner registrations and disposable sign-in; skip them unattended. Owner instructions
+state exact public IDs/portal steps and never ask for passwords/tokens/secrets.
+
+No safe-completion claim until the full objective is proved. Keep the goal active.
+
+## User pause after preparation checkpoint
+
+Authorized 2026-10-21: preserve each provider branch through the non-release VM
+checkpoint workflow, then pause. No merge, push, tag, build, publication or live
+account access. Resume with the user on 2026-10-22; no scheduled automatic resume.
+Use git rev-parse HEAD for this checkpoint's exact identity; ec009ff remains its
+source base. Validation counts above were executed before checkpointing and have
+not been rerun for this documentation-only capture. Current write restrictions
+and remaining engineering/live acceptance gates are unchanged. The checkpoint
+receipt and VM previews/manifests are retained externally under
+C:/xxx/_INSTALLS/_HERE/_xxx/TraceSync-preparation-checkpoints-20261021-*.

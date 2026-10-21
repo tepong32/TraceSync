@@ -9,10 +9,11 @@ from core.onedrive_setup_service import OneDriveSetupError, OneDriveSetupService
 
 
 class OneDriveSetupDialog(tk.Toplevel):
-    def __init__(self, parent, service=None):
+    def __init__(self, parent, service=None, *, provider_name="OneDrive", scope_notice=None):
         super().__init__(parent)
         self.service = service or OneDriveSetupService()
-        self.title("OneDrive Folder Pair — setup preview")
+        self.provider_name = provider_name
+        self.title(f"{provider_name} Folder Pair")
         self.geometry("720x640")
         self.minsize(640, 580)
         self.transient(parent)
@@ -22,6 +23,7 @@ class OneDriveSetupDialog(tk.Toplevel):
         self._saving = False
         self._closed = False
         self._poll_id = None
+        self._editing = None
         self._path = []
         self._folders = []
         self.selected_connection = None
@@ -29,7 +31,7 @@ class OneDriveSetupDialog(tk.Toplevel):
         self.location = tk.StringVar(value="Choose a cloud folder after connecting")
         self.name = tk.StringVar()
         self.local = tk.StringVar()
-        self.status = tk.StringVar(value="Next: connect your personal Microsoft account.")
+        self.status = tk.StringVar(value=f"Next: connect your {provider_name} account.")
         self.saved_name = tk.StringVar()
         body = ttk.Frame(self, padding=16)
         body.pack(fill="both", expand=True)
@@ -37,13 +39,13 @@ class OneDriveSetupDialog(tk.Toplevel):
         body.rowconfigure(4, weight=1)
         ttk.Label(body, text="Connect account → Choose folder → Save Folder Pair",
                   style="WorkflowTitle.TLabel", padding=10).grid(row=0, column=0, sticky="ew")
-        ttk.Label(body, text="Development preview: reviewed new-file copies only. Existing files are never replaced.",
+        ttk.Label(body, text=scope_notice or "Development preview: reviewed new-file copies only. Existing files are never replaced.",
                   wraplength=650, foreground=AMBER).grid(row=1, column=0, sticky="w", pady=10)
         self.connect_button = ttk.Button(body, text="Connect account", command=self._connect,
                                          style="GuideNext.TButton")
         self.connect_button.grid(row=2, column=0, sticky="w")
         ttk.Label(body, textvariable=self.account).grid(row=3, column=0, sticky="w", pady=8)
-        browser = ttk.LabelFrame(body, text="Choose OneDrive folder", padding=8)
+        browser = ttk.LabelFrame(body, text=f"Choose {provider_name} folder", padding=8)
         browser.grid(row=4, column=0, sticky="nsew")
         browser.columnconfigure(0, weight=1)
         browser.rowconfigure(1, weight=1)
@@ -75,7 +77,7 @@ class OneDriveSetupDialog(tk.Toplevel):
         self.use_button = ttk.Button(body, text="Use saved pair", command=self._use_pair, style="GuideNext.TButton")
         self.use_button.grid(row=6, column=0, sticky="e")
         ttk.Label(body, textvariable=self.status, wraplength=650).grid(row=7, column=0, sticky="w", pady=8)
-        saved = ttk.LabelFrame(body, text="Saved OneDrive pairs", padding=4)
+        saved = ttk.LabelFrame(body, text=f"Saved {provider_name} pairs", padding=4)
         saved.grid(row=8, column=0, sticky="ew")
         saved.columnconfigure(0, weight=1)
         self.saved_combo = ttk.Combobox(saved, textvariable=self.saved_name, state="readonly", width=18)
@@ -87,6 +89,12 @@ class OneDriveSetupDialog(tk.Toplevel):
         self.reconnect_button.grid(row=0, column=2)
         self.disconnect_button = ttk.Button(saved, text="Disconnect", command=self._disconnect)
         self.disconnect_button.grid(row=0, column=3)
+        self.edit_button = ttk.Button(saved, text="Edit", command=self._edit)
+        self.edit_button.grid(row=1, column=1, pady=(4, 0))
+        self.delete_button = ttk.Button(saved, text="Delete", command=self._delete)
+        self.delete_button.grid(row=1, column=2, pady=(4, 0))
+        self.cancel_edit_button = ttk.Button(saved, text="Cancel edit", command=self._cancel_edit)
+        self.cancel_edit_button.grid(row=1, column=3, pady=(4, 0))
         self.close_button = ttk.Button(body, text="Close", command=self._close)
         self.close_button.grid(row=9, column=0, sticky="e", pady=(8, 0))
         self.protocol("WM_DELETE_WINDOW", self._close)
@@ -110,13 +118,62 @@ class OneDriveSetupDialog(tk.Toplevel):
         for widget in (self.browse_button, self.local_entry, self.name_entry):
             widget.configure(state="disabled" if self._busy else "normal")
         self.close_button.configure(state="disabled" if self._saving else "normal")
-        self.saved_combo.configure(state="disabled" if self._busy else "readonly")
+        self.saved_combo.configure(state="disabled" if self._busy or self._editing else "readonly")
         for widget in (self.reopen_button, self.reconnect_button, self.disconnect_button):
+            widget.configure(state="normal" if self.saved_name.get() and not self._busy and not self._editing else "disabled")
+        self.use_button.configure(state="normal" if self.saved_name.get() and not self._busy and not self._editing else "disabled")
+        for widget in (self.edit_button, self.delete_button):
             widget.configure(state="normal" if self.saved_name.get() and not self._busy else "disabled")
-        self.use_button.configure(state="normal" if self.saved_name.get() and not self._busy else "disabled")
+        self.cancel_edit_button.configure(state="normal" if self._editing and not self._busy else "disabled")
+        self.save_button.configure(text="Save changes" if self._editing else "Save pair with current cloud folder",
+            state="normal" if (self._editing or self._path) and not self._busy else "disabled")
+
+    def _edit(self):
+        if self._busy:
+            return
+        pair = next((pair for pair in self.service.saved_pairs() if pair["name"] == self.saved_name.get()), None)
+        if pair is None:
+            return
+        self._editing = pair
+        self._path, self._folders = [], []
+        self.folders.delete(0, "end")
+        self.name.set(pair["name"])
+        self.local.set(pair["local_folder"])
+        self.account.set(pair["server_endpoint"]["account_name"])
+        self.location.set(pair["server_endpoint"]["folder_name"] + " (saved; not verified)")
+        self.status.set("Editing saved pair. Rename or change local folder offline. Connect the same account to choose a different cloud folder.")
+        self._controls()
+
+    def _cancel_edit(self):
+        if self._busy:
+            return
+        self._editing = None
+        self._path, self._folders = [], []
+        self.folders.delete(0, "end")
+        self.name.set("")
+        self.local.set("")
+        self.location.set("No cloud folder selected")
+        self.account.set("No account selected")
+        self.status.set("Edit cancelled. Saved definitions are unchanged.")
+        self._controls()
+
+    def _delete(self):
+        if self._busy:
+            return
+        pair = next((pair for pair in self.service.saved_pairs() if pair["name"] == self.saved_name.get()), None)
+        if pair is None or not messagebox.askyesno("Delete saved Folder Pair?",
+                f"Delete '{pair['name']}' from saved pairs? Local and cloud files and saved sign-in are kept.", parent=self):
+            return
+        service = self.service
+        self._saving = True
+        def deleted(_result):
+            self._cancel_edit()
+            self._show_saved()
+            self.status.set("Saved pair deleted. Files and saved sign-in are unchanged.")
+        self._run(lambda: service.delete_pair(pair), deleted, "Deleting saved pair…")
 
     def _use_pair(self):
-        if self._busy or not self.saved_name.get():
+        if self._busy or self._editing or not self.saved_name.get():
             return
         service, name = self.service, self.saved_name.get()
         def ready(connection):
@@ -208,7 +265,7 @@ class OneDriveSetupDialog(tk.Toplevel):
     def _disconnect(self):
         if self._busy or not self.saved_name.get():
             return
-        if not messagebox.askyesno("Disconnect Microsoft account?",
+        if not messagebox.askyesno(f"Disconnect {self.provider_name} account?",
                                    "Remove this account's saved sign-in on this device? All pairs using it will need to reconnect. "
                                    "Saved pairs and cloud files are kept; browser sign-in is unchanged.", parent=self):
             return
@@ -243,15 +300,20 @@ class OneDriveSetupDialog(tk.Toplevel):
             self.local.set(selected)
 
     def _save(self):
-        if self._busy or not self._path:
+        if self._busy or (not self._path and not self._editing):
             return
-        name, local, folder_id = self.name.get(), self.local.get(), self._path[-1].id
+        name, local = self.name.get(), self.local.get()
+        folder_id = self._path[-1].id if self._path else None
+        expected = self._editing
         self._saving = True
         def saved(pair):
             self.status.set(f"Saved '{pair['name']}'. Choose Use saved pair to compare before copying.")
+            self._editing = None
             self._show_saved()
+            self.saved_name.set(pair["name"])
         service = self.service
-        self._run(lambda: service.save_pair(name, local, folder_id), saved, "Verifying folder and saving pair…")
+        operation = (lambda: service.edit_pair(expected, name, local, folder_id)) if expected else (lambda: service.save_pair(name, local, folder_id))
+        self._run(operation, saved, "Verifying folder and saving pair…")
 
     def _close(self):
         if self._saving:

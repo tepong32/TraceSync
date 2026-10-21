@@ -337,7 +337,14 @@ Preserve compare-review-confirm-sync, truthful history, service/UI separation an
 
 ### Development state
 
-v0.11.0 includes the material-inspired UI, backup recovery, provider-neutral transfer foundation and local new-file race fix. SFTP remains separate unfinished development and is excluded from this release.
+Active branch: `codex/google-drive-provider-completion`, based on local Gate B checkpoint ec009ff.
+Read docs/PROVIDER_COMPLETION.md and docs/CLOUD_OWNER_SETUP.md before provider,
+settings, authentication or packaging changes. OneDrive and Google completion
+worktrees are separate; neither is merged, released or live-account accepted.
+Keep existing create-only restrictions and truthful unknown/partial outcomes.
+Historical frozen Gate A/B evidence has its original source/artifact identity;
+changed builds require acceptance. SFTP and original pair-management work stay
+preserved separately. Dropbox remains a later candidate.
 
 ### Read next
 
@@ -448,3 +455,10 @@ Use scripts/build_cache_acceptance.py to generate an external temporary spec;
 the separately named artifact exits before GUI/authentication, requires explicit
 synthetic TEMP fixtures and Medium integrity, and blocks network/browser/auth
 construction. See docs/GATE_B_VALIDATION.md; source tests are not frozen acceptance.
+
+Client modification time uses OneDrive fileSystemInfo, with eTag retained for
+change detection. Post-create timestamp updates may target only the confirmed
+new item ID with its returned eTag in If-Match; no path-based metadata update,
+content replacement or retry. Failure after confirmed content creation is a
+copied file with a warning, not a false byte-transfer failure. See
+PROVIDER_COMPLETION.md and provider validation for precision and live gates.

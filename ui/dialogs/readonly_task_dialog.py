@@ -23,7 +23,7 @@ class ReadonlyTaskDialog(tk.Toplevel):
             try:
                 results.put((True, operation()))
             except Exception:
-                results.put((False, "OneDrive comparison failed. Check access and reconnect, then compare again."))
+                results.put((False, "Cloud comparison failed. Check access and reconnect, then compare again."))
         threading.Thread(target=worker, daemon=True).start()
         def poll():
             try:

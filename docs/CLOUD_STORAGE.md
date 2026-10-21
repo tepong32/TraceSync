@@ -1,6 +1,32 @@
 # Cloud storage provider plan
 
-## Current create-only safety audit
+## Google completion branch — 2026-10-21
+
+`codex/google-drive-provider-completion` starts at OneDrive safety/Gate B checkpoint
+ec009ff. Provider-specific code is selectively reviewed from remote Google 8cec558,
+not merged wholesale. Keep OneDrive and its local completion branch intact.
+See PROVIDER_COMPLETION.md. The selected-folder OAuth query parameters used by
+the old branch are not documented in Google's desktop OAuth specification; do not
+depend on them for folder selection or completeness. Use standard desktop PKCE
+OAuth followed by a native read-only folder browser. Whole-folder downloading
+requires `drive.readonly`, since `drive.file` authorizes individual app-selected
+items and cannot be assumed to expose every existing descendant. This is a
+restricted scope; explain its breadth before sign-in and require owner consent
+configuration/verification before distribution. No live authorization is performed
+during development. Uploads and replacements remain explicit unfinished work.
+
+Sources checked 2026-10-21:
+https://developers.google.com/identity/protocols/oauth2/native-app
+https://developers.google.com/workspace/drive/api/guides/api-specific-auth
+
+## Historical create-only safety audit snapshots
+
+Status correction for these historical snapshots: Gate B was committed locally
+as ec009ff on 2026-10-21, following 3996629. Provider completion is preserved as local preparation checkpoints on
+the separate branches above. Earlier statements about uncommitted diagnostics or
+pending dependency declarations describe their original checkpoints, not today.
+See PROVIDER_COMPLETION_VALIDATION.md for current validation and open gates.
+
 
 Current local source checkpoint is 3996629, after dependency checkpoint 5292753.
 Gate A standard-user local acceptance and Gate B's acceptance-only frozen synthetic

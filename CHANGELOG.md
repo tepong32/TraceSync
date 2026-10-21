@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased - provider completion
+
+- Restore saved OneDrive Folder Pair editing/deletion without changing file contents or sign-in.
+- Load public application identity from bundled build data; keep tokens out of build configuration.
+- Store settings per Windows user, preserving atomic save and legacy configuration files.
+- Reject additional reserved Windows filename aliases before OneDrive transfers.
+- Preserve OneDrive upload client times, including empty files, with version-bound metadata updates and honest warning history.
+- Show confirmed-copy notes in an amber, scrollable synchronization summary.
+- Bind personal OneDrive sign-in to the verified MSAL cache identity, including its consumers realm.
+- Verify read-only OneDrive backup staging and preserve download timestamps; avoid false failures from Windows temporary-file cleanup.
+- Keep the historical Gate B builder pinned to its original spec/source; test changes against that fixture.
+- Add native Google PKCE sign-in and folder browsing with explicit full-folder read permission.
+- Scope Google credentials by application/account using Windows Credential Manager without plaintext fallback.
+- Reuse named Folder Pair controls for Google setup and reviewed downloads with history.
+- Harden source freshness, ancestry and pagination; block uploads and replacements.
+
+
 ## Unreleased - saved folder startup restoration
 
 - Restore the saved Server Folder before field-change callbacks can erase it.

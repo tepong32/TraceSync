@@ -102,11 +102,16 @@ raise SystemExit(d.main(sys.argv[1:]))
 
     def test_temporary_spec_changes_only_acceptance_configuration(self):
         repo = Path(__file__).resolve().parents[1]
-        original = (repo / "TraceSync.spec").read_text()
+        current = (repo / "TraceSync.spec").read_text()
+        # The historical diagnostic is pinned to its original production inputs.
+        # New cloud build configuration must not silently relax that acceptance.
+        original = (repo / "tests/fixtures/gate_b_production.spec.txt").read_text()
         generated = acceptance_spec(original, repo)
         self.assertIn("TraceSync-Cache-Acceptance", generated)
         self.assertIn("cache_runtime_hook.py", generated)
         self.assertIn("console=True", generated)
-        self.assertEqual((repo / "TraceSync.spec").read_text(), original)
+        self.assertEqual((repo / "TraceSync.spec").read_text(), current)
+        with self.assertRaises(ValueError):
+            acceptance_spec(current, repo)
         with self.assertRaises(ValueError):
             acceptance_spec(original.replace("runtime_hooks=[]", "runtime_hooks=['changed']"), repo)
