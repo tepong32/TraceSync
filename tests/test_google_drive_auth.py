@@ -116,6 +116,21 @@ class GoogleAuthTests(unittest.TestCase):
                     self.auth.acquire_for_account("account-a")
                 load.assert_not_called()
 
+    def test_expired_credentials_refresh_uses_bounded_request_timeout(self):
+        self.store.get.return_value = {
+            "client_id": self.auth.client_id,
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "scopes": [GOOGLE_DRIVE_SCOPE],
+        }
+        self.credentials.valid = False
+        self.credentials.refresh.side_effect = lambda request: setattr(self.credentials, "valid", True)
+        with patch("google.oauth2.credentials.Credentials.from_authorized_user_info", return_value=self.credentials), \
+                patch("google.auth.transport.requests.Request") as request_factory:
+            request_factory.return_value = object()
+            self.auth.acquire_for_account("account-a")
+        request_factory.assert_called_once_with(timeout=120)
+        self.credentials.refresh.assert_called_once_with(request_factory.return_value)
+
     def test_token_storage_is_scoped_and_never_uses_global_keyring(self):
         a = GoogleTokenStore("client", "account-a")
         self.assertNotEqual(a.key, GoogleTokenStore("client", "account-b").key)
