@@ -139,7 +139,8 @@ class GoogleDriveAuth:
             if not credentials.valid:
                 if not credentials.refresh_token:
                     raise GoogleReconnectRequired("Google sign-in expired. Reconnect this account.")
-                credentials.refresh(Request())
+                # Token refresh is network I/O too; keep it bounded just like Drive API calls.
+                credentials.refresh(Request(timeout=120))
             if not credentials.valid or not credentials.has_scopes([GOOGLE_DRIVE_SCOPE]):
                 raise GoogleReconnectRequired("Reconnect to grant folder-read access.")
             connection = self._connection(credentials, account_id)
