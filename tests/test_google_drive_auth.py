@@ -9,7 +9,8 @@ from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
-from core.google_drive_auth import GoogleDriveAuth, GoogleTokenStore, GoogleReconnectRequired
+from core.google_drive_auth import (GoogleDriveAuth, GoogleTokenStore, GoogleReconnectRequired,
+    GoogleOAuthDiagnosticError, _with_oauth_diagnostics)
 from core.google_drive_provider import GOOGLE_DRIVE_SCOPE, GoogleDriveConfigurationError
 
 
@@ -50,6 +51,70 @@ class GoogleAuthTests(unittest.TestCase):
         self.assertEqual(result.account_id, "account-a")
         self.factory.assert_called_once_with(self.auth.client_id, "account-a")
         self.store.set.assert_called_once()
+
+    def test_callback_oauth_error_is_actionable_and_does_not_expose_callback_values(self):
+        class Flow:
+            def authorization_url(self, **kwargs):
+                return "https://accounts.google.com/", "private-state-value"
+            def fetch_token(self, **kwargs):
+                raise AssertionError("token exchange must not run for callback error")
+        flow = _with_oauth_diagnostics(Flow())
+        flow.authorization_url()
+        callback = "http://127.0.0.1:1234/?state=private-state-value&error=access_denied&error_description=private-description&code=private-code"
+        with self.assertRaises(GoogleOAuthDiagnosticError) as caught:
+            flow.fetch_token(authorization_response=callback)
+        message = str(caught.exception)
+        self.assertIn("canceled or permission was declined", message)
+        for secret in ("private-state-value", "private-description", "private-code", callback):
+            self.assertNotIn(secret, message)
+
+    def test_invalid_callback_state_is_distinguished_and_redacted(self):
+        class Flow:
+            def authorization_url(self, **kwargs):
+                return "https://accounts.google.com/", "expected-state"
+            def fetch_token(self, **kwargs):
+                raise AssertionError("token exchange must not run for invalid state")
+        flow = _with_oauth_diagnostics(Flow())
+        flow.authorization_url()
+        with self.assertRaisesRegex(GoogleOAuthDiagnosticError, "invalid sign-in response"):
+            flow.fetch_token(authorization_response="http://127.0.0.1/?state=attacker-state&code=private-code")
+
+    def test_token_exchange_failure_is_distinguished_and_redacted(self):
+        class Flow:
+            def authorization_url(self, **kwargs):
+                return "https://accounts.google.com/", "private-state"
+            def fetch_token(self, **kwargs):
+                raise RuntimeError("private-token-response private-client-secret")
+        flow = _with_oauth_diagnostics(Flow())
+        flow.authorization_url()
+        with self.assertRaises(GoogleOAuthDiagnosticError) as caught:
+            flow.fetch_token(authorization_response="http://127.0.0.1/?state=private-state&code=private-code")
+        self.assertIn("reached token exchange", str(caught.exception))
+        for secret in ("private-state", "private-code", "private-token-response", "private-client-secret"):
+            self.assertNotIn(secret, str(caught.exception))
+
+    def test_callback_timeout_and_local_server_failure_have_distinct_safe_messages(self):
+        from google_auth_oauthlib.flow import WSGITimeoutError
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow") as flow:
+            flow.from_client_config.return_value.run_local_server.side_effect = WSGITimeoutError("private-state")
+            with self.assertRaises(GoogleOAuthDiagnosticError) as timeout:
+                self.auth.connect()
+            self.assertIn("No response returned", str(timeout.exception))
+            self.assertNotIn("private-state", str(timeout.exception))
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow") as flow:
+            flow.from_client_config.return_value.run_local_server.side_effect = OSError("private-callback-url")
+            with self.assertRaises(GoogleOAuthDiagnosticError) as server:
+                self.auth.connect()
+            self.assertIn("local sign-in callback", str(server.exception))
+            self.assertNotIn("private-callback-url", str(server.exception))
+
+    def test_unexpected_local_exception_is_generic_and_redacted(self):
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow") as flow:
+            flow.from_client_config.side_effect = RuntimeError("private-token-response")
+            with self.assertRaises(GoogleOAuthDiagnosticError) as caught:
+                self.auth.connect()
+        self.assertIn("unexpected local error", str(caught.exception))
+        self.assertNotIn("private-token-response", str(caught.exception))
 
     def test_reconnect_wrong_account_never_saves_credentials(self):
         with patch("google_auth_oauthlib.flow.InstalledAppFlow") as flow:

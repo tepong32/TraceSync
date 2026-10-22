@@ -1,7 +1,7 @@
 """Google folder browsing and credential-free named pairs; no remote writes."""
 from pathlib import Path
 
-from core.google_drive_auth import GoogleDriveAuth
+from core.google_drive_auth import GoogleDriveAuth, GoogleOAuthDiagnosticError
 from core.google_drive_provider import GoogleDriveProvider
 from core.onedrive_setup_service import CloudFolder, OneDriveSetupError
 from utils.settings import SettingsService
@@ -49,6 +49,9 @@ class GoogleDriveSetupService:
             folder = self._folder("root")
             self._known[folder.id] = folder
             return folder
+        except GoogleOAuthDiagnosticError as error:
+            self._clear()
+            raise GoogleSetupError(str(error)) from None
         except Exception:
             self._clear()
             raise GoogleSetupError("Google could not connect. Check this build's configuration, consent and connection, then try again.") from None

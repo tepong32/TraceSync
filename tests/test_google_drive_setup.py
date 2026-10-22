@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from core.google_drive_setup_service import GoogleDriveSetupService, GoogleSetupError
+from core.google_drive_auth import GoogleOAuthDiagnosticError
 from utils import settings
 
 
@@ -113,6 +114,14 @@ class GoogleSetupTests(unittest.TestCase):
             self.service.connect()
         self.assertNotIn("secret-token-response", str(caught.exception))
         self.assertEqual((self.root / "settings.json").read_bytes(), before)
+
+    def test_connect_preserves_only_sanitized_oauth_diagnostic(self):
+        self.auth.connect.side_effect = GoogleOAuthDiagnosticError(
+            "Google sign-in reached token exchange but could not finish.")
+        with self.assertRaises(GoogleSetupError) as caught:
+            self.service.connect()
+        self.assertEqual(str(caught.exception), "Google sign-in reached token exchange but could not finish.")
+        self.assertIsNone(self.service._connection)
 
     def test_relative_local_folder_is_persisted_as_a_stable_absolute_path(self):
         import os
