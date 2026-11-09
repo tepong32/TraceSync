@@ -368,7 +368,7 @@ Start with affected unittest modules under tests/. Broaden across synchronizatio
 
 Green indicates a safe setup/compare step; amber remains review or warning. Styling must not choose a copy direction or bypass confirmation. Existing local overwrite and restore are backup-protected but not atomic compare-and-swap; preserve the documented concurrent-writer limitation. New-file publication must never replace an occupied destination.
 
-Use `scripts/vm_release.py` with the shared external version manager for releases. The adapter restricts automatic changes to VERSION and CHANGELOG so historical product-tour versions remain accurate; update current release prose deliberately. See docs/RELEASE.md.
+Use `python tools/version_manager.py` for releases. It restricts automatic changes to VERSION and CHANGELOG by default so historical product-tour versions remain accurate; update current release prose deliberately. See docs/RELEASE.md.
 
 ### Cloud product direction — check before code changes
 
