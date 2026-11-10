@@ -14,11 +14,18 @@ Existing-file replacement retains the accepted concurrent-writer limitation.
 
 ## Development status
 
-SFTP Provider Workflow remains unfinished on the separate development branch.
-Do not release it until disposable-server integration and packaged credentials,
-trust and create-only behavior have been validated. Remote replacement remains
-outside the accepted safety contract. The release build contains local/mapped
-folder support only; provider choices remain planning controls.
+SFTP Provider Workflow remains unfinished on `codex/sftp-provider-workflow`.
+The development branch now has a provider foundation with strict host-key
+rejection and create-only transfer, but no active UI routing. Do not release it
+until profile management, explicit host trust, disposable-server integration,
+and packaged credentials/trust/create-only behavior have been validated. Remote
+replacement remains outside the accepted safety contract. The release build
+contains local/mapped folder support only; provider choices remain planning
+controls.
+
+The intended end-user sequence is documented in the [planned SFTP user workflow
+in the architecture guide](ARCHITECTURE.md#planned-sftp-user-workflow). Treat it
+as a product target, not implemented behavior.
 
 ## Documentation Hierarchy
 

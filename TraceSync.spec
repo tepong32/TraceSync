@@ -6,7 +6,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets', 'assets'), ('VERSION', '.')],
-    hiddenimports=[],
+    hiddenimports=[
+        'paramiko',
+        'keyring',
+        'keyring.backends.Windows',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

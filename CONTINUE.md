@@ -48,8 +48,21 @@ Portfolio destination: https://tepong32.github.io/assets/downloads/TraceSync-v0.
 Keep historical downloads. Verify master/tag push and portfolio Pages deployment
 against this checksum; publication outcomes are recorded in the portfolio handoff.
 
-## Next work
+## SFTP development branch
 
-Continue SFTP in its preserved development workspace, reconciling the release UI
-fixes before integration. Its explicit disposable endpoint and packaged credential/
-host-trust gates remain outstanding. Do not claim atomic existing-file replacement.
+Branch `codex/sftp-provider-workflow` starts from the clean v0.11.0 release
+baseline. The first development increment adds `core/sftp_storage_provider.py`,
+Paramiko and keyring dependencies, and PyInstaller hidden imports. It is a
+backend foundation only: MainWindow still routes comparisons to local providers,
+and the provider is not user-accessible. Remote replacement is unsupported.
+
+## Validation and next work
+
+No SFTP tests, live endpoint checks, or packaged-build checks have been run in
+this increment. Next, add isolated provider tests and profile/settings support,
+then explicit host-key trust and comparison routing. Before enabling the UI,
+validate create-only transfer and credential/trust behavior against a disposable
+SFTP server and a packaged Windows build. Do not claim existing-file replacement
+or release readiness. The intended user-facing sequence is recorded in
+`docs/ARCHITECTURE.md` under “Planned SFTP user workflow”; keep it marked as a
+target until each step is implemented and validated.

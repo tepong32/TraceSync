@@ -73,6 +73,46 @@ The local provider retains its legacy `CONDITIONAL_TRANSFER` flag for this accep
 
 SFTP is excluded from this release and remains unfinished development.
 
+### SFTP development boundary
+
+`SftpStorageProvider` is an unfinished development provider. It loads only
+configured or system known-host keys and rejects unknown hosts. Profiles carry
+host, port, username, remote root, and credential references; passwords are
+looked up from the operating-system keyring and are not part of settings or
+history. The provider advertises `CONDITIONAL_CREATE` only. It opens new remote
+files exclusively and does not support replacement or remote backup. A failure
+after exclusive creation may leave a partial file; TraceSync records the result
+as unknown and requires a fresh comparison before any retry. Symlink entries
+are omitted and symlinked parent paths are rejected. No user-facing SFTP route
+is active until profile management, explicit host trust, disposable-server
+validation, and packaged credential/trust behavior are complete.
+
+### Planned SFTP user workflow
+
+This describes intended behavior, not a currently available feature:
+
+1. The user selects SFTP for one endpoint and enters the host, port, username,
+   and explicit remote folder. The other endpoint remains a local folder.
+2. On first connection, TraceSync shows the server host-key fingerprint. The
+   user verifies it with their administrator or hosting provider and explicitly
+   trusts it. TraceSync remembers the approved key and warns if it changes.
+3. The user authenticates with a password or SSH key. If the password is saved,
+   it goes to Windows Credential Manager, never settings or sync history.
+4. TraceSync compares the folders in its existing results table. Insufficiently
+   supported comparisons remain review items.
+5. The user chooses a direction and reviews the normal synchronization preview.
+6. After explicit confirmation, TraceSync creates only remote files that remain
+   absent at the server's exclusive-create operation. Existing remote files are
+   not replaced. An interrupted upload can leave a partial file; its outcome is
+   reported as unknown and requires a fresh comparison before retrying.
+7. TraceSync presents completed, skipped, failed, and uncertain outcomes through
+   the existing summary and history workflow.
+
+Before this flow is exposed, implement profile/settings management, verified
+first-use host trust, provider routing, and packaged credential and known-host
+storage. Validate the full flow against a disposable SFTP server. Remote
+replacement requires a separate safety design and is not included here.
+
 
 ## Presentation
 

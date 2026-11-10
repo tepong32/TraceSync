@@ -1,9 +1,11 @@
 altgraph==0.17.5
 colorama==0.4.6
 packaging==26.2
+paramiko==5.0.0
 pefile==2024.8.26
 pillow==12.2.0
 pyinstaller==6.20.0
 pyinstaller-hooks-contrib==2026.6
 pywin32-ctypes==0.2.3
+keyring==25.7.0
 ttkbootstrap==1.20.3

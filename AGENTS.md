@@ -205,6 +205,13 @@ overwrite protection only by safely materializing and verifying its current
 content through `StorageProvider.open_backup_content`; failure must block the
 overwrite.
 
+SFTP development uses strict known-hosts verification and OS keyring retrieval
+for saved passwords. SFTP must advertise `CONDITIONAL_CREATE` only: use the
+server's exclusive-create operation for new files, report uncertain upload
+results without automatic retry, and never replace a remote file. Live provider
+controls remain unavailable until settings, host-key trust, packaging, and a
+disposable-server workflow are integrated and validated.
+
 Target structure:
 
 ui/
