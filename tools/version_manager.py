@@ -290,7 +290,7 @@ class Git:
         if check and result.returncode != 0:
             detail = ((result.stderr or "") + (result.stdout or "")).strip() if quiet else ""
             raise VMError(f"git {' '.join(args)} failed{': ' + detail if detail else ''}")
-        return (result.stdout or "").strip() if quiet else ""
+        return (result.stdout or "").strip("\r\n") if quiet else ""
 
     def ok(self, *args: str) -> bool:
         try:
