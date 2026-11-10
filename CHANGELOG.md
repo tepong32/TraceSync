@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.15.1] - 2026-11-10
+### Maintenance
+- Update version_manager to v2.0.1 (preserve leading spaces in git output)
+
 ## [0.15.0] - 2026-10-18
 ### Added
 - Add create-only empty uploads and reviewed cloud folders
